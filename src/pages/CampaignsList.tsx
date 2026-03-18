@@ -367,6 +367,14 @@ export default function CampaignsList() {
     <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <PageContainer>
+        {showDrillBanner && (
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            extraLabel={drillState?.filterStatus ? `Status: ${drillState.filterStatus}` : undefined}
+            onClear={() => { setShowDrillBanner(false); setAdvancedFilters({ status: ["Running"] }); clearDrillState(); }}
+          />
+        )}
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

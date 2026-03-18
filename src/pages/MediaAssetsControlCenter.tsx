@@ -294,6 +294,15 @@ export default function MediaAssetsControlCenter() {
   return (
     <ModuleGuard module="media_assets">
     <div className="min-h-screen flex flex-col bg-background">
+      {showDrillBanner && (
+        <div className="px-6 pt-4">
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+          />
+        </div>
+      )}
       {/* Main Content */}
       <div className="flex-1">
         <div className="flex flex-col h-[calc(100vh-3.5rem)]">

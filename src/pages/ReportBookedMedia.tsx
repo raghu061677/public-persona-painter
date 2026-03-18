@@ -451,6 +451,14 @@ export default function ReportBookedMedia() {
 
   return (
     <div className="space-y-6 p-6">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          extraLabel={drillState?.filterCity ? `City: ${drillState.filterCity}` : undefined}
+          onClear={() => { setShowDrillBanner(false); resetFilters(); clearDrillState(); }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Booked Media Report</h1>

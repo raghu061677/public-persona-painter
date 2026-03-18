@@ -638,6 +638,13 @@ export default function ClientsList() {
     <ModuleGuard module="clients">
     <div className="min-h-screen bg-background">
       <PageContainer>
+        {showDrillBanner && (
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+          />
+        )}
         <PageHeader
           title="Clients"
           description="Manage your client database and contact information"

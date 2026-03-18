@@ -402,6 +402,33 @@ export async function generateExecutiveSummaryPDF(data: ExecutiveSummaryPDFData)
 
   renderPageFooter(doc, 3, gray);
 
+  // ==================== FOOTNOTES PAGE ====================
+  doc.addPage();
+  y = renderPageHeader(doc, 'Metric Definitions', data.companyName, theme, gray);
+
+  const footnotes = [
+    ['Invoiced Revenue', 'Sum of non-Draft, non-Cancelled invoices in the selected period.'],
+    ['Net Profit', 'Invoiced Revenue minus expenses in the selected period.'],
+    ['Collection Rate', 'Cash collected against invoices in the selected period, regardless of payment date.'],
+    ['Avg Occupancy', 'Booked asset-days divided by total asset-days in the selected period.'],
+    ['Top City by Booked Value', 'Highest city by booked commercial value in the selected period.'],
+    ['Best ROI Asset', 'Based on booked value versus direct cost where cost data exists.'],
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Metric', 'Definition']],
+    body: footnotes,
+    theme: 'grid',
+    styles: { font: 'NotoSans', fontSize: 8, cellPadding: 3, textColor: dark, lineColor: [229, 231, 235], lineWidth: 0.3 },
+    headStyles: { fillColor: [245, 247, 250], textColor: dark, fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 45, fontStyle: 'bold' }, 1: { cellWidth: CW - 45 } },
+    margin: { left: M, right: M },
+    tableWidth: CW,
+  });
+
+  renderPageFooter(doc, 4, gray);
+
   // Add page numbers to all pages
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {

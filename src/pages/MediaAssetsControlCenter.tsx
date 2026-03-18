@@ -36,6 +36,8 @@ export default function MediaAssetsControlCenter() {
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   useEffect(() => {
     fetchAssets();

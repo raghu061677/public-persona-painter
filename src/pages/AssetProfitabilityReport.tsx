@@ -274,6 +274,7 @@ export default function AssetProfitabilityReport() {
         });
       }
 
+      audit.summarize('AssetProfitabilityReport');
       setData(Array.from(profitabilityMap.values()));
     } catch (error) {
       console.error('Error fetching profitability data:', error);

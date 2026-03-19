@@ -215,11 +215,20 @@ export default function AssetProfitabilityReport() {
           return ca && ii.campaign_asset_id;
         }) || [];
         
-        revenue = assetInvoiceItems.reduce((sum, ii) => sum + (ii.line_total || 0), 0);
+        revenue = assetInvoiceItems.reduce((sum, ii) => sum + Math.max(0, Number(ii.line_total) || 0), 0);
         
-        // If no invoice data, estimate from campaign assets
+        // If no invoice data, estimate from campaign assets (non-negative only)
         if (revenue === 0 && assetCampaigns.length > 0) {
-          revenue = assetCampaigns.reduce((sum, ca) => sum + (ca.total_price || ca.negotiated_rate || ca.card_rate || 0), 0);
+          revenue = assetCampaigns.reduce((sum, ca) => {
+            const val = Number(ca.total_price) || Number(ca.negotiated_rate) || Number(ca.card_rate) || 0;
+            return sum + Math.max(0, val);
+          }, 0);
+        }
+
+        // Safeguard: revenue must never be negative
+        if (revenue < 0) {
+          console.warn(`[AssetProfitability] Negative revenue clamped to 0 for asset ${asset.id}:`, revenue);
+          revenue = 0;
         }
 
         // Power costs
@@ -281,9 +290,9 @@ export default function AssetProfitabilityReport() {
   // Calculate totals
   const totals = data.reduce(
     (acc, item) => ({
-      revenue: acc.revenue + item.revenue_billed,
+      revenue: acc.revenue + Math.max(0, item.revenue_billed),
       cogs: acc.cogs + item.total_cogs,
-      profit: acc.profit + item.gross_profit,
+      profit: acc.profit + (Math.max(0, item.revenue_billed) - item.total_cogs),
     }),
     { revenue: 0, cogs: 0, profit: 0 }
   );

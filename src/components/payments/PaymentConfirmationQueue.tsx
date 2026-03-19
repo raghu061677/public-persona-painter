@@ -82,32 +82,63 @@ export function PaymentConfirmationQueue() {
   const loadConfirmations = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Fetch confirmations without relational joins (no FK from payment_confirmations to clients)
+      const { data: rawConfirmations, error } = await supabase
         .from("payment_confirmations")
-        .select(`
-          *,
-          clients:client_id (name),
-          invoices:invoice_id (invoice_no),
-          receipts:receipt_id (receipt_no)
-        `)
+        .select("*")
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
 
-      const mapped = (data || []).map((c: any) => ({
+      const rows = rawConfirmations || [];
+      if (rows.length === 0) {
+        setConfirmations([]);
+        return;
+      }
+
+      // Collect unique IDs for related lookups
+      const clientIds = [...new Set(rows.map(r => r.client_id).filter(Boolean))];
+      const invoiceIds = [...new Set(rows.map(r => r.invoice_id).filter(Boolean))];
+      const receiptIds = [...new Set(rows.map(r => r.receipt_id).filter(Boolean))];
+
+      // Fetch related records in parallel (each is independently safe)
+      const [clientsRes, invoicesRes, receiptsRes] = await Promise.all([
+        clientIds.length > 0
+          ? supabase.from("clients").select("id, name").in("id", clientIds)
+          : Promise.resolve({ data: [] }),
+        invoiceIds.length > 0
+          ? supabase.from("invoices").select("id, invoice_no").in("id", invoiceIds)
+          : Promise.resolve({ data: [] }),
+        receiptIds.length > 0
+          ? supabase.from("receipts").select("id, receipt_no").in("id", receiptIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c.name]));
+      const invoiceMap = new Map((invoicesRes.data || []).map((i: any) => [i.id, i.invoice_no]));
+      const receiptMap = new Map((receiptsRes.data || []).map((r: any) => [r.id, r.receipt_no]));
+
+      const mapped = rows.map((c: any) => ({
         ...c,
-        client_name: c.clients?.name,
-        invoice_no: c.invoices?.invoice_no,
-        receipt_no: c.receipts?.receipt_no,
+        client_name: clientMap.get(c.client_id) || undefined,
+        invoice_no: invoiceMap.get(c.invoice_id) || undefined,
+        receipt_no: receiptMap.get(c.receipt_id) || undefined,
       }));
 
       setConfirmations(mapped);
     } catch (error: any) {
-      console.error("Error loading confirmations:", error);
+      console.error("Error loading payment confirmations:", {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+      });
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load payment confirmations",
+        description: error?.message && error.message.length < 200
+          ? error.message
+          : "Failed to load payment confirmations",
       });
     } finally {
       setLoading(false);

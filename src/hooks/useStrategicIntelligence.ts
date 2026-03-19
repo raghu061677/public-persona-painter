@@ -335,7 +335,7 @@ export function useStrategicIntelligence() {
     periodCampaignAssets.forEach(ca => {
       const aid = ca.asset_id;
       if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
-      assetMap[aid].revenue += Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      assetMap[aid].revenue += Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
       assetMap[aid].printCost += Number(ca.printing_cost) || 0;
       assetMap[aid].mountCost += Number(ca.mounting_cost) || 0;
       assetMap[aid].sqft = Number(ca.total_sqft) || 0;
@@ -420,7 +420,7 @@ export function useStrategicIntelligence() {
   // ── F) Executive KPIs (period-aware, consistent definitions) ──
   const executiveKPIs = useMemo((): ExecutiveKPIs => {
     // FIX #4: Unified accrual-basis definition: Revenue = invoiced, Profit = invoiced - expenses
-    const periodRevenue = periodInvoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+    const periodRevenue = periodInvoices.reduce((s, i) => s + Math.max(0, Number(i.total_amount) || 0), 0);
     const periodExpenseTotal = periodExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
     const periodProfit = periodRevenue - periodExpenseTotal;
 

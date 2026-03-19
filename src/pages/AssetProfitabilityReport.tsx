@@ -290,9 +290,9 @@ export default function AssetProfitabilityReport() {
   // Calculate totals
   const totals = data.reduce(
     (acc, item) => ({
-      revenue: acc.revenue + item.revenue_billed,
+      revenue: acc.revenue + Math.max(0, item.revenue_billed),
       cogs: acc.cogs + item.total_cogs,
-      profit: acc.profit + item.gross_profit,
+      profit: acc.profit + (Math.max(0, item.revenue_billed) - item.total_cogs),
     }),
     { revenue: 0, cogs: 0, profit: 0 }
   );

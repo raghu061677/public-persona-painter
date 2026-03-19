@@ -420,7 +420,7 @@ export function useStrategicIntelligence() {
   // ── F) Executive KPIs (period-aware, consistent definitions) ──
   const executiveKPIs = useMemo((): ExecutiveKPIs => {
     // FIX #4: Unified accrual-basis definition: Revenue = invoiced, Profit = invoiced - expenses
-    const periodRevenue = periodInvoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+    const periodRevenue = periodInvoices.reduce((s, i) => s + Math.max(0, Number(i.total_amount) || 0), 0);
     const periodExpenseTotal = periodExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
     const periodProfit = periodRevenue - periodExpenseTotal;
 

@@ -335,7 +335,7 @@ export function useStrategicIntelligence() {
     periodCampaignAssets.forEach(ca => {
       const aid = ca.asset_id;
       if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
-      assetMap[aid].revenue += Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      assetMap[aid].revenue += Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
       assetMap[aid].printCost += Number(ca.printing_cost) || 0;
       assetMap[aid].mountCost += Number(ca.mounting_cost) || 0;
       assetMap[aid].sqft = Number(ca.total_sqft) || 0;

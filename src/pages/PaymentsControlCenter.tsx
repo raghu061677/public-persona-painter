@@ -89,7 +89,7 @@ export default function PaymentsControlCenter() {
       const { count } = await supabase
         .from("payment_confirmations" as any)
         .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
+        .eq("status", "Pending");
       setPendingConfirmations(count || 0);
     } catch (e) {
       // Graceful - metrics are optional

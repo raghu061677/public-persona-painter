@@ -186,6 +186,7 @@ export default function AssetProfitabilityReport() {
 
       // Build profitability data per asset
       const profitabilityMap = new Map<string, AssetProfitability>();
+      const audit = new RevenueAuditCollector();
 
       for (const asset of assets) {
         const assetCampaigns = campaignAssets?.filter(ca => ca.asset_id === asset.id) || [];
@@ -216,21 +217,25 @@ export default function AssetProfitabilityReport() {
           return ca && ii.campaign_asset_id;
         }) || [];
         
-        revenue = assetInvoiceItems.reduce((sum, ii) => sum + Math.max(0, Number(ii.line_total) || 0), 0);
+        revenue = assetInvoiceItems.reduce((sum, ii) => {
+          const raw = Number(ii.line_total) || 0;
+          return sum + audit.clamp(raw, 'invoice_items', 'line_total', ii.invoice_id || asset.id, `asset=${asset.id}`);
+        }, 0);
         
         // If no invoice data, estimate from campaign assets (non-negative only)
         if (revenue === 0 && assetCampaigns.length > 0) {
           revenue = assetCampaigns.reduce((sum, ca) => {
-            const val = Number(ca.total_price) || Number(ca.negotiated_rate) || Number(ca.card_rate) || 0;
-            return sum + Math.max(0, val);
+            const totalPrice = Number(ca.total_price) || 0;
+            const negRate = Number(ca.negotiated_rate) || 0;
+            const cardRate = Number(ca.card_rate) || 0;
+            const val = totalPrice || negRate || cardRate;
+            const field = totalPrice ? 'total_price' : negRate ? 'negotiated_rate' : 'card_rate';
+            return sum + audit.clamp(val, 'campaign_assets', field, asset.id);
           }, 0);
         }
 
-        // Safeguard: revenue must never be negative
-        if (revenue < 0) {
-          console.warn(`[AssetProfitability] Negative revenue clamped to 0 for asset ${asset.id}:`, revenue);
-          revenue = 0;
-        }
+        // Final safeguard
+        revenue = audit.clamp(revenue, 'computed', 'final_revenue', asset.id);
 
         // Power costs
         const assetPowerBills = powerBills?.filter(pb => pb.asset_id === asset.id) || [];

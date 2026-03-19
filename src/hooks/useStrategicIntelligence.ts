@@ -454,12 +454,15 @@ export function useStrategicIntelligence() {
     const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
 
     // STRICT: Top city - sanitize to non-negative booked values only
+    const topCityAudit = new RevenueAuditCollector();
     const cityRev: Record<string, number> = {};
     periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
-      const rev = Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      const rev = topCityAudit.clamp(rawRev, 'campaign_assets', 'total_price', ca.asset_id, `topCity=${c}`);
       if (rev > 0) cityRev[c] = (cityRev[c] || 0) + rev;
     });
+    topCityAudit.summarize('TopCity');
     const topCityEntry = Object.entries(cityRev).sort((a, b) => b[1] - a[1])[0];
 
     // STRICT: Best ROI - only assets with cost > 0 and non-null ROI

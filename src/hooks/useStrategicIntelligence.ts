@@ -397,12 +397,15 @@ export function useStrategicIntelligence() {
   // ── C) Concession Risk ──
   const concessionRisk = useMemo((): ConcessionRiskRow[] => {
     const cityMap: Record<string, { revenue: number; bookedAssets: Set<string> }> = {};
+    const audit = new RevenueAuditCollector();
     periodCampaignAssets.forEach(ca => {
       const city = ca.city || "Unknown";
       if (!cityMap[city]) cityMap[city] = { revenue: 0, bookedAssets: new Set() };
-      cityMap[city].revenue += Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      cityMap[city].revenue += audit.clamp(rawRev, 'campaign_assets', 'total_price', ca.asset_id, `city=${city}`);
       cityMap[city].bookedAssets.add(ca.asset_id);
     });
+    audit.summarize('ConcessionRisk');
 
     const totalAssetsByCity: Record<string, number> = {};
     mediaAssets.forEach(ma => {

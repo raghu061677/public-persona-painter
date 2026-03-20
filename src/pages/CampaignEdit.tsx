@@ -14,6 +14,8 @@ import { ArrowLeft, CalendarIcon, Save, X } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { campaignEntitySchema } from "@/lib/validation/schemas";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
 import { CampaignAssetsTable } from "@/components/campaigns/CampaignAssetsTable";

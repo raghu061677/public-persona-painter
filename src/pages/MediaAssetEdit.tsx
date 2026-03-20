@@ -188,6 +188,7 @@ export default function MediaAssetEdit() {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const parsed = parseDimensions(formData.dimensions);

@@ -106,6 +106,7 @@ export default function CampaignEdit() {
   
   // Enterprise RBAC access mode
   const perms = useRecordPermissions(campaignRecord, 'campaigns');
+  const { validate: validateCampaign } = useFormValidation(campaignEntitySchema);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);

@@ -74,25 +74,19 @@ export default function RevenueControlCenter() {
         .select("amount")
         .eq("company_id", company.id);
 
-      // Fetch campaign assets for city-level breakdown
-      const { data: campaignAssets } = await supabase
-        .from("campaign_assets")
-        .select("city, total_price, negotiated_rate, card_rate, campaign_id")
-        .eq("campaign_id", company.id ? undefined : "");
-
-      // Fetch campaigns to filter campaign_assets by company
+      // Fetch campaigns for this company to filter campaign_assets
       const { data: campaigns } = await supabase
         .from("campaigns")
         .select("id")
         .eq("company_id", company.id);
       const campaignIds = new Set((campaigns || []).map(c => c.id));
 
-      // Re-fetch campaign assets filtered by company campaigns
-      const { data: filteredCampaignAssets } = await supabase
+      // Fetch campaign assets and filter by company campaigns
+      const { data: allCampaignAssets } = await supabase
         .from("campaign_assets")
         .select("city, total_price, negotiated_rate, card_rate, campaign_id");
 
-      const companyCampaignAssets = (filteredCampaignAssets || []).filter(a => campaignIds.has(a.campaign_id));
+      const companyCampaignAssets = (allCampaignAssets || []).filter(a => campaignIds.has(a.campaign_id));
 
       // Fetch total expenses for expense impact
       const { data: expensesData } = await supabase

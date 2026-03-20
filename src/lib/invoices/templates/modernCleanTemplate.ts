@@ -421,13 +421,13 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(17, 24, 39);
-  doc.text('Bank: HDFC Bank Limited', leftMargin + 4, bankY);
+  doc.text(`Bank: ${bankDetails.bankName}`, leftMargin + 4, bankY);
   bankY += 5;
-  doc.text('Branch: Karkhana Road, Secunderabad 500009', leftMargin + 4, bankY);
+  doc.text(`Branch: ${bankDetails.branch}`, leftMargin + 4, bankY);
   bankY += 5;
-  doc.text('A/C No: 50200010727301', leftMargin + 4, bankY);
+  doc.text(`A/C No: ${bankDetails.accountNo}`, leftMargin + 4, bankY);
   bankY += 5;
-  doc.text('IFSC: HDFC0001555', leftMargin + 4, bankY);
+  doc.text(`IFSC: ${bankDetails.ifsc}`, leftMargin + 4, bankY);
 
   // RIGHT: Financial Summary
   const summaryResult = renderInvoiceSummaryTable({

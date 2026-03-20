@@ -346,10 +346,10 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   doc.setFont('helvetica', 'normal');
 
   const bankDetails = [
-    'Bank Name: HDFC Bank',
-    'Account Number: 50200010727301',
-    'IFSC Code: HDFC0001555',
-    'Branch: Karkhana Road',
+    `Bank Name: ${bankInfo.bankName}`,
+    `Account Number: ${bankInfo.accountNo}`,
+    `IFSC Code: ${bankInfo.ifsc}`,
+    `Branch: ${bankInfo.branch}`,
   ];
 
   bankDetails.forEach((line) => {

@@ -512,6 +512,67 @@ export default function CompanyProfile() {
         </div>
       </SettingsCard>
 
+      {/* Terms & Conditions */}
+      <SettingsCard title="Terms & Conditions">
+        <InfoAlert variant="info" className="mb-6">
+          These terms will appear on all invoices, quotations, proforma invoices, release orders, and work orders. One term per line.
+        </InfoAlert>
+
+        <div className="space-y-4">
+          {(formData.terms_conditions.length === 0
+            ? ['']
+            : formData.terms_conditions
+          ).map((term, idx) => (
+            <div key={idx} className="flex items-start gap-2">
+              <span className="text-sm text-muted-foreground mt-2.5 w-6 shrink-0">{idx + 1}.</span>
+              <Textarea
+                value={term}
+                rows={1}
+                className="min-h-[38px] resize-none"
+                onChange={(e) => {
+                  const updated = [...formData.terms_conditions];
+                  updated[idx] = e.target.value;
+                  setFormData({ ...formData, terms_conditions: updated });
+                }}
+                placeholder="Enter term..."
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 mt-0.5"
+                onClick={() => {
+                  const updated = formData.terms_conditions.filter((_, i) => i !== idx);
+                  setFormData({ ...formData, terms_conditions: updated });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setFormData({
+                ...formData,
+                terms_conditions: [...formData.terms_conditions, ''],
+              })
+            }
+          >
+            + Add Term
+          </Button>
+
+          {formData.terms_conditions.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              No custom terms set. Default terms will be used on all documents.
+            </p>
+          )}
+        </div>
+      </SettingsCard>
+
       {/* Tax Information */}
       <SettingsCard title="Tax Information">
         <div className="space-y-6">

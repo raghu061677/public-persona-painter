@@ -81,11 +81,25 @@ export function DeleteClientDialog({
         .select('*', { count: 'exact', head: true })
         .eq('client_id', client.id);
 
+      // Check for related asset holds
+      const { count: assetHoldsCount } = await supabase
+        .from('asset_holds')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+
+      // Check for related credit notes
+      const { count: creditNotesCount } = await supabase
+        .from('credit_notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+
       setRelatedRecords({
         plans: plansCount || 0,
         campaigns: campaignsCount || 0,
         estimations: estimationsCount || 0,
         invoices: invoicesCount || 0,
+        asset_holds: assetHoldsCount || 0,
+        credit_notes: creditNotesCount || 0,
       });
     } catch (error) {
       console.error("Error checking related records:", error);

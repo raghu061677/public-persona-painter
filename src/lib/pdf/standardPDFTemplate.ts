@@ -730,8 +730,6 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
   doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bkY);
   bkY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bkY);
-  bkY += 4.5;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftMargin + 4, bkY);
   doc.setTextColor(0, 0, 0);
 
   yPos = boxY + bankBoxHeight + 5;

@@ -350,8 +350,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, lm, bkY); bkY += 4;
   doc.text(`Account No: ${BANK_DETAILS.accountNo}`, lm, bkY); bkY += 4;
-  doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, lm, bkY); bkY += 4;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, lm, bkY);
+  doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, lm, bkY);
 
   // --- RIGHT: Campaign Cost Summary ---
   const summaryRows: string[][] = [

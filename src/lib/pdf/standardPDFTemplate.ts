@@ -52,6 +52,7 @@ export interface PDFDocumentData {
   // Optional overrides
   terms?: string[];
   paymentTerms?: string;
+  company?: any; // company record for dynamic terms & bank details
 
   // Professional quotation metadata
   campaignDuration?: string;        // "01 Mar 2026 – 31 Mar 2026"

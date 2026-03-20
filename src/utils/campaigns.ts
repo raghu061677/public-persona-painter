@@ -7,10 +7,10 @@
  * NOTE: Uses atomic counter to prevent duplicates.
  * Existing campaigns with old format are unchanged.
  */
-export async function generateCampaignId(supabase: any): Promise<string> {
+export async function generateCampaignId(supabase: any, userId?: string | null): Promise<string> {
   // Use the new v2 function that generates CAM-YYYYMM-#### format
-  // Pass null explicitly for the p_user_id parameter
-  const { data, error } = await supabase.rpc('generate_campaign_id_v2', { p_user_id: null });
+  // Pass user_id so the RPC uses the correct company counter
+  const { data, error } = await supabase.rpc('generate_campaign_id_v2', { p_user_id: userId ?? null });
   
   if (error) {
     console.error('Error generating campaign ID via RPC:', error);

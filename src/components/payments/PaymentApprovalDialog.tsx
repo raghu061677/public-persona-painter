@@ -99,7 +99,7 @@ export function PaymentApprovalDialog({
           company_id: confirmation.company_id,
           invoice_id: confirmation.invoice_id,
           client_id: confirmation.client_id,
-          amount: parsedAmount,
+          amount: parsed.amount,
           method: method,
           reference_no: reference || null,
           payment_date: paymentDate,
@@ -130,7 +130,7 @@ export function PaymentApprovalDialog({
         .from("payment_confirmations")
         .update({
           status: "Approved",
-          approved_amount: parsedAmount,
+          approved_amount: parsed.amount,
           approved_method: method,
           approved_reference: reference || null,
           approved_date: paymentDate,
@@ -170,9 +170,9 @@ export function PaymentApprovalDialog({
 
       // Trigger payment email notifications
       try {
-        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsedAmount, balance_due: 0, client_name: confirmation.client_name };
+        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsed.amount, balance_due: 0, client_name: confirmation.client_name };
         const emailPayload = buildInvoicePayload(invoiceData, { name: confirmation.client_name }, company);
-        emailPayload.amount_paid = `₹${parsedAmount.toLocaleString('en-IN')}`;
+        emailPayload.amount_paid = `₹${parsed.amount.toLocaleString('en-IN')}`;
         triggerEmail('payment_received_internal', emailPayload, [{ to: company?.email || '' }], confirmation.invoice_id || '');
         // Client receipt notification (confirm mode)
         if (confirmation.client_id) {
@@ -187,7 +187,7 @@ export function PaymentApprovalDialog({
 
       toast({
         title: "Payment Approved",
-        description: `Payment of ₹${parsedAmount.toLocaleString("en-IN")} recorded. Receipt ${receipt?.receipt_no || ""} will be sent.`,
+        description: `Payment of ₹${parsed.amount.toLocaleString("en-IN")} recorded. Receipt ${receipt?.receipt_no || ""} will be sent.`,
       });
 
       onApproved();

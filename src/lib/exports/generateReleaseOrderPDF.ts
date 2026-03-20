@@ -93,16 +93,7 @@ const SERVICE_PROVIDER = {
   gstin: '36AATFM4107H2Z3',
 };
 
-const DEFAULT_RO_TERMS = [
-  'Advance Payment & Purchase Order is Mandatory to start the campaign.',
-  'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-  'Site available date may change in case of present display Renewal.',
-  'Site Availability changes every minute, please double check site available dates when you confirm the sites.',
-  'Campaign Execution takes 2 days in city and 4 days in upcountry.',
-  'Artwork must be ready before confirming the sites. Undelivered flex within 5 days will result in site release.',
-  'Damaged flex/vinyl is the client\'s responsibility to replace.',
-  'Renewal requests must be made at least 10 days before site expiry.',
-];
+import { STANDARD_SHORT_TERMS, renderTermsBoxPDF as renderStdTermsBox } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 

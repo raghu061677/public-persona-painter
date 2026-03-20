@@ -438,24 +438,15 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   // @ts-ignore
   y = doc.lastAutoTable.finalY + 8;
 
-  // ===== TERMS & CONDITIONS =====
-  if (y + 50 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
-
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138);
-  doc.text('Terms & Conditions', lm, y);
-  y += 6;
-  doc.setFontSize(7.5);
-  doc.setFont('NotoSans', 'normal');
-  doc.setTextColor(0, 0, 0);
-
-  RO_TERMS.forEach((term, idx) => {
-    if (y + 8 > ph - MARGINS.bottom - 30) { doc.addPage(); y = MARGINS.top; }
-    const text = `${idx + 1}. ${term}`;
-    const lines = doc.splitTextToSize(text, cw);
-    lines.forEach((line: string) => { doc.text(line, lm, y); y += 3.8; });
-    y += 1.5;
+  // ===== TERMS & CONDITIONS (Shared Standard) =====
+  y = renderTermsBoxPDF(doc, y, {
+    pageWidth: pw,
+    pageHeight: ph,
+    leftMargin: lm,
+    rightMargin: rm,
+    bottomMargin: MARGINS.bottom,
+    fontFamily: 'NotoSans',
+    onNewPage: () => { doc.addPage(); return MARGINS.top; },
   });
 
   y += 8;

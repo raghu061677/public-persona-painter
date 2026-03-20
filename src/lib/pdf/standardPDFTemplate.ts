@@ -520,56 +520,21 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   yPos += 2;
 
-  // ========== 7. TERMS & CONDITIONS ==========
-  // Calculate space needed for terms and signatory
-  const termsToUse = data.terms?.length
-    ? data.terms
-    : [
-        'Advance Payment & Purchase Order is Mandatory to start the campaign.',
-        'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-        'Site available date may change in case of present display Renewal.',
-        'Site Availability changes every minute, please double check site available dates when you confirm the sites.',
-        'Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.',
-        'Kindly ensure that your artwork is ready before confirming the sites. In case Design or Flex is undelivered within 5 days of confirmation, we will release the site.',
-        'In case flex / vinyl / display material is damaged, torn or vandalised, it will be your responsibility to provide us with new flex.',
-        'Renewal of site will only be entertained before 10 days of site expiry. Last moment renewal is not possible.',
-      ];
-
-  // Estimate space needed for terms (approximately 4mm per term with line breaks)
-  const estimatedTermsHeight = termsToUse.length * 8 + 40; // terms + header + signatory
-  const spaceForTerms = pageHeight - yPos - PAGE_MARGINS.bottom;
-  
-  // If not enough space for terms + signatory, add new page
-  if (spaceForTerms < estimatedTermsHeight) {
-    doc.addPage();
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, 34, 'F');
-    yPos = headerRenderers.compact(doc) + 10;
-  }
-
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'bold');
-  doc.text('Terms & Conditions:', leftMargin, yPos);
-  
-  yPos += 6;
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(7.5);
-  
-  termsToUse.forEach((term, idx) => {
-    // Check if we need a page break mid-terms
-    if (yPos + 10 > pageHeight - PAGE_MARGINS.bottom - 30) {
+  // ========== 7. TERMS & CONDITIONS (Shared Standard) ==========
+  const { renderTermsBoxPDF: renderStdTerms } = await import('@/lib/terms/standardTerms');
+  yPos = renderStdTerms(doc, yPos, {
+    pageWidth,
+    pageHeight,
+    leftMargin,
+    rightMargin,
+    bottomMargin: PAGE_MARGINS.bottom,
+    fontFamily: 'NotoSans',
+    onNewPage: () => {
       doc.addPage();
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 34, 'F');
-      yPos = headerRenderers.compact(doc) + 10;
-    }
-    const termText = `${idx + 1}. ${term}`;
-    const lines = doc.splitTextToSize(termText, pageWidth - leftMargin - rightMargin);
-    lines.forEach((line: string) => {
-      doc.text(line, leftMargin, yPos);
-      yPos += 3.8;
-    });
-    yPos += 1.5;
+      return headerRenderers.compact(doc) + 10;
+    },
   });
 
   yPos += 8;

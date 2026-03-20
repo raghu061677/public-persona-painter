@@ -25,6 +25,8 @@ interface RelatedRecords {
   campaigns: number;
   estimations: number;
   invoices: number;
+  asset_holds: number;
+  credit_notes: number;
 }
 
 export function DeleteClientDialog({ 

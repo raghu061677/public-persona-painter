@@ -183,6 +183,7 @@ function renderCompactHeader(
 // ============= MAIN RENDERER =============
 
 export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob> {
+  const BANK_DETAILS = getBankDetailsFromCompany(data.company);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();

@@ -121,6 +121,7 @@ export function EditClientDialog({
         phone: client.phone || "",
         company: client.company || "",
         gst_number: client.gst_number || "",
+        pan_number: client.pan_number || "",
         state: client.state || "",
         city: client.city || "",
         address: client.address || "",

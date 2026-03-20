@@ -364,8 +364,11 @@
  
        <div className="grid grid-cols-2 gap-4 text-xs">
          <div className="border border-border p-3">
-           <h3 className="font-bold text-primary mb-2">Bank Details</h3>
-           <p>HDFC Bank Limited</p><p>Account No: 50200010727301</p><p>IFSC Code: HDFC0001555</p>
+            <h3 className="font-bold text-primary mb-2">Bank Details</h3>
+            <p>{company?.bank_name || 'HDFC Bank Limited'}</p>
+            <p>Branch: {company?.bank_branch || 'Karkhana Road, Secunderabad – 500009'}</p>
+            <p>Account No: {company?.bank_account_no || '50200010727301'}</p>
+            <p>IFSC Code: {company?.bank_ifsc || 'HDFC0001555'}</p>
          </div>
          <div className="border border-border p-3">
            <table className="w-full">

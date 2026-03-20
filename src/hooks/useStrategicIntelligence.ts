@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { RevenueAuditCollector } from "@/utils/revenueAudit";
+import { DataQualityAudit } from "@/utils/dataQualityAudit";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { addDays, differenceInDays, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, isWithinInterval } from "date-fns";
@@ -332,14 +332,15 @@ export function useStrategicIntelligence() {
   // ── E) Asset ROI Ranking (period-aware) ──
   const assetROI = useMemo((): AssetROIRow[] => {
     const assetMap: Record<string, { revenue: number; printCost: number; mountCost: number; sqft: number; bookedDays: number }> = {};
-    const audit = new RevenueAuditCollector();
+    const audit = new DataQualityAudit();
 
     periodCampaignAssets.forEach(ca => {
       const aid = ca.asset_id;
       if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
       const field = Number(ca.total_price) ? 'total_price' : 'rent_amount';
-      assetMap[aid].revenue += audit.clamp(rawRev, 'campaign_assets', field, aid);
+      assetMap[aid].revenue += audit.clampMoney(rawRev, 'campaign_assets', field, aid);
+      audit.checkDateRange(ca.booking_start_date || ca.effective_start_date, ca.booking_end_date || ca.effective_end_date, 'campaign_assets', aid, 'booking_start', 'booking_end');
       assetMap[aid].printCost += Number(ca.printing_cost) || 0;
       assetMap[aid].mountCost += Number(ca.mounting_cost) || 0;
       assetMap[aid].sqft = Number(ca.total_sqft) || 0;
@@ -397,12 +398,12 @@ export function useStrategicIntelligence() {
   // ── C) Concession Risk ──
   const concessionRisk = useMemo((): ConcessionRiskRow[] => {
     const cityMap: Record<string, { revenue: number; bookedAssets: Set<string> }> = {};
-    const audit = new RevenueAuditCollector();
+    const audit = new DataQualityAudit();
     periodCampaignAssets.forEach(ca => {
       const city = ca.city || "Unknown";
       if (!cityMap[city]) cityMap[city] = { revenue: 0, bookedAssets: new Set() };
       const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-      cityMap[city].revenue += audit.clamp(rawRev, 'campaign_assets', 'total_price', ca.asset_id, `city=${city}`);
+      cityMap[city].revenue += audit.clampMoney(rawRev, 'campaign_assets', 'total_price', ca.asset_id);
       cityMap[city].bookedAssets.add(ca.asset_id);
     });
     audit.summarize('ConcessionRisk');
@@ -454,12 +455,12 @@ export function useStrategicIntelligence() {
     const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
 
     // STRICT: Top city - sanitize to non-negative booked values only
-    const topCityAudit = new RevenueAuditCollector();
+    const topCityAudit = new DataQualityAudit();
     const cityRev: Record<string, number> = {};
     periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
       const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-      const rev = topCityAudit.clamp(rawRev, 'campaign_assets', 'total_price', ca.asset_id, `topCity=${c}`);
+      const rev = topCityAudit.clampMoney(rawRev, 'campaign_assets', 'total_price', ca.asset_id);
       if (rev > 0) cityRev[c] = (cityRev[c] || 0) + rev;
     });
     topCityAudit.summarize('TopCity');

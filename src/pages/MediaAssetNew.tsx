@@ -53,7 +53,7 @@ const MEDIA_TYPE_CODES = [
 export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
+  const { fieldErrors, validate: validateAsset, clearError } = useFormValidation(mediaAssetEntitySchema);
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{
     id: string;
     photo_url: string;

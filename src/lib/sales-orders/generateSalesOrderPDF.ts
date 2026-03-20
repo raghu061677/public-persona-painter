@@ -341,6 +341,7 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   yPos += 10;
 
   // ========== BANK DETAILS ==========
+  const bankInfo = getBankDetailsFromCompany(data.company);
   doc.setFont('helvetica', 'bold');
   doc.text('Bank Details:', 15, yPos);
   yPos += 6;

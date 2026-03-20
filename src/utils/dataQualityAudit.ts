@@ -244,6 +244,9 @@ export class DataQualityAudit {
       console.groupEnd();
     }
 
+    // Feed the in-memory store for admin Data Health Dashboard
+    auditStore.capture(summary);
+
     return summary;
   }
 

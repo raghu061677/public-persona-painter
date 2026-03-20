@@ -89,6 +89,7 @@ export default function CompanyProfile() {
             bank_account_name: (data as any).bank_account_name || (data as any).name || "Matrix Network Solutions",
             bank_account_no: (data as any).bank_account_no || "50200010727301",
             bank_ifsc: (data as any).bank_ifsc || "HDFC0001555",
+            terms_conditions: (data as any).terms_conditions || [],
           });
         }
       } catch (error) {

@@ -52,6 +52,7 @@ export default function CompanyProfile() {
     bank_account_name: "Matrix Network Solutions",
     bank_account_no: "50200010727301",
     bank_ifsc: "HDFC0001555",
+    terms_conditions: [] as string[],
   });
 
   useEffect(() => {

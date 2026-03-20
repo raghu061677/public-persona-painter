@@ -175,7 +175,6 @@ const BANK_DETAILS = {
   branch: 'Karkhana Road, Secunderabad – 500009',
   accountNo: '50200010727301',
   ifsc: 'HDFC0001555',
-  micr: '500240026',
 };
 
 const PAGE_MARGINS = {
@@ -466,8 +465,6 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
   bankY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, bankBoxX + bankPad, bankY);
 
   // Total in words below the summary table
   summaryY += 3;
@@ -733,8 +730,6 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
   doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bkY);
   bkY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bkY);
-  bkY += 4.5;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftMargin + 4, bkY);
   doc.setTextColor(0, 0, 0);
 
   yPos = boxY + bankBoxHeight + 5;

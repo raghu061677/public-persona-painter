@@ -510,6 +510,14 @@ export default function ClientDetail() {
                     </div>
                   </div>
 
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 mt-1 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">PAN Number</p>
+                      <p className="text-sm text-muted-foreground">{(client as any).pan_number || "Not provided"}</p>
+                    </div>
+                  </div>
+
                   {client.contact_person && (
                     <div className="flex items-start gap-2">
                       <Users className="h-4 w-4 mt-1 text-muted-foreground" />

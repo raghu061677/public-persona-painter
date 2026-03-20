@@ -176,3 +176,7 @@ export type MediaAssetEntityFormData = z.infer<typeof mediaAssetEntitySchema>;
 export type CampaignExtendFormData = z.infer<typeof campaignExtendSchema>;
 export type CampaignRenewFormData = z.infer<typeof campaignRenewSchema>;
 export type MonthlyInvoiceFormData = z.infer<typeof monthlyInvoiceSchema>;
+export type AssetHoldFormData = z.infer<typeof assetHoldSchema>;
+export type BulkEditMediaAssetFormData = z.infer<typeof bulkEditMediaAssetSchema>;
+export type LeadFormData = z.infer<typeof leadSchema>;
+export type PlanInlinePricingFormData = z.infer<typeof planInlinePricingSchema>;

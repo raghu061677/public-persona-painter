@@ -162,8 +162,19 @@ export function ConvertLeadToClientDialog({
       toast.error("Company information not available");
       return;
     }
-    if (!newClientData.name || !newClientData.state) {
-      toast.error("Name and state are required");
+
+    // Validate lead data using schema
+    const result = leadSchema.safeParse({
+      name: newClientData.name,
+      company: newClientData.company,
+      email: lead.email || "",
+      phone: lead.phone || "",
+      state: newClientData.state,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      toast.error(firstError?.message || "Please fix validation errors");
       return;
     }
 

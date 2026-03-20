@@ -19,7 +19,8 @@ import {
 import { formatCurrency } from '@/utils/mediaAssets';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import * as XLSX from 'xlsx';
-import { RevenueAuditCollector } from '@/utils/revenueAudit';
+import { DataQualityAudit } from '@/utils/dataQualityAudit';
+import { INVOICE_STATUSES } from '@/lib/validation/status';
 
 interface AssetProfitability {
   asset_id: string;

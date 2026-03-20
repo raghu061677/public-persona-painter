@@ -31,6 +31,7 @@ async function loadStampImage(): Promise<string | undefined> {
 }
 
 export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
+  const bankDetails = getBankDetailsFromCompany(data.company);
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

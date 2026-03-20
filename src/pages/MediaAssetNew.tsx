@@ -15,6 +15,10 @@ import { Combobox } from "@/components/ui/combobox";
 import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form";
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { mediaAssetEntitySchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
+import { safePositiveMoney } from "@/lib/validation/money";
 import { generateMediaAssetCode } from "@/lib/codeGenerator";
 import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
@@ -50,6 +54,7 @@ export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
+  const { fieldErrors, validate: validateAsset, clearError } = useFormValidation(mediaAssetEntitySchema);
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{
     id: string;
     photo_url: string;
@@ -163,18 +168,20 @@ export default function MediaAssetNew() {
     setLoading(true);
 
     try {
-      // Validation
-      if (!formData.city || !formData.media_type) {
-        throw new Error("City and Media Type are required");
-      }
-      if (!formData.location || !formData.area) {
-        throw new Error("Location and Area are required");
-      }
-      if (!formData.card_rate) {
-        throw new Error("Card Rate is required");
-      }
-      if (!formData.dimensions) {
-        throw new Error("Dimensions are required");
+      // Schema validation
+      const validated = validateAsset({
+        location: formData.location,
+        area: formData.area,
+        city: formData.city,
+        media_type: formData.media_type,
+        dimensions: formData.dimensions,
+        card_rate: safePositiveMoney(formData.card_rate),
+        base_rate: formData.base_rate ? safePositiveMoney(formData.base_rate) : undefined,
+        status: formData.status as any,
+      });
+      if (!validated) {
+        setLoading(false);
+        return;
       }
 
       // Get authenticated user

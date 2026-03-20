@@ -14,6 +14,8 @@ import { ArrowLeft, CalendarIcon, Save, X } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { campaignEntitySchema } from "@/lib/validation/schemas";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
 import { CampaignAssetsTable } from "@/components/campaigns/CampaignAssetsTable";
@@ -104,6 +106,7 @@ export default function CampaignEdit() {
   
   // Enterprise RBAC access mode
   const perms = useRecordPermissions(campaignRecord, 'campaigns');
+  const { validate: validateCampaign } = useFormValidation(campaignEntitySchema);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);
@@ -981,17 +984,17 @@ export default function CampaignEdit() {
 
 
   const handleSave = async () => {
-    // Validation
-    if (!campaignName.trim()) {
-      toast({ title: "Error", description: "Campaign name is required", variant: "destructive" });
-      return;
-    }
-    if (!clientId) {
-      toast({ title: "Error", description: "Client is required", variant: "destructive" });
-      return;
-    }
-    if (!startDate || !endDate) {
-      toast({ title: "Error", description: "Start and end dates are required", variant: "destructive" });
+    // Schema validation
+    const parsed = validateCampaign({
+      name: campaignName,
+      client_id: clientId,
+      start_date: startDate ? format(startDate, 'yyyy-MM-dd') : '',
+      end_date: endDate ? format(endDate, 'yyyy-MM-dd') : '',
+      status,
+      notes,
+    });
+    if (!parsed) {
+      toast({ title: "Validation Error", description: "Please fix the highlighted fields", variant: "destructive" });
       return;
     }
     if (campaignAssets.length === 0) {

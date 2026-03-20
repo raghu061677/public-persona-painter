@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Trash2, Save, Send, History, ShieldAlert, Calendar } from 'lucide-react';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { campaignEntitySchema } from '@/lib/validation/schemas';
+import { FieldError } from '@/components/ui/field-error';
 import { ClientSelect } from '@/components/shared/ClientSelect';
 import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
@@ -57,6 +60,7 @@ export default function CampaignCreate() {
   const { company } = useCompany();
   const { isAdmin } = useAuth();
   const { checkConflict, checking } = useAssetConflictCheck();
+  const { fieldErrors: campaignErrors, validate: validateCampaign, clearError: clearCampaignError } = useFormValidation(campaignEntitySchema);
   
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
@@ -458,11 +462,21 @@ export default function CampaignCreate() {
     }
   };
 
+
   const handleSubmit = async (autoAssign: boolean = false) => {
-    if (!formData.campaign_name || !formData.client_id || !formData.start_date || !formData.end_date) {
+    // Schema validation
+    const parsed = validateCampaign({
+      name: formData.campaign_name,
+      client_id: formData.client_id,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      status: isHistoricalEntry ? formData.status : 'Planned',
+      notes: formData.notes,
+    });
+    if (!parsed) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
+        title: 'Validation Error',
+        description: 'Please fix the highlighted fields',
         variant: 'destructive',
       });
       return;

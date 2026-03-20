@@ -14,6 +14,9 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
 import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { invoiceCreateSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 
 interface Campaign {
   id: string;
@@ -104,7 +107,17 @@ export default function InvoiceCreate() {
     setLoading(false);
   };
 
+  const { fieldErrors, validate, clearError } = useFormValidation(invoiceCreateSchema);
+
   const handleCreateWithProfitCheck = () => {
+    // Schema validation first
+    const parsed = validate({
+      campaign_id: selectedCampaignId,
+      invoice_date: invoiceDate,
+      due_date: dueDate,
+    });
+    if (!parsed) return;
+
     if (!selectedCampaign) {
       toast({ title: "Error", description: "Please select a campaign", variant: "destructive" });
       return;
@@ -260,7 +273,7 @@ export default function InvoiceCreate() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Campaign</Label>
-                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <Select value={selectedCampaignId} onValueChange={(v) => { setSelectedCampaignId(v); clearError("campaign_id"); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a campaign..." />
                   </SelectTrigger>
@@ -283,6 +296,7 @@ export default function InvoiceCreate() {
                     )}
                   </SelectContent>
                 </Select>
+                <FieldError error={fieldErrors.campaign_id} />
               </div>
 
               {selectedCampaign && (
@@ -325,8 +339,9 @@ export default function InvoiceCreate() {
                   id="invoiceDate"
                   type="date"
                   value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  onChange={(e) => { setInvoiceDate(e.target.value); clearError("invoice_date"); }}
                 />
+                <FieldError error={fieldErrors.invoice_date} />
               </div>
 
               <div className="space-y-2">
@@ -335,8 +350,9 @@ export default function InvoiceCreate() {
                   id="dueDate"
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => { setDueDate(e.target.value); clearError("due_date"); }}
                 />
+                <FieldError error={fieldErrors.due_date} />
               </div>
 
               {selectedCampaign && (

@@ -25,6 +25,10 @@ import { Phone, Mail, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { paymentApprovalSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
+import { safePositiveMoney } from "@/lib/validation/money";
 
 interface PaymentConfirmation {
   id: string;
@@ -68,26 +72,18 @@ export function PaymentApprovalDialog({
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [sendEmail, setSendEmail] = useState(true);
 
-  const handleApprove = async () => {
-    // Validate
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Amount",
-        description: "Please enter a valid payment amount",
-      });
-      return;
-    }
+  const { fieldErrors, validate, clearError } = useFormValidation(paymentApprovalSchema);
 
-    if (!confirmation.invoice_id) {
-      toast({
-        variant: "destructive",
-        title: "Missing Invoice",
-        description: "This confirmation is not linked to an invoice",
-      });
-      return;
-    }
+  const handleApprove = async () => {
+    // Schema validation
+    const parsed = validate({
+      amount: safePositiveMoney(amount),
+      method,
+      reference,
+      paymentDate,
+      invoice_id: confirmation.invoice_id || "",
+    });
+    if (!parsed) return;
 
     try {
       setLoading(true);
@@ -103,7 +99,7 @@ export function PaymentApprovalDialog({
           company_id: confirmation.company_id,
           invoice_id: confirmation.invoice_id,
           client_id: confirmation.client_id,
-          amount: parsedAmount,
+          amount: parsed.amount,
           method: method,
           reference_no: reference || null,
           payment_date: paymentDate,
@@ -134,7 +130,7 @@ export function PaymentApprovalDialog({
         .from("payment_confirmations")
         .update({
           status: "Approved",
-          approved_amount: parsedAmount,
+          approved_amount: parsed.amount,
           approved_method: method,
           approved_reference: reference || null,
           approved_date: paymentDate,
@@ -174,9 +170,9 @@ export function PaymentApprovalDialog({
 
       // Trigger payment email notifications
       try {
-        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsedAmount, balance_due: 0, client_name: confirmation.client_name };
+        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsed.amount, balance_due: 0, client_name: confirmation.client_name };
         const emailPayload = buildInvoicePayload(invoiceData, { name: confirmation.client_name }, company);
-        emailPayload.amount_paid = `₹${parsedAmount.toLocaleString('en-IN')}`;
+        emailPayload.amount_paid = `₹${parsed.amount.toLocaleString('en-IN')}`;
         triggerEmail('payment_received_internal', emailPayload, [{ to: company?.email || '' }], confirmation.invoice_id || '');
         // Client receipt notification (confirm mode)
         if (confirmation.client_id) {
@@ -191,7 +187,7 @@ export function PaymentApprovalDialog({
 
       toast({
         title: "Payment Approved",
-        description: `Payment of ₹${parsedAmount.toLocaleString("en-IN")} recorded. Receipt ${receipt?.receipt_no || ""} will be sent.`,
+        description: `Payment of ₹${parsed.amount.toLocaleString("en-IN")} recorded. Receipt ${receipt?.receipt_no || ""} will be sent.`,
       });
 
       onApproved();
@@ -247,14 +243,15 @@ export function PaymentApprovalDialog({
                 id="amount"
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); clearError("amount"); }}
                 placeholder="Enter amount"
               />
+              <FieldError error={fieldErrors.amount} />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="method">Payment Method *</Label>
-              <Select value={method} onValueChange={setMethod}>
+              <Select value={method} onValueChange={(v) => { setMethod(v); clearError("method"); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
@@ -268,6 +265,7 @@ export function PaymentApprovalDialog({
                   <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                 </SelectContent>
               </Select>
+              <FieldError error={fieldErrors.method} />
             </div>
 
             <div className="grid gap-2">
@@ -286,8 +284,9 @@ export function PaymentApprovalDialog({
                 id="paymentDate"
                 type="date"
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
+                onChange={(e) => { setPaymentDate(e.target.value); clearError("paymentDate"); }}
               />
+              <FieldError error={fieldErrors.paymentDate} />
             </div>
           </div>
 

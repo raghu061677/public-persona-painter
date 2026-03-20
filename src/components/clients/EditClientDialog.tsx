@@ -85,6 +85,7 @@ export function EditClientDialog({
     phone: "",
     company: "",
     gst_number: "",
+    pan_number: "",
     state: "",
     city: "",
     address: "",

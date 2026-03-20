@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import {
@@ -21,6 +21,7 @@ import { generateClientCode } from "@/lib/codeGenerator";
 import { getStateCode } from "@/lib/stateCodeMapping";
 import { type MatchResult, getMergeAction } from "@/lib/leadClientMatching";
 import { useNavigate } from "react-router-dom";
+import { leadSchema } from "@/lib/validation/schemas";
 
 interface Lead {
   id: string;
@@ -161,8 +162,19 @@ export function ConvertLeadToClientDialog({
       toast.error("Company information not available");
       return;
     }
-    if (!newClientData.name || !newClientData.state) {
-      toast.error("Name and state are required");
+
+    // Validate lead data using schema
+    const result = leadSchema.safeParse({
+      name: newClientData.name,
+      company: newClientData.company,
+      email: lead.email || "",
+      phone: lead.phone || "",
+      state: newClientData.state,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      toast.error(firstError?.message || "Please fix validation errors");
       return;
     }
 

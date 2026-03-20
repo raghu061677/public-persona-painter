@@ -56,30 +56,43 @@ export default function RevenueControlCenter() {
   }, [company?.id]);
 
   const loadOverview = async () => {
+    if (!company?.id) return;
     try {
       setLoading(true);
       
       // Fetch invoices for revenue data
       const { data: invoices, error: invError } = await supabase
         .from("invoices")
-        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id");
+        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id")
+        .eq("company_id", company.id);
 
       if (invError) throw invError;
 
       // Fetch payment records for collected amounts
       const { data: payments } = await supabase
         .from("payment_records")
-        .select("amount");
+        .select("amount")
+        .eq("company_id", company.id);
 
-      // Fetch campaign assets for city-level breakdown
-      const { data: campaignAssets } = await supabase
+      // Fetch campaigns for this company to filter campaign_assets
+      const { data: campaigns } = await supabase
+        .from("campaigns")
+        .select("id")
+        .eq("company_id", company.id);
+      const campaignIds = new Set((campaigns || []).map(c => c.id));
+
+      // Fetch campaign assets and filter by company campaigns
+      const { data: allCampaignAssets } = await supabase
         .from("campaign_assets")
         .select("city, total_price, negotiated_rate, card_rate, campaign_id");
+
+      const companyCampaignAssets = (allCampaignAssets || []).filter(a => campaignIds.has(a.campaign_id));
 
       // Fetch total expenses for expense impact
       const { data: expensesData } = await supabase
         .from("expenses")
-        .select("total_amount");
+        .select("total_amount")
+        .eq("company_id", company.id);
       setTotalExpenses((expensesData || []).reduce((s, e) => s + (e.total_amount || 0), 0));
 
       const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
@@ -131,7 +144,7 @@ export default function RevenueControlCenter() {
 
       // Top city
       const cityMap = new Map<string, number>();
-      campaignAssets?.forEach((a) => {
+      companyCampaignAssets.forEach((a) => {
         if (!a.city) return;
         const val = a.total_price || a.negotiated_rate || a.card_rate || 0;
         cityMap.set(a.city, (cityMap.get(a.city) || 0) + val);

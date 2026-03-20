@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Columns, RotateCcw, Download } from "lucide-react";
@@ -70,11 +70,15 @@ export function ListToolbar({
   const [showColumns, setShowColumns] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
 
+  // Stable ref for callback to avoid debounce resets on every render
+  const onSearchChangeRef = useRef(onSearchChange);
+  onSearchChangeRef.current = onSearchChange;
+
   // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => onSearchChange(localSearch), 300);
+    const t = setTimeout(() => onSearchChangeRef.current(localSearch), 300);
     return () => clearTimeout(t);
-  }, [localSearch, onSearchChange]);
+  }, [localSearch]);
 
   // Sync external changes
   useEffect(() => {

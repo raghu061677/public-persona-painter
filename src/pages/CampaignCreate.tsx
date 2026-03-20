@@ -462,7 +462,6 @@ export default function CampaignCreate() {
     }
   };
 
-  const { fieldErrors: campaignErrors, validate: validateCampaign, clearError: clearCampaignError } = useFormValidation(campaignEntitySchema);
 
   const handleSubmit = async (autoAssign: boolean = false) => {
     // Schema validation

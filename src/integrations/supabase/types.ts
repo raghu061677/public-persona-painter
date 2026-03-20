@@ -10778,9 +10778,13 @@ export type Database = {
           msme_registered: boolean | null
           pan: string | null
           tan_number: string | null
+          tcs_default_rate: number | null
+          tcs_enabled: boolean | null
+          tcs_threshold: number | null
           tds_applicable: boolean | null
           tds_enabled: boolean | null
           tds_percentage: number | null
+          tds_verify_pan: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -10801,9 +10805,13 @@ export type Database = {
           msme_registered?: boolean | null
           pan?: string | null
           tan_number?: string | null
+          tcs_default_rate?: number | null
+          tcs_enabled?: boolean | null
+          tcs_threshold?: number | null
           tds_applicable?: boolean | null
           tds_enabled?: boolean | null
           tds_percentage?: number | null
+          tds_verify_pan?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -10824,9 +10832,13 @@ export type Database = {
           msme_registered?: boolean | null
           pan?: string | null
           tan_number?: string | null
+          tcs_default_rate?: number | null
+          tcs_enabled?: boolean | null
+          tcs_threshold?: number | null
           tds_applicable?: boolean | null
           tds_enabled?: boolean | null
           tds_percentage?: number | null
+          tds_verify_pan?: boolean | null
           updated_at?: string | null
         }
         Relationships: [

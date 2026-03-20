@@ -528,7 +528,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       doc.rect(0, 0, pageWidth, 34, 'F');
       return headerRenderers.compact(doc) + 10;
     },
-    company,
+    company: data.company,
   });
 
   yPos += 8;

@@ -178,7 +178,7 @@ const CompanyClientPortal = lazy(() => import("./pages/CompanyClientPortal"));
 const CompanyCurrencies = lazy(() => import("./pages/CompanyCurrencies"));
 const CompanyPDFTemplates = lazy(() => import("./pages/CompanyPDFTemplates"));
 const CompanyRoles = lazy(() => import("./pages/CompanyRoles"));
-const CompanyDirectTaxes = lazy(() => import("./pages/CompanyDirectTaxes"));
+
 const CompanyEInvoicing = lazy(() => import("./pages/CompanyEInvoicing"));
 const CompanyGeneral = lazy(() => import("./pages/CompanyGeneral"));
 const EmailSmtpSettings = lazy(() => import("./pages/EmailSmtpSettings"));
@@ -504,7 +504,7 @@ const App = () => (
                 <Route path="roles" element={<SG section="roles"><SPW section="roles"><CompanyRoles /></SPW></SG>} />
                 <Route path="users" element={<SG section="users"><SPW section="users"><CompanyUsersSettings /></SPW></SG>} />
                 <Route path="taxes" element={<SG section="taxes"><SPW section="taxes"><CompanyTaxes /></SPW></SG>} />
-                <Route path="direct-taxes" element={<SG section="direct_taxes"><SPW section="direct_taxes"><CompanyDirectTaxes /></SPW></SG>} />
+                <Route path="direct-taxes" element={<Navigate to="/admin/company-settings/taxes" replace />} />
                 <Route path="einvoicing" element={<SG section="einvoicing"><SPW section="einvoicing"><CompanyEInvoicing /></SPW></SG>} />
                 <Route path="e-invoicing" element={<Navigate to="/admin/company-settings/einvoicing" replace />} />
                 <Route path="general" element={<SG section="general"><SPW section="general"><CompanyGeneral /></SPW></SG>} />

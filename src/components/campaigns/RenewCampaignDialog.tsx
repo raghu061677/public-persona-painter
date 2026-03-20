@@ -163,7 +163,14 @@ export function RenewCampaignDialog({
     }
   };
 
+  const { fieldErrors, validate, clearAll } = useFormValidation(campaignRenewSchema);
+
   const handleSubmit = async () => {
+    const parsed = validate({ startDate, endDate, notes });
+    if (!parsed) {
+      toast({ title: "Validation Error", description: "Please fix date errors", variant: "destructive" });
+      return;
+    }
     if (!validated) {
       toast({ title: "Validate First", description: "Please validate availability before renewing.", variant: "destructive" });
       return;

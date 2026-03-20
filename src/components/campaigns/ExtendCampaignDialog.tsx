@@ -371,6 +371,7 @@ export function ExtendCampaignDialog({
                     </Popover>
                   )}
                 </div>
+                <FieldError error={fieldErrors.customEndDate} />
               </RadioGroup>
             </div>
 

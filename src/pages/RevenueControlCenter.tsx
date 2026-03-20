@@ -56,13 +56,15 @@ export default function RevenueControlCenter() {
   }, [company?.id]);
 
   const loadOverview = async () => {
+    if (!company?.id) return;
     try {
       setLoading(true);
       
       // Fetch invoices for revenue data
       const { data: invoices, error: invError } = await supabase
         .from("invoices")
-        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id");
+        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id")
+        .eq("company_id", company.id);
 
       if (invError) throw invError;
 

@@ -3,6 +3,7 @@
  import { formatINR } from '@/utils/finance';
  import { formatDate } from '@/utils/plans';
  import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
+ import { STANDARD_SHORT_TERMS } from '@/lib/terms/standardTerms';
  
  interface InvoiceTemplateZohoProps {
    invoiceId: string;

@@ -114,6 +114,27 @@ export function DeleteClientDialog({
     setDeleting(true);
 
     try {
+      // Nullify asset_holds client_id references (FK without CASCADE)
+      const { error: holdsError } = await supabase
+        .from('asset_holds')
+        .update({ client_id: null })
+        .eq('client_id', client.id);
+      if (holdsError) throw holdsError;
+
+      // Nullify credit_notes client_id references (FK without CASCADE)
+      const { error: creditError } = await supabase
+        .from('credit_notes')
+        .update({ client_id: null })
+        .eq('client_id', client.id);
+      if (creditError) throw creditError;
+
+      // Nullify plan_templates default_client_id references (FK without CASCADE)
+      const { error: templatesError } = await supabase
+        .from('plan_templates')
+        .update({ default_client_id: null })
+        .eq('default_client_id', client.id);
+      if (templatesError) throw templatesError;
+
       const { error } = await supabase
         .from('clients')
         .delete()

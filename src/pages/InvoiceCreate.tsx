@@ -339,8 +339,9 @@ export default function InvoiceCreate() {
                   id="invoiceDate"
                   type="date"
                   value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  onChange={(e) => { setInvoiceDate(e.target.value); clearError("invoice_date"); }}
                 />
+                <FieldError error={fieldErrors.invoice_date} />
               </div>
 
               <div className="space-y-2">
@@ -349,8 +350,9 @@ export default function InvoiceCreate() {
                   id="dueDate"
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => { setDueDate(e.target.value); clearError("due_date"); }}
                 />
+                <FieldError error={fieldErrors.due_date} />
               </div>
 
               {selectedCampaign && (

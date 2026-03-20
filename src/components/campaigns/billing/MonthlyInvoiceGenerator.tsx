@@ -431,7 +431,14 @@ export function MonthlyInvoiceGenerator({
   
   // Profitability-gated invoice generation
   const handleInvoiceWithProfitCheck = () => {
-    if (!selectedMonth || filteredPreviews.length === 0) return;
+    if (!selectedMonth) {
+      toast({ title: "Select Month", description: "Please select a billing month first.", variant: "destructive" });
+      return;
+    }
+    if (filteredPreviews.length === 0) {
+      toast({ title: "No Billable Assets", description: "No assets found for the selected month.", variant: "destructive" });
+      return;
+    }
     
     // Check profitability threshold (only if lock enabled)
     if (isProfitLockEnabled(campaign.company_id) && profitability) {

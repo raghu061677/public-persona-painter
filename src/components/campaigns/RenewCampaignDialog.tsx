@@ -405,6 +405,7 @@ export function RenewCampaignDialog({
                 </Popover>
               </div>
             </div>
+            <FieldError error={fieldErrors.endDate} />
 
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
               <span className="text-primary font-medium">Duration: </span>

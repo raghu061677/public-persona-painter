@@ -4519,8 +4519,42 @@ export type Database = {
           },
         ]
       }
+      data_quality_alert_thresholds: {
+        Row: {
+          created_at: string
+          id: string
+          increase_percent: number | null
+          is_active: boolean
+          notify_on_increase: boolean
+          severity: string
+          threshold_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          increase_percent?: number | null
+          is_active?: boolean
+          notify_on_increase?: boolean
+          severity: string
+          threshold_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          increase_percent?: number | null
+          is_active?: boolean
+          notify_on_increase?: boolean
+          severity?: string
+          threshold_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_quality_issues: {
         Row: {
+          assigned_to: string | null
           company_id: string | null
           context: string | null
           created_at: string
@@ -4534,10 +4568,14 @@ export type Database = {
           occurrences: number
           raw_value: string | null
           record_id: string
+          resolution_note: string | null
           resolved_at: string | null
+          severity: string
           table_name: string
+          workflow_status: string
         }
         Insert: {
+          assigned_to?: string | null
           company_id?: string | null
           context?: string | null
           created_at?: string
@@ -4551,10 +4589,14 @@ export type Database = {
           occurrences?: number
           raw_value?: string | null
           record_id: string
+          resolution_note?: string | null
           resolved_at?: string | null
+          severity?: string
           table_name: string
+          workflow_status?: string
         }
         Update: {
+          assigned_to?: string | null
           company_id?: string | null
           context?: string | null
           created_at?: string
@@ -4568,8 +4610,11 @@ export type Database = {
           occurrences?: number
           raw_value?: string | null
           record_id?: string
+          resolution_note?: string | null
           resolved_at?: string | null
+          severity?: string
           table_name?: string
+          workflow_status?: string
         }
         Relationships: [
           {

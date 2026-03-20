@@ -318,7 +318,7 @@ function IssuesView({
               className={`cursor-pointer transition-all hover:shadow-md border ${
                 checkFilter === check ? "ring-2 ring-primary" : count === 0 ? "opacity-50" : ""
               }`}
-              onClick={() => setCheckFilter((prev: string) => (prev === check ? "all" : check))}
+              onClick={() => setCheckFilter(checkFilter === check ? "all" : check)}
             >
               <CardContent className="pt-4 pb-3 px-3">
                 <div className="flex items-center gap-2 mb-2">

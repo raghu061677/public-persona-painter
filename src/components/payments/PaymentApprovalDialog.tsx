@@ -25,6 +25,10 @@ import { Phone, Mail, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { paymentApprovalSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
+import { safePositiveMoney } from "@/lib/validation/money";
 
 interface PaymentConfirmation {
   id: string;

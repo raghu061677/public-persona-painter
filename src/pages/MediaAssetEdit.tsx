@@ -33,7 +33,7 @@ export default function MediaAssetEdit() {
   const { isAdmin } = useAuth();
   const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const { fieldErrors, validate: validateAsset, clearError } = useFormValidation(mediaAssetEntitySchema);
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState<any>(null);
 

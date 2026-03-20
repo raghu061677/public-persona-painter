@@ -4519,6 +4519,107 @@ export type Database = {
           },
         ]
       }
+      data_quality_issues: {
+        Row: {
+          company_id: string | null
+          context: string | null
+          created_at: string
+          detail: string | null
+          field_name: string
+          first_seen: string
+          id: string
+          is_resolved: boolean
+          issue_type: string
+          last_seen: string
+          occurrences: number
+          raw_value: string | null
+          record_id: string
+          resolved_at: string | null
+          table_name: string
+        }
+        Insert: {
+          company_id?: string | null
+          context?: string | null
+          created_at?: string
+          detail?: string | null
+          field_name: string
+          first_seen?: string
+          id?: string
+          is_resolved?: boolean
+          issue_type: string
+          last_seen?: string
+          occurrences?: number
+          raw_value?: string | null
+          record_id: string
+          resolved_at?: string | null
+          table_name: string
+        }
+        Update: {
+          company_id?: string | null
+          context?: string | null
+          created_at?: string
+          detail?: string | null
+          field_name?: string
+          first_seen?: string
+          id?: string
+          is_resolved?: boolean
+          issue_type?: string
+          last_seen?: string
+          occurrences?: number
+          raw_value?: string | null
+          record_id?: string
+          resolved_at?: string | null
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_quality_issues_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_quality_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          issues_found: number | null
+          issues_new: number | null
+          issues_resolved: number | null
+          started_at: string
+          status: string
+          tables_scanned: string[] | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          issues_found?: number | null
+          issues_new?: number | null
+          issues_resolved?: number | null
+          started_at?: string
+          status?: string
+          tables_scanned?: string[] | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          issues_found?: number | null
+          issues_new?: number | null
+          issues_resolved?: number | null
+          started_at?: string
+          status?: string
+          tables_scanned?: string[] | null
+        }
+        Relationships: []
+      }
       default_role_settings: {
         Row: {
           auto_assign_role: boolean
@@ -13653,6 +13754,20 @@ export type Database = {
       }
       update_upcoming_campaigns: {
         Args: { p_today: string }
+        Returns: undefined
+      }
+      upsert_data_quality_issue: {
+        Args: {
+          p_company_id?: string
+          p_context?: string
+          p_detail?: string
+          p_field_name: string
+          p_issue_type: string
+          p_now?: string
+          p_raw_value?: string
+          p_record_id: string
+          p_table_name: string
+        }
         Returns: undefined
       }
       user_has_role: {

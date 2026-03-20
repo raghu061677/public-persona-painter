@@ -69,7 +69,6 @@ const navigationGroups: NavGroup[] = [
     title: "Taxes & Compliance",
     items: [
       { label: "Taxes", path: "/admin/company-settings/taxes", icon: Calculator, section: "taxes" },
-      { label: "Direct Taxes", path: "/admin/company-settings/direct-taxes", icon: FileBarChart, section: "direct_taxes" },
       { label: "e-Invoicing", path: "/admin/company-settings/einvoicing", icon: Receipt, section: "einvoicing" },
     ]
   },

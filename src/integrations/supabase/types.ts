@@ -3479,6 +3479,7 @@ export type Database = {
           name: string
           notes: string | null
           owner_id: string | null
+          pan_number: string | null
           payment_terms: string | null
           phone: string | null
           search_vector: unknown
@@ -3520,6 +3521,7 @@ export type Database = {
           name: string
           notes?: string | null
           owner_id?: string | null
+          pan_number?: string | null
           payment_terms?: string | null
           phone?: string | null
           search_vector?: unknown
@@ -3561,6 +3563,7 @@ export type Database = {
           name?: string
           notes?: string | null
           owner_id?: string | null
+          pan_number?: string | null
           payment_terms?: string | null
           phone?: string | null
           search_vector?: unknown

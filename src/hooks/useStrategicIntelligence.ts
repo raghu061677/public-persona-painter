@@ -332,14 +332,15 @@ export function useStrategicIntelligence() {
   // ── E) Asset ROI Ranking (period-aware) ──
   const assetROI = useMemo((): AssetROIRow[] => {
     const assetMap: Record<string, { revenue: number; printCost: number; mountCost: number; sqft: number; bookedDays: number }> = {};
-    const audit = new RevenueAuditCollector();
+    const audit = new DataQualityAudit();
 
     periodCampaignAssets.forEach(ca => {
       const aid = ca.asset_id;
       if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
       const field = Number(ca.total_price) ? 'total_price' : 'rent_amount';
-      assetMap[aid].revenue += audit.clamp(rawRev, 'campaign_assets', field, aid);
+      assetMap[aid].revenue += audit.clampMoney(rawRev, 'campaign_assets', field, aid);
+      audit.checkDateRange(ca.booking_start_date || ca.effective_start_date, ca.booking_end_date || ca.effective_end_date, 'campaign_assets', aid, 'booking_start', 'booking_end');
       assetMap[aid].printCost += Number(ca.printing_cost) || 0;
       assetMap[aid].mountCost += Number(ca.mounting_cost) || 0;
       assetMap[aid].sqft = Number(ca.total_sqft) || 0;

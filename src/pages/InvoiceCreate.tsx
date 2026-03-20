@@ -273,7 +273,7 @@ export default function InvoiceCreate() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Campaign</Label>
-                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <Select value={selectedCampaignId} onValueChange={(v) => { setSelectedCampaignId(v); clearError("campaign_id"); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a campaign..." />
                   </SelectTrigger>
@@ -296,6 +296,7 @@ export default function InvoiceCreate() {
                     )}
                   </SelectContent>
                 </Select>
+                <FieldError error={fieldErrors.campaign_id} />
               </div>
 
               {selectedCampaign && (

@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
 import { renderPaymentQRSection } from './paymentQR';
+import { getBankDetailsFromCompany } from '@/lib/bankDetails';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 

@@ -441,7 +441,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
     bottomMargin: MARGINS.bottom,
     fontFamily: 'NotoSans',
     onNewPage: () => { doc.addPage(); return MARGINS.top; },
-    company,
+    company: companyData,
   });
 
   y += 8;

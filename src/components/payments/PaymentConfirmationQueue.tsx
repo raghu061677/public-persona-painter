@@ -121,12 +121,23 @@ export function PaymentConfirmationQueue() {
       const invoiceMap = new Map((invoicesRes.data || []).map((i: any) => [i.id, i.invoice_no]));
       const receiptMap = new Map((receiptsRes.data || []).map((r: any) => [r.id, r.receipt_no]));
 
-      const mapped = rows.map((c: any) => ({
-        ...c,
-        client_name: clientMap.get(c.client_id) || undefined,
-        invoice_no: invoiceMap.get(c.invoice_id) || undefined,
-        receipt_no: receiptMap.get(c.receipt_id) || undefined,
-      }));
+      // Data quality audit
+      const audit = new DataQualityAudit();
+      const mapped = rows.map((c: any) => {
+        audit.checkStatus(c.status, PAYMENT_CONFIRMATION_STATUSES, 'payment_confirmations', c.id);
+        audit.checkOrphanRef(c.client_id, clientMap.has(c.client_id), 'payment_confirmations', 'client_id', c.id);
+        audit.checkOrphanRef(c.invoice_id, !c.invoice_id || invoiceMap.has(c.invoice_id), 'payment_confirmations', 'invoice_id', c.id);
+        audit.clampMoney(c.claimed_amount, 'payment_confirmations', 'claimed_amount', c.id);
+        audit.checkCompanyId(c.company_id, 'payment_confirmations', c.id);
+
+        return {
+          ...c,
+          client_name: clientMap.get(c.client_id) || undefined,
+          invoice_no: invoiceMap.get(c.invoice_id) || undefined,
+          receipt_no: receiptMap.get(c.receipt_id) || undefined,
+        };
+      });
+      audit.summarize('PaymentConfirmationQueue');
 
       setConfirmations(mapped);
     } catch (error: any) {

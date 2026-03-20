@@ -127,6 +127,42 @@ export const monthlyInvoiceSchema = z.object({
   gstMode: z.enum(["CGST_SGST", "IGST"]),
 });
 
+// ── Asset Hold ──
+export const assetHoldSchema = z.object({
+  hold_type: z.enum(["OPTION", "SOFT_HOLD", "HARD_BLOCK"]),
+  start_date: z.string().min(1, "Start date is required"),
+  end_date: z.string().min(1, "End date is required"),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+}).refine(data => {
+  if (data.start_date && data.end_date) {
+    return new Date(data.end_date) >= new Date(data.start_date);
+  }
+  return true;
+}, { message: "End date must be on or after start date", path: ["end_date"] });
+
+// ── Bulk Edit (Media Assets) ──
+export const bulkEditMediaAssetSchema = z.object({
+  card_rate: z.number().min(0, "Card rate must be non-negative").optional(),
+  base_rate: z.number().min(0, "Base rate must be non-negative").optional(),
+  gst_percent: z.number().min(0, "GST must be non-negative").max(100, "GST cannot exceed 100%").optional(),
+});
+
+// ── Lead Create / Convert ──
+export const leadSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(200),
+  company: z.string().trim().max(200).optional().or(z.literal("")),
+  email: z.string().trim().email("Invalid email address").max(255).optional().or(z.literal("")),
+  phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be exactly 10 digits").optional().or(z.literal("")),
+  state: z.string().min(1, "State is required").optional().or(z.literal("")),
+});
+
+// ── Plan Inline Pricing ──
+export const planInlinePricingSchema = z.object({
+  negotiated_price: z.number().min(0, "Price cannot be negative"),
+  printing_rate: z.number().min(0, "Printing rate cannot be negative").optional(),
+  mounting_rate: z.number().min(0, "Mounting rate cannot be negative").optional(),
+});
+
 // ── Reexport existing schemas ──
 export { clientSchema } from "@/lib/validations";
 

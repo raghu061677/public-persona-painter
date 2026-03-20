@@ -455,12 +455,12 @@ export function useStrategicIntelligence() {
     const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
 
     // STRICT: Top city - sanitize to non-negative booked values only
-    const topCityAudit = new RevenueAuditCollector();
+    const topCityAudit = new DataQualityAudit();
     const cityRev: Record<string, number> = {};
     periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
       const rawRev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-      const rev = topCityAudit.clamp(rawRev, 'campaign_assets', 'total_price', ca.asset_id, `topCity=${c}`);
+      const rev = topCityAudit.clampMoney(rawRev, 'campaign_assets', 'total_price', ca.asset_id);
       if (rev > 0) cityRev[c] = (cityRev[c] || 0) + rev;
     });
     topCityAudit.summarize('TopCity');

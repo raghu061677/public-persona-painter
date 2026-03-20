@@ -167,18 +167,20 @@ export default function MediaAssetNew() {
     setLoading(true);
 
     try {
-      // Validation
-      if (!formData.city || !formData.media_type) {
-        throw new Error("City and Media Type are required");
-      }
-      if (!formData.location || !formData.area) {
-        throw new Error("Location and Area are required");
-      }
-      if (!formData.card_rate) {
-        throw new Error("Card Rate is required");
-      }
-      if (!formData.dimensions) {
-        throw new Error("Dimensions are required");
+      // Schema validation
+      const validated = validateAsset({
+        location: formData.location,
+        area: formData.area,
+        city: formData.city,
+        media_type: formData.media_type,
+        dimensions: formData.dimensions,
+        card_rate: safePositiveMoney(formData.card_rate),
+        base_rate: formData.base_rate ? safePositiveMoney(formData.base_rate) : undefined,
+        status: formData.status as any,
+      });
+      if (!validated) {
+        setLoading(false);
+        return;
       }
 
       // Get authenticated user

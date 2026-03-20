@@ -984,17 +984,17 @@ export default function CampaignEdit() {
 
 
   const handleSave = async () => {
-    // Validation
-    if (!campaignName.trim()) {
-      toast({ title: "Error", description: "Campaign name is required", variant: "destructive" });
-      return;
-    }
-    if (!clientId) {
-      toast({ title: "Error", description: "Client is required", variant: "destructive" });
-      return;
-    }
-    if (!startDate || !endDate) {
-      toast({ title: "Error", description: "Start and end dates are required", variant: "destructive" });
+    // Schema validation
+    const parsed = validateCampaign({
+      name: campaignName,
+      client_id: clientId,
+      start_date: startDate ? format(startDate, 'yyyy-MM-dd') : '',
+      end_date: endDate ? format(endDate, 'yyyy-MM-dd') : '',
+      status,
+      notes,
+    });
+    if (!parsed) {
+      toast({ title: "Validation Error", description: "Please fix the highlighted fields", variant: "destructive" });
       return;
     }
     if (campaignAssets.length === 0) {

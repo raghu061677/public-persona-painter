@@ -193,6 +193,7 @@ export function EditClientDialog({
           phone: formData.phone?.trim() || null,
           company: formData.company?.trim() || null,
           gst_number: formData.gst_number?.trim() || null,
+          pan_number: formData.pan_number?.trim() || null,
           state: formData.state,
           city: formData.city?.trim() || null,
           address: formData.address?.trim() || null,

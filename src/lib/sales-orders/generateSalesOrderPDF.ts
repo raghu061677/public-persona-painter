@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatCurrencyForPDF, getPrimaryContactName } from '@/lib/pdf/pdfHelpers';
 import { renderLogoHeader } from '@/lib/pdf/sections/logoHeader';
 import { renderSellerFooterWithSignatory } from '@/lib/pdf/sections/authorizedSignatory';
+import { getBankDetailsFromCompany } from '@/lib/bankDetails';
 
 interface SalesOrderData {
   salesOrder: any;
@@ -340,16 +341,17 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   yPos += 10;
 
   // ========== BANK DETAILS ==========
+  const bankInfo = getBankDetailsFromCompany(data.company);
   doc.setFont('helvetica', 'bold');
   doc.text('Bank Details:', 15, yPos);
   yPos += 6;
   doc.setFont('helvetica', 'normal');
 
   const bankDetails = [
-    'Bank Name: HDFC Bank',
-    'Account Number: 50200010727301',
-    'IFSC Code: HDFC0001555',
-    'Branch: Karkhana Road',
+    `Bank Name: ${bankInfo.bankName}`,
+    `Account Number: ${bankInfo.accountNo}`,
+    `IFSC Code: ${bankInfo.ifsc}`,
+    `Branch: ${bankInfo.branch}`,
   ];
 
   bankDetails.forEach((line) => {

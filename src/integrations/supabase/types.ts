@@ -3677,6 +3677,11 @@ export type Database = {
         Row: {
           address_line1: string | null
           address_line2: string | null
+          bank_account_name: string | null
+          bank_account_no: string | null
+          bank_branch: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
           city: string | null
           country: string | null
           created_at: string
@@ -3703,6 +3708,11 @@ export type Database = {
         Insert: {
           address_line1?: string | null
           address_line2?: string | null
+          bank_account_name?: string | null
+          bank_account_no?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
           city?: string | null
           country?: string | null
           created_at?: string
@@ -3729,6 +3739,11 @@ export type Database = {
         Update: {
           address_line1?: string | null
           address_line2?: string | null
+          bank_account_name?: string | null
+          bank_account_no?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
           city?: string | null
           country?: string | null
           created_at?: string

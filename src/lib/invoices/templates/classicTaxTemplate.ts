@@ -21,13 +21,7 @@ const PAGE_MARGINS = {
   bottom: 15,
 };
 
-const BANK_DETAILS = {
-  bankName: 'HDFC Bank Limited',
-  branch: 'Karkhana Road, Secunderabad',
-  accountName: 'Matrix Network Solutions',
-  accountNo: '50200010727301',
-  ifsc: 'HDFC0001555',
-};
+import { DEFAULT_BANK_DETAILS, getBankDetailsFromCompany } from '@/lib/bankDetails';
 
 const DEFAULT_ADDRESS = {
   line1: 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
@@ -189,6 +183,7 @@ function renderCompactHeader(
 // ============= MAIN RENDERER =============
 
 export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob> {
+  const BANK_DETAILS = getBankDetailsFromCompany(data.company);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();

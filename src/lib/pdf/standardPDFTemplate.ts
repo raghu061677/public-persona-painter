@@ -170,12 +170,8 @@ function amountToWords(amount: number): string {
 
 // ============= CONSTANTS =============
 
-const BANK_DETAILS = {
-  bankName: 'HDFC Bank Limited',
-  branch: 'Karkhana Road, Secunderabad – 500009',
-  accountNo: '50200010727301',
-  ifsc: 'HDFC0001555',
-};
+import { DEFAULT_BANK_DETAILS, getBankDetailsFromCompany, type CompanyBankDetails } from '@/lib/bankDetails';
+const BANK_DETAILS = DEFAULT_BANK_DETAILS;
 
 const PAGE_MARGINS = {
   top: 20,

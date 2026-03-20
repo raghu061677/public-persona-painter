@@ -47,6 +47,11 @@ export default function CompanyProfile() {
     email: "",
     website: "",
     logo_url: "",
+    bank_name: "HDFC Bank Limited",
+    bank_branch: "Karkhana Road, Secunderabad – 500009",
+    bank_account_name: "Matrix Network Solutions",
+    bank_account_no: "50200010727301",
+    bank_ifsc: "HDFC0001555",
   });
 
   useEffect(() => {
@@ -78,6 +83,11 @@ export default function CompanyProfile() {
             email: (data as any).email || "",
             website: (data as any).website || "",
             logo_url: (data as any).logo_url || "",
+            bank_name: (data as any).bank_name || "HDFC Bank Limited",
+            bank_branch: (data as any).bank_branch || "Karkhana Road, Secunderabad – 500009",
+            bank_account_name: (data as any).bank_account_name || (data as any).name || "Matrix Network Solutions",
+            bank_account_no: (data as any).bank_account_no || "50200010727301",
+            bank_ifsc: (data as any).bank_ifsc || "HDFC0001555",
           });
         }
       } catch (error) {
@@ -434,6 +444,69 @@ export default function CompanyProfile() {
               placeholder="https://www.company.com"
             />
           </InputRow>
+        </div>
+      </SettingsCard>
+
+      {/* Bank Details */}
+      <SettingsCard title="Bank Details">
+        <InfoAlert variant="info" className="mb-6">
+          These bank details will appear on all invoices, quotations, proforma invoices, and other financial documents.
+        </InfoAlert>
+
+        <div className="space-y-6">
+          <TwoColumnRow
+            leftColumn={
+              <div className="space-y-2">
+                <Label>Bank Name</Label>
+                <Input
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  placeholder="HDFC Bank Limited"
+                />
+              </div>
+            }
+            rightColumn={
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Input
+                  value={formData.bank_branch}
+                  onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
+                  placeholder="Branch name and address"
+                />
+              </div>
+            }
+          />
+
+          <InputRow label="Account Holder Name">
+            <Input
+              value={formData.bank_account_name}
+              onChange={(e) => setFormData({ ...formData, bank_account_name: e.target.value })}
+              placeholder="Account holder name"
+            />
+          </InputRow>
+
+          <TwoColumnRow
+            leftColumn={
+              <div className="space-y-2">
+                <Label>Account Number</Label>
+                <Input
+                  value={formData.bank_account_no}
+                  onChange={(e) => setFormData({ ...formData, bank_account_no: e.target.value })}
+                  placeholder="Account number"
+                />
+              </div>
+            }
+            rightColumn={
+              <div className="space-y-2">
+                <Label>IFSC Code</Label>
+                <Input
+                  value={formData.bank_ifsc}
+                  onChange={(e) => setFormData({ ...formData, bank_ifsc: e.target.value })}
+                  placeholder="IFSC code"
+                />
+              </div>
+            }
+          />
         </div>
       </SettingsCard>
 

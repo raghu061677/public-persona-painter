@@ -37,13 +37,7 @@ const DEFAULT_ADDRESS = {
   email: 'raghu@matrix-networksolutions.com',
 };
 
-const DEFAULT_TERMS = [
-  'Sites are subject to availability at the time of confirmation.',
-  'Payment must be made before campaign start date unless otherwise agreed.',
-  'Printing and mounting charges will be extra if applicable.',
-  'In case of site unavailability due to government authority, an alternate site will be provided.',
-  'Campaign proof photographs will be shared after installation.',
-];
+import { renderTermsBoxPDF } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 
@@ -664,38 +658,20 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
   }
 
-  // ========== 9. TERMS & CONDITIONS ==========
-  const termsToUse = DEFAULT_TERMS;
-  const termsHeight = termsToUse.length * 6 + 10;
-  if (yPos + termsHeight > pageHeight - PAGE_MARGINS.bottom) {
-    doc.addPage();
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, 34, 'F');
-    yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
-  }
-
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Terms & Conditions:', leftMargin, yPos);
-  yPos += 6;
-
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(7.5);
-  termsToUse.forEach((term, idx) => {
-    if (yPos + 8 > pageHeight - PAGE_MARGINS.bottom) {
+  // ========== 9. TERMS & CONDITIONS (Shared Standard) ==========
+  yPos = renderTermsBoxPDF(doc, yPos, {
+    pageWidth,
+    pageHeight,
+    leftMargin,
+    rightMargin: PAGE_MARGINS.right,
+    bottomMargin: PAGE_MARGINS.bottom,
+    fontFamily: 'NotoSans',
+    onNewPage: () => {
       doc.addPage();
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 34, 'F');
-      yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
-    }
-    const termText = `${idx + 1}. ${term}`;
-    const lines = doc.splitTextToSize(termText, contentWidth);
-    lines.forEach((line: string) => {
-      doc.text(line, leftMargin, yPos);
-      yPos += 3.8;
-    });
-    yPos += 1.5;
+      return renderCompactHeader(doc, companyName, logoBase64) + 10;
+    },
   });
 
   return doc.output('blob');

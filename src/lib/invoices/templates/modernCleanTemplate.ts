@@ -479,38 +479,16 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
 
   yPos = yPos + 45;
 
-  // ========== TERMS & CONDITIONS ==========
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(60, 60, 60);
-  doc.text('Terms & Conditions:', leftMargin, yPos);
-  
-  yPos += 4;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
-  doc.setTextColor(80, 80, 80);
-  
-  const terms = [
-    'i) Blocking of media stands for 24 hrs, post which it becomes subject to availability. Blocking is considered \'confirmed\' only after a confirmation email.',
-    'ii) Sites are subject to availability at the time written confirmation.',
-    'iii) "Matrix" will not be responsible for flex Theft, Torn, Damage.',
-    'iv) Govt. Taxes as applicable will be charge Extra',
-    'v) PO has to be given within 7 days of the campaigns start date & PO should be in favour of "Matrix Network Solutions"',
-    'vi) Extension of ongoing campaign has to be informed to us by 10 days before campaign end date.',
-    'vii) Payment should be made in advance.',
-    'viii) Any dispute arising out of or in connection with this contract shall be settled at Telangana Jurisdiction.',
-  ];
-  
-  terms.forEach(term => {
-    const lines = doc.splitTextToSize(term, contentWidth);
-    lines.forEach((line: string) => {
-      if (yPos > pageHeight - 50) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(line, leftMargin, yPos);
-      yPos += 3;
-    });
+  // ========== TERMS & CONDITIONS (Shared Standard) ==========
+  const { renderTermsBoxPDF } = await import('@/lib/terms/standardTerms');
+  yPos = renderTermsBoxPDF(doc, yPos, {
+    pageWidth,
+    pageHeight,
+    leftMargin,
+    rightMargin,
+    bottomMargin: 15,
+    fontFamily: 'helvetica',
+    onNewPage: () => { doc.addPage(); return 20; },
   });
 
   yPos += 6;

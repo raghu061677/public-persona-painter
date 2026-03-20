@@ -93,16 +93,7 @@ const SERVICE_PROVIDER = {
   gstin: '36AATFM4107H2Z3',
 };
 
-const DEFAULT_RO_TERMS = [
-  'Advance Payment & Purchase Order is Mandatory to start the campaign.',
-  'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-  'Site available date may change in case of present display Renewal.',
-  'Site Availability changes every minute, please double check site available dates when you confirm the sites.',
-  'Campaign Execution takes 2 days in city and 4 days in upcountry.',
-  'Artwork must be ready before confirming the sites. Undelivered flex within 5 days will result in site release.',
-  'Damaged flex/vinyl is the client\'s responsibility to replace.',
-  'Renewal requests must be made at least 10 days before site expiry.',
-];
+import { renderTermsBoxPDF as renderStdTermsBox } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 
@@ -579,41 +570,15 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
 }
 
 function renderTermsSection(doc: jsPDF, data: ROData, pageWidth: number, pageHeight: number, yPos: number): number {
-  const leftMargin = MARGINS.left;
-  const terms = data.terms?.length ? data.terms : DEFAULT_RO_TERMS;
-
-  // Check page space
-  const estimatedHeight = terms.length * 8 + 60;
-  if (yPos + estimatedHeight > pageHeight - MARGINS.bottom) {
-    doc.addPage();
-    yPos = MARGINS.top;
-  }
-
-  doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(0, 0, 0);
-  doc.text('Terms & Conditions:', leftMargin, yPos);
-  yPos += 6;
-
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(7.5);
-
-  terms.forEach((term, idx) => {
-    if (yPos + 10 > pageHeight - MARGINS.bottom - 40) {
-      doc.addPage();
-      yPos = MARGINS.top;
-    }
-    const termText = `${idx + 1}. ${term}`;
-    const lines = doc.splitTextToSize(termText, pageWidth - leftMargin - MARGINS.right);
-    lines.forEach((line: string) => {
-      doc.text(line, leftMargin, yPos);
-      yPos += 3.8;
-    });
-    yPos += 1.5;
+  return renderStdTermsBox(doc, yPos, {
+    pageWidth,
+    pageHeight,
+    leftMargin: MARGINS.left,
+    rightMargin: MARGINS.right,
+    bottomMargin: MARGINS.bottom,
+    fontFamily: 'NotoSans',
+    onNewPage: () => { doc.addPage(); return MARGINS.top; },
   });
-
-  yPos += 8;
-  return yPos;
 }
 
 function renderAuthorizationSection(

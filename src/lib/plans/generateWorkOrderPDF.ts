@@ -32,18 +32,7 @@ const BANK_DETAILS = {
 
 const MARGINS = { top: 15, left: 14, right: 14, bottom: 15 };
 
-const RO_TERMS = [
-  'The client confirms booking of the above mentioned outdoor media locations.',
-  'Artwork must be supplied minimum 3-5 days before campaign start date in high resolution PDF/CDR format.',
-  'In case of site unavailability due to government action, an equivalent replacement will be provided.',
-  'Media owner reserves the right to relocate site if required by municipal/government authority.',
-  'Printing will be arranged by the service provider unless client provides flex/vinyl material.',
-  'Damage due to weather or external reasons will be replaced within reasonable time at additional cost.',
-  'Payment must be cleared before campaign start date. 100% advance is mandatory.',
-  'Proof of display photographs will be shared with client within 5 working days of installation.',
-  'Renewal of site will only be entertained before 10 days of site expiry.',
-  'Taxes applicable as per GST rules. GST @ 18% is charged on all services.',
-];
+import { renderTermsBoxPDF } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 
@@ -449,24 +438,15 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   // @ts-ignore
   y = doc.lastAutoTable.finalY + 8;
 
-  // ===== TERMS & CONDITIONS =====
-  if (y + 50 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
-
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138);
-  doc.text('Terms & Conditions', lm, y);
-  y += 6;
-  doc.setFontSize(7.5);
-  doc.setFont('NotoSans', 'normal');
-  doc.setTextColor(0, 0, 0);
-
-  RO_TERMS.forEach((term, idx) => {
-    if (y + 8 > ph - MARGINS.bottom - 30) { doc.addPage(); y = MARGINS.top; }
-    const text = `${idx + 1}. ${term}`;
-    const lines = doc.splitTextToSize(text, cw);
-    lines.forEach((line: string) => { doc.text(line, lm, y); y += 3.8; });
-    y += 1.5;
+  // ===== TERMS & CONDITIONS (Shared Standard) =====
+  y = renderTermsBoxPDF(doc, y, {
+    pageWidth: pw,
+    pageHeight: ph,
+    leftMargin: lm,
+    rightMargin: rm,
+    bottomMargin: MARGINS.bottom,
+    fontFamily: 'NotoSans',
+    onNewPage: () => { doc.addPage(); return MARGINS.top; },
   });
 
   y += 8;

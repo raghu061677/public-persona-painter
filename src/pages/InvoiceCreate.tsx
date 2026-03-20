@@ -107,7 +107,17 @@ export default function InvoiceCreate() {
     setLoading(false);
   };
 
+  const { fieldErrors, validate, clearError } = useFormValidation(invoiceCreateSchema);
+
   const handleCreateWithProfitCheck = () => {
+    // Schema validation first
+    const parsed = validate({
+      campaign_id: selectedCampaignId,
+      invoice_date: invoiceDate,
+      due_date: dueDate,
+    });
+    if (!parsed) return;
+
     if (!selectedCampaign) {
       toast({ title: "Error", description: "Please select a campaign", variant: "destructive" });
       return;

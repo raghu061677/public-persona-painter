@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { DataQualityAudit } from "@/utils/dataQualityAudit";
+import { PAYMENT_CONFIRMATION_STATUSES } from "@/lib/validation/status";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,

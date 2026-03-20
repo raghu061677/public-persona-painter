@@ -21,6 +21,7 @@ import { generateClientCode } from "@/lib/codeGenerator";
 import { getStateCode } from "@/lib/stateCodeMapping";
 import { type MatchResult, getMergeAction } from "@/lib/leadClientMatching";
 import { useNavigate } from "react-router-dom";
+import { leadSchema } from "@/lib/validation/schemas";
 
 interface Lead {
   id: string;

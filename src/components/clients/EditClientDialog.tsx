@@ -36,6 +36,7 @@ const clientSchema = z.object({
   phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be exactly 10 digits").optional().or(z.literal("")),
   company: z.string().trim().max(100, "Company name must be less than 100 characters").optional().or(z.literal("")),
   gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format").optional().or(z.literal("")),
+  pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format (e.g. ABCDE1234F)").optional().or(z.literal("")),
   state: z.string().min(1, "State is required"),
   city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
   address: z.string().trim().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),

@@ -308,6 +308,7 @@ export function ExtendCampaignDialog({
     setNotes("");
     setValidated(false);
     setConflicts([]);
+    clearAll();
   };
 
   return (

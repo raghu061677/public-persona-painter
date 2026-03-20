@@ -198,8 +198,8 @@ export function RenewCampaignDialog({
       const { data: campaignItems } = await supabase
         .from("campaign_items").select("*").eq("campaign_id", campaign.id);
 
-      // Generate new campaign ID (consistent method)
-      const newCampaignId = await generateCampaignId(supabase);
+      // Generate new campaign ID (pass user.id for correct company counter)
+      const newCampaignId = await generateCampaignId(supabase, user.id);
       const newStartStr = format(startDate, "yyyy-MM-dd");
       const newEndStr = format(endDate, "yyyy-MM-dd");
 

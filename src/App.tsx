@@ -178,7 +178,7 @@ const CompanyClientPortal = lazy(() => import("./pages/CompanyClientPortal"));
 const CompanyCurrencies = lazy(() => import("./pages/CompanyCurrencies"));
 const CompanyPDFTemplates = lazy(() => import("./pages/CompanyPDFTemplates"));
 const CompanyRoles = lazy(() => import("./pages/CompanyRoles"));
-const CompanyDirectTaxes = lazy(() => import("./pages/CompanyDirectTaxes"));
+
 const CompanyEInvoicing = lazy(() => import("./pages/CompanyEInvoicing"));
 const CompanyGeneral = lazy(() => import("./pages/CompanyGeneral"));
 const EmailSmtpSettings = lazy(() => import("./pages/EmailSmtpSettings"));

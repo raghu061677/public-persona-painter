@@ -100,6 +100,33 @@ export const mediaAssetEntitySchema = z.object({
   status: z.enum(["Available", "Booked", "Blocked", "Under Maintenance", "Expired"]).default("Available"),
 });
 
+// ── Campaign Extend ──
+export const campaignExtendSchema = z.object({
+  durationOption: z.string().min(1, "Duration is required"),
+  customEndDate: z.date().optional(),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+}).refine(data => {
+  if (data.durationOption === "custom" && !data.customEndDate) {
+    return false;
+  }
+  return true;
+}, { message: "Please select a custom end date", path: ["customEndDate"] });
+
+// ── Campaign Renew ──
+export const campaignRenewSchema = z.object({
+  startDate: z.date({ required_error: "Start date is required" }),
+  endDate: z.date({ required_error: "End date is required" }),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+}).refine(data => {
+  return data.endDate > data.startDate;
+}, { message: "End date must be after start date", path: ["endDate"] });
+
+// ── Monthly Invoice Generation ──
+export const monthlyInvoiceSchema = z.object({
+  selectedMonth: z.string().min(1, "Please select a billing month"),
+  gstMode: z.enum(["CGST_SGST", "IGST"]),
+});
+
 // ── Reexport existing schemas ──
 export { clientSchema } from "@/lib/validations";
 
@@ -110,3 +137,6 @@ export type InvoiceFormData = z.infer<typeof invoiceSchema>;
 export type CampaignEntityFormData = z.infer<typeof campaignEntitySchema>;
 export type CampaignAssetFormData = z.infer<typeof campaignAssetSchema>;
 export type MediaAssetEntityFormData = z.infer<typeof mediaAssetEntitySchema>;
+export type CampaignExtendFormData = z.infer<typeof campaignExtendSchema>;
+export type CampaignRenewFormData = z.infer<typeof campaignRenewSchema>;
+export type MonthlyInvoiceFormData = z.infer<typeof monthlyInvoiceSchema>;

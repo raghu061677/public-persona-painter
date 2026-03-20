@@ -750,11 +750,21 @@ export function SelectedAssetsTable({
                   
                   // Use local-safe date string conversion (no timezone shift)
                   const dateStr = toDateOnlyString(date);
-                  onPricingUpdate(asset.id, field, dateStr);
                   
-                  // Recalculate rent based on new dates
+                  // Validate date range — block inverted ranges
                   const newStart = field === 'start_date' ? date : assetStartDate;
                   const newEnd = field === 'end_date' ? date : assetEndDate;
+                  
+                  if (newEnd < newStart) {
+                    toast({
+                      title: "Invalid Date Range",
+                      description: "End date cannot be before start date.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  onPricingUpdate(asset.id, field, dateStr);
                   
                   // Update booked_days using inclusive calculation
                   const newBookedDays = calcInclusiveDays(newStart, newEnd);

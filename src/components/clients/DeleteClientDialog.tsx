@@ -202,6 +202,12 @@ export function DeleteClientDialog({
                   {relatedRecords.invoices > 0 && (
                     <li>{relatedRecords.invoices} Invoice(s)</li>
                   )}
+                  {relatedRecords.asset_holds > 0 && (
+                    <li>{relatedRecords.asset_holds} Asset Hold(s) — will be unlinked</li>
+                  )}
+                  {relatedRecords.credit_notes > 0 && (
+                    <li>{relatedRecords.credit_notes} Credit Note(s) — will be unlinked</li>
+                  )}
                 </ul>
                 <p className="mt-2 font-medium">
                   Deleting this client may cause data integrity issues. Consider archiving instead of deleting.

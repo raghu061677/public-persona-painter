@@ -13756,6 +13756,20 @@ export type Database = {
         Args: { p_today: string }
         Returns: undefined
       }
+      upsert_data_quality_issue: {
+        Args: {
+          p_company_id?: string
+          p_context?: string
+          p_detail?: string
+          p_field_name: string
+          p_issue_type: string
+          p_now?: string
+          p_raw_value?: string
+          p_record_id: string
+          p_table_name: string
+        }
+        Returns: undefined
+      }
       user_has_role: {
         Args: {
           p_required_role: Database["public"]["Enums"]["app_role"]

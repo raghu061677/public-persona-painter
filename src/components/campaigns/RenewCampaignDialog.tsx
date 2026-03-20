@@ -18,6 +18,9 @@ import { useNavigate } from "react-router-dom";
 import { format, addMonths, addDays, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { campaignRenewSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -160,7 +163,14 @@ export function RenewCampaignDialog({
     }
   };
 
+  const { fieldErrors, validate, clearAll } = useFormValidation(campaignRenewSchema);
+
   const handleSubmit = async () => {
+    const parsed = validate({ startDate, endDate, notes });
+    if (!parsed) {
+      toast({ title: "Validation Error", description: "Please fix date errors", variant: "destructive" });
+      return;
+    }
     if (!validated) {
       toast({ title: "Validate First", description: "Please validate availability before renewing.", variant: "destructive" });
       return;
@@ -395,6 +405,7 @@ export function RenewCampaignDialog({
                 </Popover>
               </div>
             </div>
+            <FieldError error={fieldErrors.endDate} />
 
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
               <span className="text-primary font-medium">Duration: </span>

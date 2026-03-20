@@ -13,6 +13,9 @@ import { useState, useEffect } from "react";
 import { format, addMonths, addDays, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { campaignExtendSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -161,7 +164,16 @@ export function ExtendCampaignDialog({
     }
   };
 
+  const { fieldErrors, validate, clearAll } = useFormValidation(campaignExtendSchema);
+
   const handleSubmit = async () => {
+    // Schema validation first
+    const parsed = validate({ durationOption, customEndDate, notes });
+    if (!parsed) {
+      toast({ title: "Validation Error", description: "Please fix form errors", variant: "destructive" });
+      return;
+    }
+
     if (!validated) {
       toast({ title: "Validate First", description: "Please validate availability before extending.", variant: "destructive" });
       return;
@@ -295,6 +307,7 @@ export function ExtendCampaignDialog({
     setNotes("");
     setValidated(false);
     setConflicts([]);
+    clearAll();
   };
 
   return (
@@ -358,6 +371,7 @@ export function ExtendCampaignDialog({
                     </Popover>
                   )}
                 </div>
+                <FieldError error={fieldErrors.customEndDate} />
               </RadioGroup>
             </div>
 

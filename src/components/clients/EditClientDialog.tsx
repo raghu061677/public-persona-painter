@@ -148,22 +148,20 @@ export function EditClientDialog({
   }, [client, open]);
 
   const validateForm = (): boolean => {
-    try {
-      clientSchema.parse(formData);
+    const result = clientSchema.safeParse(formData);
+    if (result.success) {
       setErrors({});
       return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-        setErrors(newErrors);
-      }
-      return false;
     }
+    const newErrors: Record<string, string> = {};
+    result.error.issues.forEach((issue) => {
+      const path = issue.path.join(".");
+      if (!newErrors[path]) {
+        newErrors[path] = issue.message;
+      }
+    });
+    setErrors(newErrors);
+    return false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

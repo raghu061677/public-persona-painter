@@ -16,7 +16,6 @@ import { toast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { campaignExtendSchema } from "@/lib/validation/schemas";
 import { FieldError } from "@/components/ui/field-error";
-import { toast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";

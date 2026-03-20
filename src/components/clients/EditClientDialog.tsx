@@ -36,6 +36,7 @@ const clientSchema = z.object({
   phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be exactly 10 digits").optional().or(z.literal("")),
   company: z.string().trim().max(100, "Company name must be less than 100 characters").optional().or(z.literal("")),
   gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format").optional().or(z.literal("")),
+  pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format (e.g. ABCDE1234F)").optional().or(z.literal("")),
   state: z.string().min(1, "State is required"),
   city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
   address: z.string().trim().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
@@ -84,6 +85,7 @@ export function EditClientDialog({
     phone: "",
     company: "",
     gst_number: "",
+    pan_number: "",
     state: "",
     city: "",
     address: "",
@@ -119,6 +121,7 @@ export function EditClientDialog({
         phone: client.phone || "",
         company: client.company || "",
         gst_number: client.gst_number || "",
+        pan_number: client.pan_number || "",
         state: client.state || "",
         city: client.city || "",
         address: client.address || "",
@@ -190,6 +193,7 @@ export function EditClientDialog({
           phone: formData.phone?.trim() || null,
           company: formData.company?.trim() || null,
           gst_number: formData.gst_number?.trim() || null,
+          pan_number: formData.pan_number?.trim() || null,
           state: formData.state,
           city: formData.city?.trim() || null,
           address: formData.address?.trim() || null,
@@ -327,6 +331,18 @@ export function EditClientDialog({
                 maxLength={15}
               />
               {errors.gst_number && <p className="text-sm text-destructive mt-1">{errors.gst_number}</p>}
+            </div>
+
+            {/* PAN Number */}
+            <div>
+              <Label>PAN Number</Label>
+              <Input
+                value={formData.pan_number}
+                onChange={(e) => updateField('pan_number', e.target.value.toUpperCase())}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+              />
+              {errors.pan_number && <p className="text-sm text-destructive mt-1">{errors.pan_number}</p>}
             </div>
 
             {/* State */}

@@ -10,6 +10,7 @@
  * - Work Order PDF
  * 
  * DO NOT duplicate or hardcode terms elsewhere.
+ * Company-level terms from DB override these defaults.
  */
 
 export const STANDARD_SHORT_TERMS: string[] = [
@@ -24,6 +25,18 @@ export const STANDARD_SHORT_TERMS: string[] = [
   'Any discrepancies must be reported within 48 hours',
   'Jurisdiction: Hyderabad',
 ];
+
+/**
+ * Extracts terms from a company record, falling back to defaults.
+ */
+export function getTermsFromCompany(company: any): string[] {
+  if (!company) return STANDARD_SHORT_TERMS;
+  const companyTerms = company.terms_conditions;
+  if (Array.isArray(companyTerms) && companyTerms.length > 0) {
+    return companyTerms;
+  }
+  return STANDARD_SHORT_TERMS;
+}
 
 /**
  * Renders terms as a bordered box in jsPDF documents.
@@ -42,6 +55,7 @@ export function renderTermsBoxPDF(
     bottomMargin?: number;
     fontFamily?: string;
     onNewPage?: () => number; // callback when new page needed, returns new yPos
+    company?: any; // company record to pull terms from
   }
 ): number {
   const {
@@ -52,10 +66,11 @@ export function renderTermsBoxPDF(
     bottomMargin = 15,
     fontFamily = 'helvetica',
     onNewPage,
+    company,
   } = options;
 
   const contentWidth = pageWidth - leftMargin - rightMargin;
-  const terms = STANDARD_SHORT_TERMS;
+  const terms = getTermsFromCompany(company);
 
   // Pre-calculate height needed
   let estimatedHeight = 14; // title + padding

@@ -3,7 +3,7 @@
  import { formatINR } from '@/utils/finance';
  import { formatDate } from '@/utils/plans';
  import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
- import { STANDARD_SHORT_TERMS } from '@/lib/terms/standardTerms';
+ import { getTermsFromCompany } from '@/lib/terms/standardTerms';
  
  interface InvoiceTemplateZohoProps {
    invoiceId: string;
@@ -391,14 +391,14 @@
        <div className="text-xs border-t border-border pt-2"><span className="font-semibold">Total (In Words): </span><span>{numberToWords(Math.round(grandTotal))}</span></div>
 
        {/* Terms & Conditions */}
-       <div className="border border-border rounded-md p-4 mt-4">
-         <h3 className="font-bold text-sm mb-2">Terms & Conditions</h3>
-         <ol className="list-decimal list-inside text-[11px] text-muted-foreground space-y-1">
-           {STANDARD_SHORT_TERMS.map((term, idx) => (
-             <li key={idx}>{term}</li>
-           ))}
-         </ol>
-       </div>
+        <div className="border border-border rounded-md p-4 mt-4">
+          <h3 className="font-bold text-sm mb-2">Terms & Conditions</h3>
+          <ol className="list-decimal list-inside text-[11px] text-muted-foreground space-y-1">
+            {getTermsFromCompany(company).map((term, idx) => (
+              <li key={idx}>{term}</li>
+            ))}
+          </ol>
+        </div>
 
        <div className="pt-6 text-right text-xs"><p className="mb-8">For,</p><p className="font-bold">{company?.name || 'Matrix Network Solutions'}</p><p className="border-t border-border inline-block pt-1 px-4 mt-4">Authorized Signatory</p></div>
      </div>

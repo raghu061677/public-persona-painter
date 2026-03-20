@@ -52,6 +52,7 @@ export interface PDFDocumentData {
   // Optional overrides
   terms?: string[];
   paymentTerms?: string;
+  company?: any; // company record for dynamic terms & bank details
 
   // Professional quotation metadata
   campaignDuration?: string;        // "01 Mar 2026 – 31 Mar 2026"
@@ -528,6 +529,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       doc.rect(0, 0, pageWidth, 34, 'F');
       return headerRenderers.compact(doc) + 10;
     },
+    company: data.company,
   });
 
   yPos += 8;

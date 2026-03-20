@@ -47,6 +47,9 @@ export interface ROData {
   // Terms
   terms?: string[];
 
+  // Company record for dynamic terms
+  company?: any;
+
   // Stamp image as base64 data URL
   stampImageBase64?: string;
 }
@@ -578,6 +581,7 @@ function renderTermsSection(doc: jsPDF, data: ROData, pageWidth: number, pageHei
     bottomMargin: MARGINS.bottom,
     fontFamily: 'NotoSans',
     onNewPage: () => { doc.addPage(); return MARGINS.top; },
+    company: data.company,
   });
 }
 

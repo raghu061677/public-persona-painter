@@ -3700,6 +3700,7 @@ export type Database = {
           slug: string | null
           state: string | null
           status: Database["public"]["Enums"]["company_status"]
+          terms_conditions: string[] | null
           theme_color: string | null
           type: Database["public"]["Enums"]["company_type"]
           updated_at: string
@@ -3731,6 +3732,7 @@ export type Database = {
           slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"]
+          terms_conditions?: string[] | null
           theme_color?: string | null
           type: Database["public"]["Enums"]["company_type"]
           updated_at?: string
@@ -3762,6 +3764,7 @@ export type Database = {
           slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"]
+          terms_conditions?: string[] | null
           theme_color?: string | null
           type?: Database["public"]["Enums"]["company_type"]
           updated_at?: string

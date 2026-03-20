@@ -150,7 +150,7 @@ export default function RevenueControlCenter() {
 
       // Top city
       const cityMap = new Map<string, number>();
-      campaignAssets?.forEach((a) => {
+      companyCampaignAssets.forEach((a) => {
         if (!a.city) return;
         const val = a.total_price || a.negotiated_rate || a.card_rate || 0;
         cityMap.set(a.city, (cityMap.get(a.city) || 0) + val);

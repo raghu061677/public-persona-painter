@@ -32,18 +32,7 @@ const BANK_DETAILS = {
 
 const MARGINS = { top: 15, left: 14, right: 14, bottom: 15 };
 
-const RO_TERMS = [
-  'The client confirms booking of the above mentioned outdoor media locations.',
-  'Artwork must be supplied minimum 3-5 days before campaign start date in high resolution PDF/CDR format.',
-  'In case of site unavailability due to government action, an equivalent replacement will be provided.',
-  'Media owner reserves the right to relocate site if required by municipal/government authority.',
-  'Printing will be arranged by the service provider unless client provides flex/vinyl material.',
-  'Damage due to weather or external reasons will be replaced within reasonable time at additional cost.',
-  'Payment must be cleared before campaign start date. 100% advance is mandatory.',
-  'Proof of display photographs will be shared with client within 5 working days of installation.',
-  'Renewal of site will only be entertained before 10 days of site expiry.',
-  'Taxes applicable as per GST rules. GST @ 18% is charged on all services.',
-];
+import { renderTermsBoxPDF } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 

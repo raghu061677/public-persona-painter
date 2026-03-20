@@ -72,26 +72,18 @@ export function PaymentApprovalDialog({
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [sendEmail, setSendEmail] = useState(true);
 
-  const handleApprove = async () => {
-    // Validate
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Amount",
-        description: "Please enter a valid payment amount",
-      });
-      return;
-    }
+  const { fieldErrors, validate, clearError } = useFormValidation(paymentApprovalSchema);
 
-    if (!confirmation.invoice_id) {
-      toast({
-        variant: "destructive",
-        title: "Missing Invoice",
-        description: "This confirmation is not linked to an invoice",
-      });
-      return;
-    }
+  const handleApprove = async () => {
+    // Schema validation
+    const parsed = validate({
+      amount: safePositiveMoney(amount),
+      method,
+      reference,
+      paymentDate,
+      invoice_id: confirmation.invoice_id || "",
+    });
+    if (!parsed) return;
 
     try {
       setLoading(true);

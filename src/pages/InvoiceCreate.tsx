@@ -14,6 +14,9 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
 import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { invoiceCreateSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 
 interface Campaign {
   id: string;

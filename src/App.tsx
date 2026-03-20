@@ -45,6 +45,7 @@ const MediaAssetsMap = lazy(() => import("./pages/MediaAssetsMap"));
 const MediaAssetsImport = lazy(() => import("./pages/MediaAssetsImport"));
 const MediaAssetsValidation = lazy(() => import("./pages/MediaAssetsValidation"));
 const MediaAssetsHealthReport = lazy(() => import("./pages/MediaAssetsHealthReport"));
+const DataHealthDashboard = lazy(() => import("./pages/admin/DataHealthDashboard"));
 // TenantAnalytics removed — redirect to analytics-dashboard
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
 const ClientsList = lazy(() => import("./pages/ClientsList"));

@@ -47,6 +47,9 @@ export interface ROData {
   // Terms
   terms?: string[];
 
+  // Company record for dynamic terms
+  company?: any;
+
   // Stamp image as base64 data URL
   stampImageBase64?: string;
 }

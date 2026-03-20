@@ -24,6 +24,9 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { format, addDays } from "date-fns";
 import { Shield, Loader2 } from "lucide-react";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { assetHoldSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 
 interface AssetHoldDialogProps {
   open: boolean;
@@ -53,6 +56,7 @@ export function AssetHoldDialog({
 }: AssetHoldDialogProps) {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { fieldErrors, validate, clearError, clearAll } = useFormValidation(assetHoldSchema);
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientId, setClientId] = useState("");
@@ -89,12 +93,21 @@ export function AssetHoldDialog({
     setClientId("");
     setHoldType("SOFT_HOLD");
     setNotes("");
+    clearAll();
   }, [open, currentBookingEnd, fallbackStartDate]);
 
   const handleSave = async () => {
     if (!company?.id) return;
-    if (!startDate || !endDate) {
-      toast({ title: "Missing dates", variant: "destructive" });
+
+    const validated = validate({
+      hold_type: holdType,
+      start_date: startDate,
+      end_date: endDate,
+      notes: notes,
+    });
+
+    if (!validated) {
+      toast({ title: "Validation Error", description: "Please fix the errors below", variant: "destructive" });
       return;
     }
 
@@ -111,12 +124,11 @@ export function AssetHoldDialog({
         hold_type: holdType,
         start_date: startDate,
         end_date: endDate,
-        notes: notes || null,
+        notes: notes.trim() || null,
         created_by: user?.id || null,
       });
 
       if (error) {
-        // The trigger raises descriptive exceptions
         toast({
           title: "Cannot create hold",
           description: error.message?.includes("overlapping")
@@ -178,11 +190,21 @@ export function AssetHoldDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); clearError("start_date"); }}
+              />
+              <FieldError error={fieldErrors.start_date} />
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); clearError("end_date"); }}
+              />
+              <FieldError error={fieldErrors.end_date} />
             </div>
           </div>
 

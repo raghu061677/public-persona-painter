@@ -21,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { bulkEditMediaAssetSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
 
 interface BulkEditDialogProps {
   open: boolean;
@@ -44,6 +46,7 @@ export function BulkEditDialog({
   onSuccess,
 }: BulkEditDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fields, setFields] = useState({
     updateStatus: false,
     updateCardRate: false,
@@ -60,28 +63,63 @@ export function BulkEditDialog({
     is_public: false,
   });
 
+  const validateFields = (): boolean => {
+    const toValidate: Record<string, number | undefined> = {};
+    if (fields.updateCardRate) toValidate.card_rate = values.card_rate;
+    if (fields.updateBaseRent) toValidate.base_rate = values.base_rate;
+    if (fields.updateGst) toValidate.gst_percent = values.gst_percent;
+
+    if (Object.keys(toValidate).length === 0) {
+      setFieldErrors({});
+      return true;
+    }
+
+    const result = bulkEditMediaAssetSchema.safeParse(toValidate);
+    if (result.success) {
+      setFieldErrors({});
+      return true;
+    }
+
+    const errors: Record<string, string> = {};
+    result.error.issues.forEach((issue) => {
+      const path = issue.path.join(".");
+      if (!errors[path]) errors[path] = issue.message;
+    });
+    setFieldErrors(errors);
+    return false;
+  };
+
   const handleSubmit = async () => {
+    // Build update object based on selected fields
+    const updateData: any = {};
+    
+    if (fields.updateStatus) updateData.status = values.status;
+    if (fields.updateCardRate) updateData.card_rate = values.card_rate;
+    if (fields.updateBaseRent) updateData.base_rate = values.base_rate;
+    if (fields.updateGst) updateData.gst_percent = values.gst_percent;
+    if (fields.updateIsPublic) updateData.is_public = values.is_public;
+    
+    if (Object.keys(updateData).length === 0) {
+      toast({
+        title: "No fields selected",
+        description: "Please select at least one field to update",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateFields()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors below",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
-      // Build update object based on selected fields
-      const updateData: any = {};
-      
-      if (fields.updateStatus) updateData.status = values.status;
-      if (fields.updateCardRate) updateData.card_rate = values.card_rate;
-      if (fields.updateBaseRent) updateData.base_rate = values.base_rate;
-      if (fields.updateGst) updateData.gst_percent = values.gst_percent;
-      if (fields.updateIsPublic) updateData.is_public = values.is_public;
-      
-      if (Object.keys(updateData).length === 0) {
-        toast({
-          title: "No fields selected",
-          description: "Please select at least one field to update",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from("media_assets")
         .update(updateData)
@@ -105,6 +143,7 @@ export function BulkEditDialog({
         updateGst: false,
         updateIsPublic: false,
       });
+      setFieldErrors({});
     } catch (error: any) {
       toast({
         title: "Error",
@@ -113,6 +152,12 @@ export function BulkEditDialog({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const clearFieldError = (field: string) => {
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
     }
   };
 
@@ -178,10 +223,14 @@ export function BulkEditDialog({
                 id="card_rate"
                 type="number"
                 value={values.card_rate}
-                onChange={(e) => setValues({ ...values, card_rate: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setValues({ ...values, card_rate: parseFloat(e.target.value) || 0 });
+                  clearFieldError("card_rate");
+                }}
                 disabled={!fields.updateCardRate}
                 placeholder="Enter card rate"
               />
+              <FieldError error={fieldErrors.card_rate} />
             </div>
           </div>
 
@@ -203,10 +252,14 @@ export function BulkEditDialog({
                 id="base_rate"
                 type="number"
                 value={values.base_rate}
-                onChange={(e) => setValues({ ...values, base_rate: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setValues({ ...values, base_rate: parseFloat(e.target.value) || 0 });
+                  clearFieldError("base_rate");
+                }}
                 disabled={!fields.updateBaseRent}
                 placeholder="Enter base rate"
               />
+              <FieldError error={fieldErrors.base_rate} />
             </div>
           </div>
 
@@ -228,10 +281,14 @@ export function BulkEditDialog({
                 id="gst_percent"
                 type="number"
                 value={values.gst_percent}
-                onChange={(e) => setValues({ ...values, gst_percent: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setValues({ ...values, gst_percent: parseFloat(e.target.value) || 0 });
+                  clearFieldError("gst_percent");
+                }}
                 disabled={!fields.updateGst}
                 placeholder="Enter GST percentage"
               />
+              <FieldError error={fieldErrors.gst_percent} />
             </div>
           </div>
 

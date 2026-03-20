@@ -447,6 +447,69 @@ export default function CompanyProfile() {
         </div>
       </SettingsCard>
 
+      {/* Bank Details */}
+      <SettingsCard title="Bank Details">
+        <InfoAlert variant="info" className="mb-6">
+          These bank details will appear on all invoices, quotations, proforma invoices, and other financial documents.
+        </InfoAlert>
+
+        <div className="space-y-6">
+          <TwoColumnRow
+            leftColumn={
+              <div className="space-y-2">
+                <Label>Bank Name</Label>
+                <Input
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  placeholder="HDFC Bank Limited"
+                />
+              </div>
+            }
+            rightColumn={
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Input
+                  value={formData.bank_branch}
+                  onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
+                  placeholder="Branch name and address"
+                />
+              </div>
+            }
+          />
+
+          <InputRow label="Account Holder Name">
+            <Input
+              value={formData.bank_account_name}
+              onChange={(e) => setFormData({ ...formData, bank_account_name: e.target.value })}
+              placeholder="Account holder name"
+            />
+          </InputRow>
+
+          <TwoColumnRow
+            leftColumn={
+              <div className="space-y-2">
+                <Label>Account Number</Label>
+                <Input
+                  value={formData.bank_account_no}
+                  onChange={(e) => setFormData({ ...formData, bank_account_no: e.target.value })}
+                  placeholder="Account number"
+                />
+              </div>
+            }
+            rightColumn={
+              <div className="space-y-2">
+                <Label>IFSC Code</Label>
+                <Input
+                  value={formData.bank_ifsc}
+                  onChange={(e) => setFormData({ ...formData, bank_ifsc: e.target.value })}
+                  placeholder="IFSC code"
+                />
+              </div>
+            }
+          />
+        </div>
+      </SettingsCard>
+
       {/* Tax Information */}
       <SettingsCard title="Tax Information">
         <div className="space-y-6">

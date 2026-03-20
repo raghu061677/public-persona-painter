@@ -465,8 +465,6 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
   bankY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, bankBoxX + bankPad, bankY);
 
   // Total in words below the summary table
   summaryY += 3;

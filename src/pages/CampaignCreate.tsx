@@ -461,11 +461,22 @@ export default function CampaignCreate() {
     }
   };
 
+  const { fieldErrors: campaignErrors, validate: validateCampaign, clearError: clearCampaignError } = useFormValidation(campaignEntitySchema);
+
   const handleSubmit = async (autoAssign: boolean = false) => {
-    if (!formData.campaign_name || !formData.client_id || !formData.start_date || !formData.end_date) {
+    // Schema validation
+    const parsed = validateCampaign({
+      name: formData.campaign_name,
+      client_id: formData.client_id,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      status: isHistoricalEntry ? formData.status : 'Planned',
+      notes: formData.notes,
+    });
+    if (!parsed) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
+        title: 'Validation Error',
+        description: 'Please fix the highlighted fields',
         variant: 'destructive',
       });
       return;

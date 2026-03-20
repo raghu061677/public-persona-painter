@@ -3,6 +3,7 @@
  *
  * Tracks integrity issues across reporting and core business modules.
  * Dev-mode only logging — zero production noise.
+ * Issues are also captured into the singleton auditStore for admin viewing.
  *
  * Check types:
  *  - negative_money: negative monetary values
@@ -17,6 +18,7 @@
 import { isCanonicalStatus } from "@/lib/validation/status";
 import { safeMoney } from "@/lib/validation/money";
 import { safeDate } from "@/lib/validation/date";
+import { auditStore } from "./auditStore";
 
 export type AuditCheckType =
   | "negative_money"
@@ -241,6 +243,9 @@ export class DataQualityAudit {
       console.log("By table:", byTable);
       console.groupEnd();
     }
+
+    // Feed the in-memory store for admin Data Health Dashboard
+    auditStore.capture(summary);
 
     return summary;
   }

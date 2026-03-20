@@ -60,6 +60,7 @@ export default function CampaignCreate() {
   const { company } = useCompany();
   const { isAdmin } = useAuth();
   const { checkConflict, checking } = useAssetConflictCheck();
+  const { fieldErrors: campaignErrors, validate: validateCampaign, clearError: clearCampaignError } = useFormValidation(campaignEntitySchema);
   
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);

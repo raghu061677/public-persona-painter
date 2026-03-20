@@ -175,7 +175,6 @@ const BANK_DETAILS = {
   branch: 'Karkhana Road, Secunderabad – 500009',
   accountNo: '50200010727301',
   ifsc: 'HDFC0001555',
-  micr: '500240026',
 };
 
 const PAGE_MARGINS = {

@@ -171,7 +171,22 @@ export default function MediaAssetEdit() {
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Schema validation
+      const validated = validateAsset({
+        location: formData.location,
+        area: formData.area,
+        city: formData.city,
+        media_type: formData.media_type,
+        dimensions: formData.dimensions,
+        card_rate: safePositiveMoney(formData.card_rate),
+        base_rate: formData.base_rate ? safePositiveMoney(formData.base_rate) : undefined,
+        status: formData.status as any,
+      });
+      if (!validated) {
+        setLoading(false);
+        return;
+      }
+
       if (!user) throw new Error("Not authenticated");
 
       const parsed = parseDimensions(formData.dimensions);

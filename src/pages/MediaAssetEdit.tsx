@@ -14,6 +14,10 @@ import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { mediaAssetEntitySchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/ui/field-error";
+import { safePositiveMoney } from "@/lib/validation/money";
 import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText, QrCode, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";

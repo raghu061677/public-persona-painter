@@ -93,7 +93,7 @@ const SERVICE_PROVIDER = {
   gstin: '36AATFM4107H2Z3',
 };
 
-import { STANDARD_SHORT_TERMS, renderTermsBoxPDF as renderStdTermsBox } from '@/lib/terms/standardTerms';
+import { renderTermsBoxPDF as renderStdTermsBox } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 

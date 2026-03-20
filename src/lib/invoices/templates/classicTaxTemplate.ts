@@ -37,7 +37,7 @@ const DEFAULT_ADDRESS = {
   email: 'raghu@matrix-networksolutions.com',
 };
 
-import { STANDARD_SHORT_TERMS, renderTermsBoxPDF } from '@/lib/terms/standardTerms';
+import { renderTermsBoxPDF } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 

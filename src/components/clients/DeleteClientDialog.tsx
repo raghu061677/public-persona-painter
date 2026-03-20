@@ -25,6 +25,8 @@ interface RelatedRecords {
   campaigns: number;
   estimations: number;
   invoices: number;
+  asset_holds: number;
+  credit_notes: number;
 }
 
 export function DeleteClientDialog({ 
@@ -40,6 +42,8 @@ export function DeleteClientDialog({
     campaigns: 0,
     estimations: 0,
     invoices: 0,
+    asset_holds: 0,
+    credit_notes: 0,
   });
 
   useEffect(() => {
@@ -77,11 +81,25 @@ export function DeleteClientDialog({
         .select('*', { count: 'exact', head: true })
         .eq('client_id', client.id);
 
+      // Check for related asset holds
+      const { count: assetHoldsCount } = await supabase
+        .from('asset_holds')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+
+      // Check for related credit notes
+      const { count: creditNotesCount } = await supabase
+        .from('credit_notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+
       setRelatedRecords({
         plans: plansCount || 0,
         campaigns: campaignsCount || 0,
         estimations: estimationsCount || 0,
         invoices: invoicesCount || 0,
+        asset_holds: assetHoldsCount || 0,
+        credit_notes: creditNotesCount || 0,
       });
     } catch (error) {
       console.error("Error checking related records:", error);
@@ -96,6 +114,27 @@ export function DeleteClientDialog({
     setDeleting(true);
 
     try {
+      // Nullify asset_holds client_id references (FK without CASCADE)
+      const { error: holdsError } = await supabase
+        .from('asset_holds')
+        .update({ client_id: null })
+        .eq('client_id', client.id);
+      if (holdsError) throw holdsError;
+
+      // Nullify credit_notes client_id references (FK without CASCADE)
+      const { error: creditError } = await supabase
+        .from('credit_notes')
+        .update({ client_id: null })
+        .eq('client_id', client.id);
+      if (creditError) throw creditError;
+
+      // Nullify plan_templates default_client_id references (FK without CASCADE)
+      const { error: templatesError } = await supabase
+        .from('plan_templates')
+        .update({ default_client_id: null })
+        .eq('default_client_id', client.id);
+      if (templatesError) throw templatesError;
+
       const { error } = await supabase
         .from('clients')
         .delete()
@@ -162,6 +201,12 @@ export function DeleteClientDialog({
                   )}
                   {relatedRecords.invoices > 0 && (
                     <li>{relatedRecords.invoices} Invoice(s)</li>
+                  )}
+                  {relatedRecords.asset_holds > 0 && (
+                    <li>{relatedRecords.asset_holds} Asset Hold(s) — will be unlinked</li>
+                  )}
+                  {relatedRecords.credit_notes > 0 && (
+                    <li>{relatedRecords.credit_notes} Credit Note(s) — will be unlinked</li>
                   )}
                 </ul>
                 <p className="mt-2 font-medium">

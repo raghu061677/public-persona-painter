@@ -220,7 +220,7 @@ export default function AssetProfitabilityReport() {
         
         revenue = assetInvoiceItems.reduce((sum, ii) => {
           const raw = Number(ii.line_total) || 0;
-          return sum + audit.clamp(raw, 'invoice_items', 'line_total', ii.invoice_id || asset.id, `asset=${asset.id}`);
+          return sum + audit.clampMoney(raw, 'invoice_items', 'line_total', ii.invoice_id || asset.id);
         }, 0);
         
         // If no invoice data, estimate from campaign assets (non-negative only)
@@ -231,7 +231,7 @@ export default function AssetProfitabilityReport() {
             const cardRate = Number(ca.card_rate) || 0;
             const val = totalPrice || negRate || cardRate;
             const field = totalPrice ? 'total_price' : negRate ? 'negotiated_rate' : 'card_rate';
-            return sum + audit.clamp(val, 'campaign_assets', field, asset.id);
+            return sum + audit.clampMoney(val, 'campaign_assets', field, asset.id);
           }, 0);
         }
 

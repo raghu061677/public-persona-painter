@@ -213,10 +213,16 @@ export default function PlanDetail() {
       if (data?.client_id) {
         const { data: client } = await supabase
           .from('clients')
-          .select('gst_number, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode')
+          .select('name, email, phone, company, gst_number, pan_number, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode')
           .eq('id', data.client_id)
           .single();
         setClientDetails(client);
+        // Sync plan's snapshot client_name with live client data
+        if (client?.name && client.name !== data.client_name) {
+          setPlan((prev: any) => prev ? { ...prev, client_name: client.name } : prev);
+          // Also update the stored snapshot in the database
+          await supabase.from('plans').update({ client_name: client.name }).eq('id', data.id);
+        }
       }
     }
     setLoading(false);

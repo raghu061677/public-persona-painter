@@ -7,11 +7,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ── Canonical status sets (mirror of frontend validation) ──
+// ── Canonical status sets ──
 const CAMPAIGN_STATUSES = ["Draft","Upcoming","Running","Completed","Cancelled","Archived"];
 const INVOICE_STATUSES = ["Draft","Sent","Paid","Overdue","Cancelled","Partially Paid"];
 const MEDIA_ASSET_STATUSES = ["Available","Booked","Blocked","Under Maintenance","Expired"];
 const PAYMENT_CONFIRMATION_STATUSES = ["Pending","Approved","Rejected"];
+
+// ── Severity mapping ──
+const SEVERITY_MAP: Record<string, string> = {
+  missing_company_id: "critical",
+  orphan_reference: "high",
+  negative_money: "high",
+  inverted_date_range: "high",
+  invalid_status: "medium",
+  booking_outside_campaign: "medium",
+  missing_identifier: "low",
+};
 
 interface Issue {
   issue_type: string;
@@ -21,6 +32,7 @@ interface Issue {
   raw_value: string | null;
   detail: string;
   company_id: string | null;
+  severity: string;
 }
 
 serve(async (req) => {
@@ -36,15 +48,16 @@ serve(async (req) => {
   const issues: Issue[] = [];
   const tablesScanned: string[] = [];
 
+  function addIssue(type: string, table: string, field: string, recordId: string, rawValue: string | null, detail: string, companyId: string | null) {
+    issues.push({ issue_type: type, table_name: table, field_name: field, record_id: recordId, raw_value: rawValue, detail, company_id: companyId, severity: SEVERITY_MAP[type] || "medium" });
+  }
+
   try {
-    // Record run start
     await supabase.from("data_quality_runs").insert({
-      id: runId,
-      status: "running",
-      started_at: new Date().toISOString(),
+      id: runId, status: "running", started_at: new Date().toISOString(),
     });
 
-    // ── 1. Campaigns: negative money, invalid status, inverted dates, missing company_id ──
+    // ── 1. Campaigns ──
     tablesScanned.push("campaigns");
     const { data: campaigns } = await supabase
       .from("campaigns")
@@ -53,23 +66,15 @@ serve(async (req) => {
       .limit(5000);
 
     for (const c of campaigns || []) {
-      if (!c.company_id) {
-        issues.push({ issue_type: "missing_company_id", table_name: "campaigns", field_name: "company_id", record_id: c.id, raw_value: null, detail: "Row has null/empty company_id", company_id: null });
-      }
-      if (c.status && !CAMPAIGN_STATUSES.includes(c.status)) {
-        issues.push({ issue_type: "invalid_status", table_name: "campaigns", field_name: "status", record_id: c.id, raw_value: c.status, detail: `"${c.status}" not in canonical set`, company_id: c.company_id });
-      }
-      if (c.start_date && c.end_date && c.end_date < c.start_date) {
-        issues.push({ issue_type: "inverted_date_range", table_name: "campaigns", field_name: "start_date/end_date", record_id: c.id, raw_value: `${c.start_date}..${c.end_date}`, detail: `${c.start_date} > ${c.end_date}`, company_id: c.company_id });
-      }
+      if (!c.company_id) addIssue("missing_company_id", "campaigns", "company_id", c.id, null, "Row has null/empty company_id", null);
+      if (c.status && !CAMPAIGN_STATUSES.includes(c.status)) addIssue("invalid_status", "campaigns", "status", c.id, c.status, `"${c.status}" not in canonical set`, c.company_id);
+      if (c.start_date && c.end_date && c.end_date < c.start_date) addIssue("inverted_date_range", "campaigns", "start_date/end_date", c.id, `${c.start_date}..${c.end_date}`, `${c.start_date} > ${c.end_date}`, c.company_id);
       for (const fld of ["total_amount", "gst_amount", "grand_total"] as const) {
-        if (c[fld] != null && Number(c[fld]) < 0) {
-          issues.push({ issue_type: "negative_money", table_name: "campaigns", field_name: fld, record_id: c.id, raw_value: String(c[fld]), detail: `Negative value ${c[fld]}`, company_id: c.company_id });
-        }
+        if (c[fld] != null && Number(c[fld]) < 0) addIssue("negative_money", "campaigns", fld, c.id, String(c[fld]), `Negative value ${c[fld]}`, c.company_id);
       }
     }
 
-    // ── 2. Campaign Assets: negative money, inverted dates, booking outside campaign ──
+    // ── 2. Campaign Assets ──
     tablesScanned.push("campaign_assets");
     const { data: cAssets } = await supabase
       .from("campaign_assets")
@@ -79,19 +84,13 @@ serve(async (req) => {
 
     for (const ca of cAssets || []) {
       for (const fld of ["card_rate", "negotiated_rate", "total_price", "printing_cost", "mounting_cost"] as const) {
-        if (ca[fld] != null && Number(ca[fld]) < 0) {
-          issues.push({ issue_type: "negative_money", table_name: "campaign_assets", field_name: fld, record_id: ca.id, raw_value: String(ca[fld]), detail: `Negative value ${ca[fld]}`, company_id: null });
-        }
+        if (ca[fld] != null && Number(ca[fld]) < 0) addIssue("negative_money", "campaign_assets", fld, ca.id, String(ca[fld]), `Negative value ${ca[fld]}`, null);
       }
-      if (ca.start_date && ca.end_date && ca.end_date < ca.start_date) {
-        issues.push({ issue_type: "inverted_date_range", table_name: "campaign_assets", field_name: "start_date/end_date", record_id: ca.id, raw_value: null, detail: `${ca.start_date} > ${ca.end_date}`, company_id: null });
-      }
-      if (ca.booking_start_date && ca.booking_end_date && ca.booking_end_date < ca.booking_start_date) {
-        issues.push({ issue_type: "inverted_date_range", table_name: "campaign_assets", field_name: "booking_start_date/booking_end_date", record_id: ca.id, raw_value: null, detail: `${ca.booking_start_date} > ${ca.booking_end_date}`, company_id: null });
-      }
+      if (ca.start_date && ca.end_date && ca.end_date < ca.start_date) addIssue("inverted_date_range", "campaign_assets", "start_date/end_date", ca.id, null, `${ca.start_date} > ${ca.end_date}`, null);
+      if (ca.booking_start_date && ca.booking_end_date && ca.booking_end_date < ca.booking_start_date) addIssue("inverted_date_range", "campaign_assets", "booking_start_date/booking_end_date", ca.id, null, `${ca.booking_start_date} > ${ca.booking_end_date}`, null);
     }
 
-    // ── 3. Invoices: negative money, invalid status, inverted dates ──
+    // ── 3. Invoices ──
     tablesScanned.push("invoices");
     const { data: invoices } = await supabase
       .from("invoices")
@@ -99,71 +98,40 @@ serve(async (req) => {
       .limit(5000);
 
     for (const inv of invoices || []) {
-      if (!inv.company_id) {
-        issues.push({ issue_type: "missing_company_id", table_name: "invoices", field_name: "company_id", record_id: inv.id, raw_value: null, detail: "Row has null/empty company_id", company_id: null });
-      }
-      if (inv.status && !INVOICE_STATUSES.includes(inv.status)) {
-        issues.push({ issue_type: "invalid_status", table_name: "invoices", field_name: "status", record_id: inv.id, raw_value: inv.status, detail: `"${inv.status}" not in canonical set`, company_id: inv.company_id });
-      }
-      if (inv.invoice_date && inv.due_date && inv.due_date < inv.invoice_date) {
-        issues.push({ issue_type: "inverted_date_range", table_name: "invoices", field_name: "invoice_date/due_date", record_id: inv.id, raw_value: null, detail: `due_date ${inv.due_date} < invoice_date ${inv.invoice_date}`, company_id: inv.company_id });
-      }
+      if (!inv.company_id) addIssue("missing_company_id", "invoices", "company_id", inv.id, null, "Row has null/empty company_id", null);
+      if (inv.status && !INVOICE_STATUSES.includes(inv.status)) addIssue("invalid_status", "invoices", "status", inv.id, inv.status, `"${inv.status}" not in canonical set`, inv.company_id);
+      if (inv.invoice_date && inv.due_date && inv.due_date < inv.invoice_date) addIssue("inverted_date_range", "invoices", "invoice_date/due_date", inv.id, null, `due_date ${inv.due_date} < invoice_date ${inv.invoice_date}`, inv.company_id);
       for (const fld of ["sub_total", "total_amount"] as const) {
-        if (inv[fld] != null && Number(inv[fld]) < 0) {
-          issues.push({ issue_type: "negative_money", table_name: "invoices", field_name: fld, record_id: inv.id, raw_value: String(inv[fld]), detail: `Negative value ${inv[fld]}`, company_id: inv.company_id });
-        }
+        if (inv[fld] != null && Number(inv[fld]) < 0) addIssue("negative_money", "invoices", fld, inv.id, String(inv[fld]), `Negative value ${inv[fld]}`, inv.company_id);
       }
     }
 
-    // ── 4. Media Assets: negative money, invalid status, missing company_id ──
+    // ── 4. Media Assets ──
     tablesScanned.push("media_assets");
-    const { data: assets } = await supabase
-      .from("media_assets")
-      .select("id, status, card_rate, company_id")
-      .limit(5000);
+    const { data: assets } = await supabase.from("media_assets").select("id, status, card_rate, company_id").limit(5000);
 
     for (const a of assets || []) {
-      if (!a.company_id) {
-        issues.push({ issue_type: "missing_company_id", table_name: "media_assets", field_name: "company_id", record_id: a.id, raw_value: null, detail: "Row has null/empty company_id", company_id: null });
-      }
-      if (a.status && !MEDIA_ASSET_STATUSES.includes(a.status)) {
-        issues.push({ issue_type: "invalid_status", table_name: "media_assets", field_name: "status", record_id: a.id, raw_value: a.status, detail: `"${a.status}" not in canonical set`, company_id: a.company_id });
-      }
-      if (a.card_rate != null && Number(a.card_rate) < 0) {
-        issues.push({ issue_type: "negative_money", table_name: "media_assets", field_name: "card_rate", record_id: a.id, raw_value: String(a.card_rate), detail: `Negative card_rate ${a.card_rate}`, company_id: a.company_id });
-      }
+      if (!a.company_id) addIssue("missing_company_id", "media_assets", "company_id", a.id, null, "Row has null/empty company_id", null);
+      if (a.status && !MEDIA_ASSET_STATUSES.includes(a.status)) addIssue("invalid_status", "media_assets", "status", a.id, a.status, `"${a.status}" not in canonical set`, a.company_id);
+      if (a.card_rate != null && Number(a.card_rate) < 0) addIssue("negative_money", "media_assets", "card_rate", a.id, String(a.card_rate), `Negative card_rate ${a.card_rate}`, a.company_id);
     }
 
-    // ── 5. Payment Confirmations: negative money, invalid status ──
+    // ── 5. Payment Confirmations ──
     tablesScanned.push("payment_confirmations");
-    const { data: payments } = await supabase
-      .from("payment_confirmations")
-      .select("id, status, claimed_amount, company_id")
-      .limit(5000);
+    const { data: payments } = await supabase.from("payment_confirmations").select("id, status, claimed_amount, company_id").limit(5000);
 
     for (const p of payments || []) {
-      if (p.status && !PAYMENT_CONFIRMATION_STATUSES.includes(p.status)) {
-        issues.push({ issue_type: "invalid_status", table_name: "payment_confirmations", field_name: "status", record_id: p.id, raw_value: p.status, detail: `"${p.status}" not in canonical set`, company_id: p.company_id });
-      }
-      if (p.claimed_amount != null && Number(p.claimed_amount) < 0) {
-        issues.push({ issue_type: "negative_money", table_name: "payment_confirmations", field_name: "claimed_amount", record_id: p.id, raw_value: String(p.claimed_amount), detail: `Negative claimed_amount ${p.claimed_amount}`, company_id: p.company_id });
-      }
+      if (p.status && !PAYMENT_CONFIRMATION_STATUSES.includes(p.status)) addIssue("invalid_status", "payment_confirmations", "status", p.id, p.status, `"${p.status}" not in canonical set`, p.company_id);
+      if (p.claimed_amount != null && Number(p.claimed_amount) < 0) addIssue("negative_money", "payment_confirmations", "claimed_amount", p.id, String(p.claimed_amount), `Negative claimed_amount ${p.claimed_amount}`, p.company_id);
     }
 
-    // ── 6. Clients: missing company_id, missing identifier ──
+    // ── 6. Clients ──
     tablesScanned.push("clients");
-    const { data: clients } = await supabase
-      .from("clients")
-      .select("id, company_id, name")
-      .limit(5000);
+    const { data: clients } = await supabase.from("clients").select("id, company_id, name").limit(5000);
 
     for (const cl of clients || []) {
-      if (!cl.company_id) {
-        issues.push({ issue_type: "missing_company_id", table_name: "clients", field_name: "company_id", record_id: cl.id, raw_value: null, detail: "Row has null/empty company_id", company_id: null });
-      }
-      if (!cl.name || cl.name.trim() === "") {
-        issues.push({ issue_type: "missing_identifier", table_name: "clients", field_name: "name", record_id: cl.id, raw_value: null, detail: 'Required field "name" is null/empty', company_id: cl.company_id });
-      }
+      if (!cl.company_id) addIssue("missing_company_id", "clients", "company_id", cl.id, null, "Row has null/empty company_id", null);
+      if (!cl.name || cl.name.trim() === "") addIssue("missing_identifier", "clients", "name", cl.id, null, 'Required field "name" is null/empty', cl.company_id);
     }
 
     // ── Upsert all issues ──
@@ -171,12 +139,9 @@ serve(async (req) => {
     let issuesNew = 0;
 
     for (const issue of issues) {
-      const coalesceCompany = issue.company_id || "00000000-0000-0000-0000-000000000000";
-
-      // Check if exists
       const { data: existing } = await supabase
         .from("data_quality_issues")
-        .select("id, occurrences")
+        .select("id, occurrences, workflow_status")
         .eq("issue_type", issue.issue_type)
         .eq("table_name", issue.table_name)
         .eq("field_name", issue.field_name)
@@ -184,18 +149,21 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        await supabase
-          .from("data_quality_issues")
-          .update({
-            last_seen: now,
-            occurrences: (existing.occurrences || 0) + 1,
-            detail: issue.detail,
-            raw_value: issue.raw_value,
-            context: "nightly-audit",
-            is_resolved: false,
-            resolved_at: null,
-          })
-          .eq("id", existing.id);
+        // Don't reopen issues that were explicitly ignored
+        const updates: Record<string, any> = {
+          last_seen: now,
+          occurrences: (existing.occurrences || 0) + 1,
+          detail: issue.detail,
+          raw_value: issue.raw_value,
+          context: "nightly-audit",
+          severity: issue.severity,
+        };
+        if (existing.workflow_status !== "ignored") {
+          updates.is_resolved = false;
+          updates.resolved_at = null;
+          updates.workflow_status = "open";
+        }
+        await supabase.from("data_quality_issues").update(updates).eq("id", existing.id);
       } else {
         await supabase.from("data_quality_issues").insert({
           issue_type: issue.issue_type,
@@ -209,18 +177,40 @@ serve(async (req) => {
           first_seen: now,
           last_seen: now,
           occurrences: 1,
+          severity: issue.severity,
+          workflow_status: "open",
         });
         issuesNew++;
       }
     }
 
-    // Mark issues not seen in this run as resolved
+    // Mark issues not seen in this run as resolved (except ignored)
     const { count: resolvedCount } = await supabase
       .from("data_quality_issues")
-      .update({ is_resolved: true, resolved_at: now })
+      .update({ is_resolved: true, resolved_at: now, workflow_status: "resolved" })
       .lt("last_seen", now)
       .eq("is_resolved", false)
+      .neq("workflow_status", "ignored")
       .select("id", { count: "exact", head: true });
+
+    // ── Alert check ──
+    const severityCounts: Record<string, number> = {};
+    for (const i of issues) {
+      severityCounts[i.severity] = (severityCounts[i.severity] || 0) + 1;
+    }
+
+    const { data: thresholds } = await supabase
+      .from("data_quality_alert_thresholds")
+      .select("*")
+      .eq("is_active", true);
+
+    const alerts: string[] = [];
+    for (const t of thresholds || []) {
+      const count = severityCounts[t.severity] || 0;
+      if (count >= t.threshold_count) {
+        alerts.push(`${t.severity.toUpperCase()}: ${count} issues (threshold: ${t.threshold_count})`);
+      }
+    }
 
     // Update run record
     await supabase.from("data_quality_runs").update({
@@ -240,6 +230,8 @@ serve(async (req) => {
         issues_new: issuesNew,
         issues_resolved: resolvedCount || 0,
         tables_scanned: tablesScanned,
+        severity_counts: severityCounts,
+        alerts,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

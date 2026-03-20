@@ -11,6 +11,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { AuditIssue } from "@/utils/dataQualityAudit";
 
+const SEVERITY_MAP: Record<string, string> = {
+  missing_company_id: "critical",
+  orphan_reference: "high",
+  negative_money: "high",
+  inverted_date_range: "high",
+  invalid_status: "medium",
+  booking_outside_campaign: "medium",
+  missing_identifier: "low",
+};
+
 interface PendingIssue extends AuditIssue {
   context: string;
   companyId?: string;
@@ -58,8 +68,6 @@ class AuditPersistence {
     try {
       const now = new Date().toISOString();
       for (const item of deduped.values()) {
-        // Use RPC or raw upsert via service — but from client we do a simple upsert
-        // This will fail silently if user isn't admin (no INSERT RLS policy) — that's fine
         await supabase.rpc("upsert_data_quality_issue" as any, {
           p_issue_type: item.check,
           p_table_name: item.table,
@@ -70,6 +78,7 @@ class AuditPersistence {
           p_detail: item.detail,
           p_company_id: item.companyId || null,
           p_now: now,
+          p_severity: SEVERITY_MAP[item.check] || "medium",
         });
       }
     } catch {

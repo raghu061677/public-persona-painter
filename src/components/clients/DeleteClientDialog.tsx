@@ -42,6 +42,8 @@ export function DeleteClientDialog({
     campaigns: 0,
     estimations: 0,
     invoices: 0,
+    asset_holds: 0,
+    credit_notes: 0,
   });
 
   useEffect(() => {

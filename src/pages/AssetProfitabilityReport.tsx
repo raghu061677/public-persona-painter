@@ -236,7 +236,12 @@ export default function AssetProfitabilityReport() {
         }
 
         // Final safeguard
-        revenue = audit.clamp(revenue, 'computed', 'final_revenue', asset.id);
+        revenue = audit.clampMoney(revenue, 'computed', 'final_revenue', asset.id);
+
+        // Date range audit per campaign asset
+        for (const ca of assetCampaigns) {
+          audit.checkDateRange(ca.booking_start_date, ca.booking_end_date, 'campaign_assets', asset.id, 'booking_start_date', 'booking_end_date');
+        }
 
         // Power costs
         const assetPowerBills = powerBills?.filter(pb => pb.asset_id === asset.id) || [];

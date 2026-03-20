@@ -333,6 +333,18 @@ export function EditClientDialog({
               {errors.gst_number && <p className="text-sm text-destructive mt-1">{errors.gst_number}</p>}
             </div>
 
+            {/* PAN Number */}
+            <div>
+              <Label>PAN Number</Label>
+              <Input
+                value={formData.pan_number}
+                onChange={(e) => updateField('pan_number', e.target.value.toUpperCase())}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+              />
+              {errors.pan_number && <p className="text-sm text-destructive mt-1">{errors.pan_number}</p>}
+            </div>
+
             {/* State */}
             <div>
               <Label>State *</Label>

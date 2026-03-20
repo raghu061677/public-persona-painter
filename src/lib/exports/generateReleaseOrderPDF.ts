@@ -581,6 +581,7 @@ function renderTermsSection(doc: jsPDF, data: ROData, pageWidth: number, pageHei
     bottomMargin: MARGINS.bottom,
     fontFamily: 'NotoSans',
     onNewPage: () => { doc.addPage(); return MARGINS.top; },
+    company: data.company,
   });
 }
 

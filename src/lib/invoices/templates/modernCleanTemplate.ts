@@ -491,6 +491,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     bottomMargin: 15,
     fontFamily: 'helvetica',
     onNewPage: () => { doc.addPage(); return 20; },
+    company,
   });
 
   yPos += 6;

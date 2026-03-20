@@ -667,6 +667,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       doc.rect(0, 0, pageWidth, 34, 'F');
       return renderCompactHeader(doc, companyName, logoBase64) + 10;
     },
+    company,
   });
 
   return doc.output('blob');

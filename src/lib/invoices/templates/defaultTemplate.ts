@@ -587,6 +587,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     bottomMargin: 15,
     fontFamily: 'helvetica',
     onNewPage: () => { doc.addPage(); return 20; },
+    company,
   });
 
   yPos += 4;

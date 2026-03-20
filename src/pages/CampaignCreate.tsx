@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Trash2, Save, Send, History, ShieldAlert, Calendar } from 'lucide-react';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { campaignEntitySchema } from '@/lib/validation/schemas';
+import { FieldError } from '@/components/ui/field-error';
 import { ClientSelect } from '@/components/shared/ClientSelect';
 import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';

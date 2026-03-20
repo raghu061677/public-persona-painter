@@ -243,14 +243,15 @@ export function PaymentApprovalDialog({
                 id="amount"
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); clearError("amount"); }}
                 placeholder="Enter amount"
               />
+              <FieldError error={fieldErrors.amount} />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="method">Payment Method *</Label>
-              <Select value={method} onValueChange={setMethod}>
+              <Select value={method} onValueChange={(v) => { setMethod(v); clearError("method"); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select method" />
                 </SelectTrigger>
@@ -264,6 +265,7 @@ export function PaymentApprovalDialog({
                   <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                 </SelectContent>
               </Select>
+              <FieldError error={fieldErrors.method} />
             </div>
 
             <div className="grid gap-2">
@@ -282,8 +284,9 @@ export function PaymentApprovalDialog({
                 id="paymentDate"
                 type="date"
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
+                onChange={(e) => { setPaymentDate(e.target.value); clearError("paymentDate"); }}
               />
+              <FieldError error={fieldErrors.paymentDate} />
             </div>
           </div>
 

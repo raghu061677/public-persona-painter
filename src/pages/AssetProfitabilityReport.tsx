@@ -187,7 +187,7 @@ export default function AssetProfitabilityReport() {
 
       // Build profitability data per asset
       const profitabilityMap = new Map<string, AssetProfitability>();
-      const audit = new RevenueAuditCollector();
+      const audit = new DataQualityAudit();
 
       for (const asset of assets) {
         const assetCampaigns = campaignAssets?.filter(ca => ca.asset_id === asset.id) || [];

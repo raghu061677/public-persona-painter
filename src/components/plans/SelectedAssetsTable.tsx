@@ -699,6 +699,16 @@ export function SelectedAssetsTable({
                 const handleNegotiatedChange = (value: string) => {
                   const numValue = parseFormattedNumber(value);
                   
+                  // Block negative values
+                  if (numValue < 0) {
+                    toast({
+                      title: "Invalid Price",
+                      description: "Negotiated rate cannot be negative.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
                   // Update negotiated price and recalculate all dependent values
                   onPricingUpdate(asset.id, 'negotiated_price', numValue);
                   
@@ -718,6 +728,12 @@ export function SelectedAssetsTable({
 
                 const handleNegotiatedBlur = (value: string) => {
                   const numValue = parseFormattedNumber(value);
+                  
+                  // Block negative on blur (defensive)
+                  if (numValue < 0) {
+                    onPricingUpdate(asset.id, 'negotiated_price', 0);
+                    return;
+                  }
                   
                   // Only warn if below base rate (below cost) when user finishes typing
                   if (numValue > 0 && numValue < baseRate) {

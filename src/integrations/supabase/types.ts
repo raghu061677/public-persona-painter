@@ -3122,6 +3122,27 @@ export type Database = {
             referencedRelation: "plans_summary_secure"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_audit_log: {
@@ -6465,6 +6486,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
@@ -8689,6 +8731,27 @@ export type Database = {
           whatsapp_sent_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_payment_confirmations_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_payment_confirmations_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_payment_confirmations_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_confirmations_company_id_fkey"
             columns: ["company_id"]
@@ -11838,6 +11901,27 @@ export type Database = {
             referencedRelation: "plans_summary_secure"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_outstanding_summary: {
@@ -11853,6 +11937,27 @@ export type Database = {
           total_paid: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_company_id_fkey"
             columns: ["company_id"]
@@ -12021,6 +12126,27 @@ export type Database = {
             referencedRelation: "plans_summary_secure"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_campaigns_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       invoice_aging_report: {
@@ -12070,6 +12196,27 @@ export type Database = {
           total_amount?: never
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -12155,6 +12302,27 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]

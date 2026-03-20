@@ -37,13 +37,7 @@ const DEFAULT_ADDRESS = {
   email: 'raghu@matrix-networksolutions.com',
 };
 
-const DEFAULT_TERMS = [
-  'Sites are subject to availability at the time of confirmation.',
-  'Payment must be made before campaign start date unless otherwise agreed.',
-  'Printing and mounting charges will be extra if applicable.',
-  'In case of site unavailability due to government authority, an alternate site will be provided.',
-  'Campaign proof photographs will be shared after installation.',
-];
+import { STANDARD_SHORT_TERMS, renderTermsBoxPDF } from '@/lib/terms/standardTerms';
 
 // ============= HELPERS =============
 

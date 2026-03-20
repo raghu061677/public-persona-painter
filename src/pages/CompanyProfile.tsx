@@ -83,6 +83,11 @@ export default function CompanyProfile() {
             email: (data as any).email || "",
             website: (data as any).website || "",
             logo_url: (data as any).logo_url || "",
+            bank_name: (data as any).bank_name || "HDFC Bank Limited",
+            bank_branch: (data as any).bank_branch || "Karkhana Road, Secunderabad – 500009",
+            bank_account_name: (data as any).bank_account_name || (data as any).name || "Matrix Network Solutions",
+            bank_account_no: (data as any).bank_account_no || "50200010727301",
+            bank_ifsc: (data as any).bank_ifsc || "HDFC0001555",
           });
         }
       } catch (error) {

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatCurrencyForPDF, getPrimaryContactName } from '@/lib/pdf/pdfHelpers';
 import { renderLogoHeader } from '@/lib/pdf/sections/logoHeader';
 import { renderSellerFooterWithSignatory } from '@/lib/pdf/sections/authorizedSignatory';
+import { getBankDetailsFromCompany } from '@/lib/bankDetails';
 
 interface SalesOrderData {
   salesOrder: any;

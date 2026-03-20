@@ -23,6 +23,7 @@ const MATRIX_COMPANY = {
 };
 
 import { DEFAULT_BANK_DETAILS, getBankDetailsFromCompany } from '@/lib/bankDetails';
+const BANK_DETAILS = DEFAULT_BANK_DETAILS;
 
 const MARGINS = { top: 15, left: 14, right: 14, bottom: 15 };
 

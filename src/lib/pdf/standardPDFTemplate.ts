@@ -171,6 +171,7 @@ function amountToWords(amount: number): string {
 // ============= CONSTANTS =============
 
 import { DEFAULT_BANK_DETAILS, getBankDetailsFromCompany, type CompanyBankDetails } from '@/lib/bankDetails';
+const BANK_DETAILS = DEFAULT_BANK_DETAILS;
 
 const PAGE_MARGINS = {
   top: 20,

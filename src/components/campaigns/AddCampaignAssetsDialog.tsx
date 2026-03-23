@@ -376,7 +376,7 @@ export function AddCampaignAssetsDialog({
   );
 
   const getAvailInfo = (assetId: string): AssetAvailabilityInfo => {
-    return availabilityMap.get(assetId) || { status: 'available', suggestedStartDate: null, overlappingBookings: [] };
+    return availabilityMap.get(assetId) || { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] };
   };
 
   // Filter and sort assets

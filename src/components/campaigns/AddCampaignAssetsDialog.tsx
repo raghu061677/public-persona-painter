@@ -503,6 +503,7 @@ export function AddCampaignAssetsDialog({
           ...asset,
           // Attach suggested asset-wise booking dates
           _suggestedStartDate: info.suggestedStartDate || null,
+          _suggestedEndDate: info.suggestedEndDate || null,
           _hasAdjustedDates: info.status === 'available_adjusted',
         };
       });

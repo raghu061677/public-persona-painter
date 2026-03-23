@@ -2,23 +2,57 @@
  * useEmailTrigger — Lightweight wrapper for triggering email events
  * from business modules. Handles auto-send vs confirm flow cleanly.
  * 
- * Usage in any component:
- *   const { trigger, ConfirmDialog } = useEmailTrigger();
- *   
- *   // After a business action:
- *   trigger('plan_approved_internal', payload, recipients, sourceId);
- *   
- *   // Render the confirm dialog somewhere in JSX:
- *   {ConfirmDialog}
+ * v2: Returns structured result so callers can react to skips/failures.
  */
 
 import { useCallback, useState } from "react";
 import { useCompany } from "@/contexts/CompanyContext";
-import { triggerEmailEvent, sendEmail, type EmailPreview, type TriggerEmailOptions, type EmailRecipient } from "@/services/notifications/emailSender";
+import { supabase } from "@/integrations/supabase/client";
+import { triggerEmailEvent, sendEmail, prepareEmail, type EmailPreview, type TriggerEmailOptions, type EmailRecipient } from "@/services/notifications/emailSender";
 import type { EmailPayload } from "@/services/notifications/emailRenderer";
 import { toast } from "sonner";
 import { EmailSendConfirmDialog } from "@/components/email/EmailSendConfirmDialog";
 import React from "react";
+
+export type EmailTriggerResult = 
+  | { status: 'sent'; success: boolean; error?: string }
+  | { status: 'confirm' }
+  | { status: 'skipped'; reason: string; reason_code: string }
+  | { status: 'error'; reason: string; reason_code: string };
+
+/**
+ * Log a failed/skipped email attempt to email_outbox for visibility.
+ */
+async function logEmailFailure(opts: {
+  company_id: string;
+  event_key: string;
+  source_id?: string;
+  recipient_to?: string;
+  reason_code: string;
+  reason: string;
+}) {
+  try {
+    await supabase
+      .from("email_outbox" as any)
+      .insert({
+        company_id: opts.company_id,
+        template_key: opts.event_key,
+        event_key: opts.event_key,
+        source_module: 'plan',
+        source_id: opts.source_id || null,
+        entity_type: 'plan',
+        recipient_to: opts.recipient_to || 'unknown',
+        subject_rendered: `[FAILED] ${opts.event_key}`,
+        html_rendered: '',
+        payload_json: { reason_code: opts.reason_code, reason: opts.reason },
+        status: 'skipped',
+        attempt_count: 0,
+        last_error: `${opts.reason_code}: ${opts.reason}`,
+      } as any);
+  } catch (e) {
+    console.error('[useEmailTrigger] Failed to log email failure to outbox:', e);
+  }
+}
 
 export function useEmailTrigger() {
   const { company } = useCompany();
@@ -30,16 +64,43 @@ export function useEmailTrigger() {
     payload: EmailPayload,
     recipients: EmailRecipient[],
     source_id?: string,
-  ) => {
-    if (!company?.id) {
-      console.warn('[useEmailTrigger] No company context — skipping email trigger');
-      return;
+  ): Promise<EmailTriggerResult> => {
+    // Pre-flight 1: Verify auth session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const result: EmailTriggerResult = { 
+        status: 'skipped', 
+        reason: 'No active auth session', 
+        reason_code: 'missing_session' 
+      };
+      console.warn('[useEmailTrigger] Pre-flight fail:', result);
+      if (company?.id) {
+        await logEmailFailure({ company_id: company.id, event_key, source_id, reason_code: result.reason_code, reason: result.reason });
+      }
+      return result;
     }
 
-    // Skip if no recipients
+    // Pre-flight 2: Verify company context
+    if (!company?.id) {
+      const result: EmailTriggerResult = { 
+        status: 'skipped', 
+        reason: 'Company context not loaded', 
+        reason_code: 'missing_company' 
+      };
+      console.warn('[useEmailTrigger] Pre-flight fail:', result);
+      return result;
+    }
+
+    // Pre-flight 3: Verify recipients
     if (!recipients || recipients.length === 0 || !recipients[0]?.to) {
-      console.warn('[useEmailTrigger] No recipients provided — skipping');
-      return;
+      const result: EmailTriggerResult = { 
+        status: 'skipped', 
+        reason: 'No valid recipients provided', 
+        reason_code: 'missing_recipients' 
+      };
+      console.warn('[useEmailTrigger] Pre-flight fail:', result);
+      await logEmailFailure({ company_id: company.id, event_key, source_id, reason_code: result.reason_code, reason: result.reason });
+      return result;
     }
 
     try {
@@ -51,29 +112,56 @@ export function useEmailTrigger() {
         source_id,
       };
 
-      const result = await triggerEmailEvent(options);
+      const triggerResult = await triggerEmailEvent(options);
 
-      switch (result.action) {
+      switch (triggerResult.action) {
         case 'sent':
-          if (result.success) {
-            // Silent success for internal auto emails
-          } else {
-            console.warn(`[emailTrigger] Send failed: ${result.error}`);
+          if (!triggerResult.success) {
+            console.warn(`[useEmailTrigger] Send failed: ${triggerResult.error}`);
+            await logEmailFailure({ 
+              company_id: company.id, event_key, source_id, 
+              recipient_to: recipients[0]?.to,
+              reason_code: 'send_failed', 
+              reason: triggerResult.error || 'Unknown send error' 
+            });
           }
-          break;
+          return { status: 'sent', success: triggerResult.success, error: triggerResult.error };
 
         case 'confirm':
-          setPendingConfirm(result.preview);
+          setPendingConfirm(triggerResult.preview);
           setConfirmOpen(true);
-          break;
+          return { status: 'confirm' };
 
-        case 'skipped':
-          console.log(`[emailTrigger] Skipped: ${result.reason}`);
-          break;
+        case 'skipped': {
+          const result: EmailTriggerResult = { 
+            status: 'skipped', 
+            reason: triggerResult.reason, 
+            reason_code: triggerResult.reason.includes('template') ? 'missing_template' : 'trigger_skipped' 
+          };
+          console.warn('[useEmailTrigger] Trigger skipped:', result);
+          await logEmailFailure({ 
+            company_id: company.id, event_key, source_id, 
+            recipient_to: recipients[0]?.to,
+            reason_code: result.reason_code, 
+            reason: result.reason 
+          });
+          return result;
+        }
       }
     } catch (err: any) {
-      // Don't crash business flows if email system has issues
-      console.error('[emailTrigger] Error:', err);
+      const result: EmailTriggerResult = { 
+        status: 'error', 
+        reason: err.message || String(err), 
+        reason_code: 'trigger_exception' 
+      };
+      console.error('[useEmailTrigger] Exception:', result);
+      await logEmailFailure({ 
+        company_id: company.id, event_key, source_id, 
+        recipient_to: recipients[0]?.to,
+        reason_code: result.reason_code, 
+        reason: result.reason 
+      });
+      return result;
     }
   }, [company?.id]);
 
@@ -92,7 +180,6 @@ export function useEmailTrigger() {
     setConfirmOpen(false);
   }, []);
 
-  // Renderable dialog component
   const ConfirmDialog = React.createElement(EmailSendConfirmDialog, {
     open: confirmOpen,
     onOpenChange: setConfirmOpen,

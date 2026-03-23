@@ -554,16 +554,45 @@ export default function PlanNew() {
         description: "Plan created successfully",
       });
 
-      // Trigger plan_created_internal email
+      // Trigger plan_created_internal email — hardened with pre-flight checks
       try {
-        // Get current user's email as fallback recipient
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         const recipientEmail = company?.email || currentUser?.email || '';
-        const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
-        await triggerEmail('plan_created_internal', emailPayload,
-          [{ to: recipientEmail }], plan.id);
-      } catch (emailErr) {
-        console.warn('[PlanNew] Email trigger failed (non-blocking):', emailErr);
+        
+        if (!recipientEmail) {
+          console.warn('[PlanNew] No recipient email available — skipping email trigger');
+          toast({
+            title: "Plan saved",
+            description: "Notification email was not sent — no recipient email found.",
+            variant: "default",
+          });
+        } else {
+          const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
+          const emailResult = await triggerEmail('plan_created_internal', emailPayload,
+            [{ to: recipientEmail }], plan.id);
+
+          if (emailResult.status === 'skipped' || emailResult.status === 'error') {
+            console.warn('[PlanNew] Email not queued:', emailResult);
+            toast({
+              title: "Plan saved",
+              description: `Notification email was not queued: ${emailResult.reason}`,
+              variant: "default",
+            });
+          } else if (emailResult.status === 'sent' && !emailResult.success) {
+            toast({
+              title: "Plan saved",
+              description: `Notification email failed to send: ${emailResult.error}`,
+              variant: "default",
+            });
+          }
+        }
+      } catch (emailErr: any) {
+        console.error('[PlanNew] Email trigger exception (non-blocking):', emailErr);
+        toast({
+          title: "Plan saved",
+          description: "Notification email could not be sent. You can retry from the plan details page.",
+          variant: "default",
+        });
       }
 
       navigate(`/admin/plans/${plan.id}`);

@@ -63,7 +63,7 @@ serve(withAuth(async (req) => {
     const gallery = photoMap[asset.id] || [];
     if (gallery.length === 0) errors.push("No photos uploaded yet");
     if (!asset.dimensions) errors.push("Missing dimensions");
-    else if (!/^\d+[xX]\d+(-\d+[xX]\d+)*$/.test(asset.dimensions)) errors.push("Invalid dimensions format");
+    else if (!/^\s*\d+\s*[xX×]\s*\d+(\s*-\s*\d+\s*[xX×]\s*\d+)*\s*$/.test(asset.dimensions)) errors.push("Invalid dimensions format");
     if (!asset.latitude || !asset.longitude) errors.push("Missing GPS coordinates");
     if (!asset.illumination_type) errors.push("Missing illumination_type");
     if (asset.is_multi_face && (!asset.faces || asset.faces.length < 2)) errors.push("Multi-face asset must have at least 2 faces");

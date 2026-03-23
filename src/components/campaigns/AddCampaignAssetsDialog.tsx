@@ -55,8 +55,10 @@ type StatusFilter = 'all' | 'available_for_dates' | 'available_now' | 'conflict'
  */
 interface AssetAvailabilityInfo {
   status: 'available' | 'available_adjusted' | 'conflict' | 'upcoming';
-  /** If dates needed adjustment, this is the first available date */
+  /** If dates needed adjustment, this is the first available date (adjusted start) */
   suggestedStartDate: string | null;
+  /** If dates needed adjustment at the end, this is the last available date (adjusted end) */
+  suggestedEndDate: string | null;
   /** Existing bookings that overlap with the requested window */
   overlappingBookings: Array<{
     campaignName: string;
@@ -247,6 +249,10 @@ export function AddCampaignAssetsDialog({
       if (!campaign || campaign.is_deleted) continue;
       if (EXCLUDED_CAMPAIGN_STATUSES.includes(campaign.status)) continue;
 
+      // Skip dropped/removed assets — they no longer block availability
+      // Their effective_end_date marks when they were freed
+      if (b.is_removed) continue;
+
       // Resolve using asset-wise date priority (NOT campaign dates)
       const bStart = toDateString(b.effective_start_date) ||
                      toDateString(b.booking_start_date) ||
@@ -285,7 +291,7 @@ export function AddCampaignAssetsDialog({
       const existingBookings = bookingsByAsset.get(assetId) || [];
 
       if (existingBookings.length === 0) {
-        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        result.set(assetId, { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] });
         continue;
       }
 
@@ -295,11 +301,11 @@ export function AddCampaignAssetsDialog({
       );
 
       if (overlapping.length === 0) {
-        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        result.set(assetId, { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] });
         continue;
       }
 
-      // Compute first available date after all overlapping bookings end
+      // Try forward adjustment: first available date after overlapping bookings end
       const firstAvailable = computeFirstAvailableDate(
         overlapping.map(b => ({ startDate: b.startDate, endDate: b.endDate })),
         reqStart,
@@ -307,20 +313,44 @@ export function AddCampaignAssetsDialog({
       );
 
       if (firstAvailable) {
-        // Asset can be added with adjusted start date
         result.set(assetId, {
           status: 'available_adjusted',
           suggestedStartDate: firstAvailable,
+          suggestedEndDate: null,
           overlappingBookings: overlapping,
         });
-      } else {
-        // True conflict — asset is fully blocked for the entire period
-        result.set(assetId, {
-          status: 'conflict',
-          suggestedStartDate: null,
-          overlappingBookings: overlapping,
-        });
+        continue;
       }
+
+      // Try backward adjustment: check if there's a free window at the START of the range
+      // Find the earliest overlapping booking start date
+      const earliestOverlapStart = overlapping.reduce((min, b) => 
+        b.startDate < min ? b.startDate : min, overlapping[0].startDate);
+      
+      if (earliestOverlapStart > reqStart) {
+        // There's a gap at the beginning: reqStart to (earliestOverlapStart - 1 day)
+        const endBefore = new Date(earliestOverlapStart + 'T00:00:00');
+        endBefore.setDate(endBefore.getDate() - 1);
+        const suggestedEnd = endBefore.toISOString().split('T')[0];
+        
+        if (suggestedEnd >= reqStart) {
+          result.set(assetId, {
+            status: 'available_adjusted',
+            suggestedStartDate: null,
+            suggestedEndDate: suggestedEnd,
+            overlappingBookings: overlapping,
+          });
+          continue;
+        }
+      }
+
+      // True conflict — asset is fully blocked for the entire period
+      result.set(assetId, {
+        status: 'conflict',
+        suggestedStartDate: null,
+        suggestedEndDate: null,
+        overlappingBookings: overlapping,
+      });
     }
 
     return result;
@@ -346,7 +376,7 @@ export function AddCampaignAssetsDialog({
   );
 
   const getAvailInfo = (assetId: string): AssetAvailabilityInfo => {
-    return availabilityMap.get(assetId) || { status: 'available', suggestedStartDate: null, overlappingBookings: [] };
+    return availabilityMap.get(assetId) || { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] };
   };
 
   // Filter and sort assets
@@ -473,6 +503,7 @@ export function AddCampaignAssetsDialog({
           ...asset,
           // Attach suggested asset-wise booking dates
           _suggestedStartDate: info.suggestedStartDate || null,
+          _suggestedEndDate: info.suggestedEndDate || null,
           _hasAdjustedDates: info.status === 'available_adjusted',
         };
       });
@@ -540,22 +571,30 @@ export function AddCampaignAssetsDialog({
           </TooltipProvider>
         );
       
-      case 'available_adjusted':
+      case 'available_adjusted': {
+        const dateLabel = info.suggestedStartDate
+          ? `From ${format(new Date(info.suggestedStartDate), 'dd MMM')}`
+          : info.suggestedEndDate
+            ? `Until ${format(new Date(info.suggestedEndDate), 'dd MMM')}`
+            : 'Adjusted';
+        const dateLabelFull = info.suggestedStartDate
+          ? `Available from ${format(new Date(info.suggestedStartDate), 'dd MMM yyyy')}`
+          : info.suggestedEndDate
+            ? `Available until ${format(new Date(info.suggestedEndDate), 'dd MMM yyyy')}`
+            : 'Available with adjusted dates';
         return (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="text-blue-600 border-blue-500 cursor-help">
                   <Clock className="w-3 h-3 mr-1" />
-                  From {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM') : ''}
+                  {dateLabel}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <div className="text-sm">
-                  <p className="font-semibold mb-1">
-                    Available from {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM yyyy') : ''}
-                  </p>
-                  <p className="text-muted-foreground mb-1">Previous booking:</p>
+                  <p className="font-semibold mb-1">{dateLabelFull}</p>
+                  <p className="text-muted-foreground mb-1">Existing booking:</p>
                   {info.overlappingBookings.map((c, i) => (
                     <div key={i} className="mb-1">
                       <span className="font-medium">{c.campaignName}</span>
@@ -574,6 +613,7 @@ export function AddCampaignAssetsDialog({
             </Tooltip>
           </TooltipProvider>
         );
+      }
       
       default:
         return (

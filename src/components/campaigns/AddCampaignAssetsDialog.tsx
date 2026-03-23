@@ -291,7 +291,7 @@ export function AddCampaignAssetsDialog({
       const existingBookings = bookingsByAsset.get(assetId) || [];
 
       if (existingBookings.length === 0) {
-        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        result.set(assetId, { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] });
         continue;
       }
 
@@ -301,11 +301,11 @@ export function AddCampaignAssetsDialog({
       );
 
       if (overlapping.length === 0) {
-        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        result.set(assetId, { status: 'available', suggestedStartDate: null, suggestedEndDate: null, overlappingBookings: [] });
         continue;
       }
 
-      // Compute first available date after all overlapping bookings end
+      // Try forward adjustment: first available date after overlapping bookings end
       const firstAvailable = computeFirstAvailableDate(
         overlapping.map(b => ({ startDate: b.startDate, endDate: b.endDate })),
         reqStart,
@@ -313,20 +313,44 @@ export function AddCampaignAssetsDialog({
       );
 
       if (firstAvailable) {
-        // Asset can be added with adjusted start date
         result.set(assetId, {
           status: 'available_adjusted',
           suggestedStartDate: firstAvailable,
+          suggestedEndDate: null,
           overlappingBookings: overlapping,
         });
-      } else {
-        // True conflict — asset is fully blocked for the entire period
-        result.set(assetId, {
-          status: 'conflict',
-          suggestedStartDate: null,
-          overlappingBookings: overlapping,
-        });
+        continue;
       }
+
+      // Try backward adjustment: check if there's a free window at the START of the range
+      // Find the earliest overlapping booking start date
+      const earliestOverlapStart = overlapping.reduce((min, b) => 
+        b.startDate < min ? b.startDate : min, overlapping[0].startDate);
+      
+      if (earliestOverlapStart > reqStart) {
+        // There's a gap at the beginning: reqStart to (earliestOverlapStart - 1 day)
+        const endBefore = new Date(earliestOverlapStart + 'T00:00:00');
+        endBefore.setDate(endBefore.getDate() - 1);
+        const suggestedEnd = endBefore.toISOString().split('T')[0];
+        
+        if (suggestedEnd >= reqStart) {
+          result.set(assetId, {
+            status: 'available_adjusted',
+            suggestedStartDate: null,
+            suggestedEndDate: suggestedEnd,
+            overlappingBookings: overlapping,
+          });
+          continue;
+        }
+      }
+
+      // True conflict — asset is fully blocked for the entire period
+      result.set(assetId, {
+        status: 'conflict',
+        suggestedStartDate: null,
+        suggestedEndDate: null,
+        overlappingBookings: overlapping,
+      });
     }
 
     return result;

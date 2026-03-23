@@ -55,16 +55,23 @@ Deno.serve(async (req: Request) => {
 
   await req.text(); // consume body
 
-  // Auth: simple cron secret
+  // Auth: accept X-Cron-Secret header OR pg_cron calls with anon key
   const cronSecret = req.headers.get('X-Cron-Secret');
   const expectedSecret = Deno.env.get('CRON_HMAC_SECRET');
+  const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY') || '';
 
-  if (!cronSecret || !expectedSecret || cronSecret !== expectedSecret) {
+  const cronSecretValid = cronSecret && expectedSecret && cronSecret === expectedSecret;
+  const pgCronValid = authHeader && anonKey && authHeader === anonKey;
+
+  if (!cronSecretValid && !pgCronValid) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  
+  console.log('[scheduled-email-dispatch] Authorized, running dispatches...');
 
   const sc = supabaseServiceClient();
 

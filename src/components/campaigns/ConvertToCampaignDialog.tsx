@@ -202,16 +202,32 @@ export function ConvertToCampaignDialog({
         description: `Campaign ${campaignId} created successfully`,
       });
 
-      // Trigger email notifications
+      // Trigger email notifications — await before navigating
+      const companyEmail = company?.email || '';
       const campaignPayload = buildCampaignPayload(
         { id: campaignId, campaign_name: campaignName, status: 'Planned', start_date: format(startDate, "yyyy-MM-dd"), end_date: format(endDate, "yyyy-MM-dd"), client_name: plan.client_name },
         null, company
       );
-      triggerEmail('campaign_created_internal', campaignPayload, [{ to: company?.email || '' }], campaignId);
-      // Client confirmation (confirm mode)
-      if (plan.client_email) {
-        triggerEmail('campaign_confirmed_client', campaignPayload, [{ to: plan.client_email }], campaignId);
+
+      const emailPromises: Promise<any>[] = [];
+      if (companyEmail) {
+        emailPromises.push(
+          triggerEmail('campaign_created_internal', campaignPayload, [{ to: companyEmail }], campaignId)
+        );
       }
+      // Client confirmation — fetch email from clients table since plan doesn't have it
+      if (plan.client_id) {
+        try {
+          const { data: client } = await supabase.from('clients').select('email, name').eq('id', plan.client_id).single();
+          if (client?.email) {
+            emailPromises.push(
+              triggerEmail('campaign_confirmed_client', campaignPayload, [{ to: client.email, name: client.name || plan.client_name }], campaignId)
+            );
+          }
+        } catch (e) { /* client email lookup failed, skip */ }
+      }
+      
+      await Promise.allSettled(emailPromises);
 
       onOpenChange(false);
       navigate(`/admin/campaigns/${campaignId}`);

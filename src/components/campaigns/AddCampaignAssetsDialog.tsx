@@ -571,22 +571,30 @@ export function AddCampaignAssetsDialog({
           </TooltipProvider>
         );
       
-      case 'available_adjusted':
+      case 'available_adjusted': {
+        const dateLabel = info.suggestedStartDate
+          ? `From ${format(new Date(info.suggestedStartDate), 'dd MMM')}`
+          : info.suggestedEndDate
+            ? `Until ${format(new Date(info.suggestedEndDate), 'dd MMM')}`
+            : 'Adjusted';
+        const dateLabelFull = info.suggestedStartDate
+          ? `Available from ${format(new Date(info.suggestedStartDate), 'dd MMM yyyy')}`
+          : info.suggestedEndDate
+            ? `Available until ${format(new Date(info.suggestedEndDate), 'dd MMM yyyy')}`
+            : 'Available with adjusted dates';
         return (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="text-blue-600 border-blue-500 cursor-help">
                   <Clock className="w-3 h-3 mr-1" />
-                  From {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM') : ''}
+                  {dateLabel}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <div className="text-sm">
-                  <p className="font-semibold mb-1">
-                    Available from {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM yyyy') : ''}
-                  </p>
-                  <p className="text-muted-foreground mb-1">Previous booking:</p>
+                  <p className="font-semibold mb-1">{dateLabelFull}</p>
+                  <p className="text-muted-foreground mb-1">Existing booking:</p>
                   {info.overlappingBookings.map((c, i) => (
                     <div key={i} className="mb-1">
                       <span className="font-medium">{c.campaignName}</span>
@@ -605,6 +613,7 @@ export function AddCampaignAssetsDialog({
             </Tooltip>
           </TooltipProvider>
         );
+      }
       
       default:
         return (

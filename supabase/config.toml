@@ -287,3 +287,7 @@ verify_jwt = false
 
 [functions.archive-stale-plans]
 verify_jwt = false
+
+# Scheduled Email Dispatch (cron)
+[functions.scheduled-email-dispatch]
+verify_jwt = false

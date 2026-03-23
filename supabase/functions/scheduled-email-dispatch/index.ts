@@ -55,16 +55,17 @@ Deno.serve(async (req: Request) => {
 
   await req.text(); // consume body
 
-  // Auth: accept either X-Cron-Secret header or service role via Authorization header
+  // Auth: accept X-Cron-Secret header OR pg_cron calls with anon key
   const cronSecret = req.headers.get('X-Cron-Secret');
   const expectedSecret = Deno.env.get('CRON_HMAC_SECRET');
   const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 
   const cronSecretValid = cronSecret && expectedSecret && cronSecret === expectedSecret;
-  const serviceRoleValid = authHeader && serviceRoleKey && authHeader === serviceRoleKey;
+  // pg_cron uses anon key — allow it as this is a system endpoint 
+  const pgCronValid = authHeader && anonKey && authHeader === anonKey;
 
-  if (!cronSecretValid && !serviceRoleValid) {
+  if (!cronSecretValid && !pgCronValid) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

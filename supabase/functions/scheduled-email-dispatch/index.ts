@@ -59,18 +59,32 @@ Deno.serve(async (req: Request) => {
   const cronSecret = req.headers.get('X-Cron-Secret');
   const expectedSecret = Deno.env.get('CRON_HMAC_SECRET');
   const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+  
+  // Supabase provides SUPABASE_ANON_KEY in edge function runtime
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY') || '';
+  
+  console.log('[scheduled-email-dispatch] Auth check:', {
+    hasCronSecret: !!cronSecret,
+    hasExpectedSecret: !!expectedSecret,
+    hasAuthHeader: !!authHeader,
+    hasAnonKey: !!anonKey,
+    authHeaderLen: authHeader.length,
+    anonKeyLen: anonKey.length,
+  });
 
   const cronSecretValid = cronSecret && expectedSecret && cronSecret === expectedSecret;
   // pg_cron uses anon key — allow it as this is a system endpoint 
   const pgCronValid = authHeader && anonKey && authHeader === anonKey;
 
   if (!cronSecretValid && !pgCronValid) {
+    console.log('[scheduled-email-dispatch] Auth FAILED. cronSecretValid:', cronSecretValid, 'pgCronValid:', pgCronValid);
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  
+  console.log('[scheduled-email-dispatch] Auth OK, running dispatches...');
 
   const sc = supabaseServiceClient();
 

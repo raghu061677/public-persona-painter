@@ -557,9 +557,9 @@ export default function CampaignEdit() {
       const addBillingMode: BillingMode = 'PRORATA_30';
 
       // Use asset-wise suggested dates if available, otherwise fall back to campaign dates
-      const hasAdjustedDates = asset._hasAdjustedDates && asset._suggestedStartDate;
-      const assetStartDate = hasAdjustedDates ? new Date(asset._suggestedStartDate) : campaignStart;
-      const assetEndDate = campaignEnd; // End date defaults to campaign end
+      const hasAdjustedDates = asset._hasAdjustedDates && (asset._suggestedStartDate || asset._suggestedEndDate);
+      const assetStartDate = asset._suggestedStartDate ? new Date(asset._suggestedStartDate) : campaignStart;
+      const assetEndDate = asset._suggestedEndDate ? new Date(asset._suggestedEndDate) : campaignEnd;
 
       if (hasAdjustedDates) adjustedCount++;
 

@@ -67,7 +67,7 @@ export default function MediaAssetsValidation() {
     if (photos.length === 0) errors.push("No photos in media_photos");
 
     // Rule 3: Dimensions valid
-    if (!asset.dimensions || !/^\s*\d+\s*[xX×]\s*\d+(\s*-\s*\d+\s*[xX×]\s*\d+)*\s*$/.test(asset.dimensions)) {
+    if (!asset.dimensions || !/^\s*\d+(\.\d+)?\s*[xX×]\s*\d+(\.\d+)?([\s,]+\d+(\.\d+)?\s*[xX×]\s*\d+(\.\d+)?)*(\s*-\s*\d+(\.\d+)?\s*[xX×]\s*\d+(\.\d+)?([\s,]+\d+(\.\d+)?\s*[xX×]\s*\d+(\.\d+)?)*)*\s*$/.test(asset.dimensions)) {
       errors.push("Invalid dimensions format");
     }
 

@@ -552,7 +552,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
       <p style="color: #475569;">This is a friendly reminder that the following invoice is due for payment.</p>
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
         <tr><td style="padding: 8px 0; color: #64748b; width: 140px;">Invoice</td><td style="padding: 8px 0; font-weight: 600;">{{invoice_number}}</td></tr>
-        <tr><td style="padding: 8px 0; color: #64748b;">Amount Due</td><td style="padding: 8px 0; font-weight: 600; color: #f59e0b;">{{amount_due}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Campaign</td><td style="padding: 8px 0; font-weight: 600;">{{campaign_name}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Amount Due</td><td style="padding: 8px 0; font-weight: 600; color: #f59e0b;">{{balance_due}}</td></tr>
         <tr><td style="padding: 8px 0; color: #64748b;">Due Date</td><td style="padding: 8px 0;">{{due_date}}</td></tr>
       </table>
       <a href="{{payment_link}}" style="display: inline-block; background: #f59e0b; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">Pay Now</a>

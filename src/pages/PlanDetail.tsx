@@ -1060,15 +1060,35 @@ export default function PlanDetail() {
         description: `Campaign created with ${result.total_items || planItems.length} assets`,
       });
 
-      // Trigger email notifications for plan conversion
+      // Trigger email notifications for plan conversion — await before navigating
+      const companyEmail = company?.email || '';
+      const clientEmail = clientDetails?.email || '';
       const payload = buildPlanPayload(plan, clientDetails, company);
       payload.campaign_code = result.campaign_id || '';
       payload.campaign_name = plan?.plan_name || '';
-      triggerEmail('plan_converted_to_campaign_internal', payload,
-        [{ to: company?.email || '' }], id);
-      // Also trigger campaign_created_internal
-      triggerEmail('campaign_created_internal', payload,
-        [{ to: company?.email || '' }], result.campaign_id);
+
+      // Fire internal notifications (must await before navigation unmounts component)
+      const emailPromises: Promise<any>[] = [];
+      if (companyEmail) {
+        emailPromises.push(
+          triggerEmail('plan_converted_to_campaign_internal', payload,
+            [{ to: companyEmail }], id)
+        );
+        emailPromises.push(
+          triggerEmail('campaign_created_internal', payload,
+            [{ to: companyEmail }], result.campaign_id)
+        );
+      }
+      // Client notification
+      if (clientEmail) {
+        emailPromises.push(
+          triggerEmail('campaign_confirmed_client', payload,
+            [{ to: clientEmail, name: clientDetails?.name || plan?.client_name || '' }], result.campaign_id)
+        );
+      }
+      
+      // Wait for all emails to queue before navigating
+      await Promise.allSettled(emailPromises);
 
       setShowConvertDialog(false);
       

@@ -247,6 +247,10 @@ export function AddCampaignAssetsDialog({
       if (!campaign || campaign.is_deleted) continue;
       if (EXCLUDED_CAMPAIGN_STATUSES.includes(campaign.status)) continue;
 
+      // Skip dropped/removed assets — they no longer block availability
+      // Their effective_end_date marks when they were freed
+      if (b.is_removed) continue;
+
       // Resolve using asset-wise date priority (NOT campaign dates)
       const bStart = toDateString(b.effective_start_date) ||
                      toDateString(b.booking_start_date) ||

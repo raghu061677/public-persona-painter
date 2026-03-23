@@ -55,8 +55,10 @@ type StatusFilter = 'all' | 'available_for_dates' | 'available_now' | 'conflict'
  */
 interface AssetAvailabilityInfo {
   status: 'available' | 'available_adjusted' | 'conflict' | 'upcoming';
-  /** If dates needed adjustment, this is the first available date */
+  /** If dates needed adjustment, this is the first available date (adjusted start) */
   suggestedStartDate: string | null;
+  /** If dates needed adjustment at the end, this is the last available date (adjusted end) */
+  suggestedEndDate: string | null;
   /** Existing bookings that overlap with the requested window */
   overlappingBookings: Array<{
     campaignName: string;

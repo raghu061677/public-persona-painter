@@ -136,7 +136,7 @@ export async function dispatchPaymentReminders(companyId: string): Promise<Sched
 
   const { data: invoices } = await supabase
     .from('invoices')
-    .select('id, invoice_no, client_id, client_name, due_date, total_amount, balance_due, status, company_id')
+    .select('id, invoice_no, client_id, client_name, due_date, total_amount, balance_due, status, company_id, campaign_id')
     .eq('company_id', companyId)
     .in('status', ['Sent', 'Overdue'])
     .gt('balance_due', 0);
@@ -153,6 +153,17 @@ export async function dispatchPaymentReminders(companyId: string): Promise<Sched
 
       const eventKey = isOverdue ? 'payment_overdue_client' : 'payment_reminder_client';
 
+      // Fetch campaign name if linked
+      let campaignName = '';
+      if (inv.campaign_id) {
+        const { data: campaign } = await supabase
+          .from('campaigns')
+          .select('campaign_name, campaign_code')
+          .eq('id', inv.campaign_id)
+          .single();
+        campaignName = campaign?.campaign_name || campaign?.campaign_code || '';
+      }
+
       const payload: EmailPayload = {
         invoice_number: inv.invoice_no || inv.id,
         invoice_date: '',
@@ -160,6 +171,7 @@ export async function dispatchPaymentReminders(companyId: string): Promise<Sched
         invoice_total: inv.total_amount ? `₹${Number(inv.total_amount).toLocaleString('en-IN')}` : '',
         balance_due: inv.balance_due ? `₹${Number(inv.balance_due).toLocaleString('en-IN')}` : '',
         client_name: inv.client_name || '',
+        campaign_name: campaignName,
       };
 
       if (inv.client_id) {

@@ -117,12 +117,20 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   // Create invoice details as a bordered table
   autoTable(doc, {
     startY: yPos,
-    body: [
-      ['Invoice No:', invoiceNo, 'Place Of Supply:', placeOfSupply],
-      ['Invoice Date:', invoiceDate, 'Sales Person:', salesPerson],
-      ['Terms:', termsMode, 'HSN/SAC:', HSN_SAC_CODE],
-      ['Due Date:', dueDate, '', ''],
-    ],
+    body: (() => {
+      const clientPoNumber = data.invoice.client_po_number || data.campaign?.client_po_number;
+      const clientPoDate = data.invoice.client_po_date || data.campaign?.client_po_date;
+      const poText = clientPoNumber 
+        ? (clientPoDate ? `${clientPoNumber} (${formatDate(clientPoDate)})` : clientPoNumber)
+        : '';
+      const rows = [
+        ['Invoice No:', invoiceNo, 'Place Of Supply:', placeOfSupply],
+        ['Invoice Date:', invoiceDate, 'Sales Person:', salesPerson],
+        ['Terms:', termsMode, 'HSN/SAC:', HSN_SAC_CODE],
+        ['Due Date:', dueDate, ...(clientPoNumber ? ['Client PO/WO:', poText] : ['', ''])],
+      ];
+      return rows;
+    })(),
     theme: 'plain',
     styles: {
       fontSize: 7.5,

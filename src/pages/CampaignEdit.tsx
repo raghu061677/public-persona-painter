@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, CalendarIcon, Save, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Save, X, FileText } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -125,6 +125,10 @@ export default function CampaignEdit() {
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   const [manualDiscountAmount, setManualDiscountAmount] = useState(0);
   const [manualDiscountReason, setManualDiscountReason] = useState("");
+  
+  // Client PO / Work Order reference
+  const [clientPoNumber, setClientPoNumber] = useState("");
+  const [clientPoDate, setClientPoDate] = useState<Date | undefined>();
   
   // Duration settings
   const [durationMode, setDurationMode] = useState<DurationMode>('MONTH');
@@ -290,6 +294,9 @@ export default function CampaignEdit() {
     // Load manual discount from database
     setManualDiscountAmount(Number(campaign.manual_discount_amount) || 0);
     setManualDiscountReason(campaign.manual_discount_reason || "");
+    // Client PO / Work Order reference
+    setClientPoNumber(campaign.client_po_number || "");
+    setClientPoDate(campaign.client_po_date ? new Date(campaign.client_po_date) : undefined);
     // Use campaign.gst_percent directly - if 0, it should stay 0 (do NOT default to 18)
     // Only if gst_percent is null/undefined AND gstApplicable, we default to 18
     const campaignGstPercent = campaign.gst_percent;
@@ -1029,6 +1036,8 @@ export default function CampaignEdit() {
           gst_amount: gstAmount,
           grand_total: grandTotal,
           billing_cycle: durationMode === 'DAYS' ? 'DAILY' : 'MONTHLY',
+          client_po_number: clientPoNumber || null,
+          client_po_date: clientPoDate ? format(clientPoDate, 'yyyy-MM-dd') : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -1437,6 +1446,54 @@ export default function CampaignEdit() {
                   placeholder="Additional campaign notes..."
                   rows={3}
                 />
+              </div>
+
+              {/* Client PO / Work Order Reference */}
+              <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Client PO / Work Order Reference</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="clientPoNumber">PO / WO Number</Label>
+                    <Input
+                      id="clientPoNumber"
+                      value={clientPoNumber}
+                      onChange={(e) => setClientPoNumber(e.target.value)}
+                      placeholder="e.g., PO-2025-001"
+                    />
+                  </div>
+                  <div>
+                    <Label>PO / WO Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !clientPoDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {clientPoDate ? format(clientPoDate, "dd MMM yyyy") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={clientPoDate}
+                          onSelect={setClientPoDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Client's Purchase Order or Work Order reference. This will appear on invoices generated for this campaign.
+                </p>
               </div>
             </CardContent>
           </Card>

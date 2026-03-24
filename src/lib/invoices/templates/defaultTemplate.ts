@@ -188,6 +188,19 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.setTextColor(0, 0, 0);
   doc.text(`: ${HSN_SAC_CODE}`, leftColX + labelWidth, detailRowY);
 
+  // Client PO/WO on right side of Row 4
+  const clientPoNumber = data.invoice.client_po_number || data.campaign?.client_po_number;
+  const clientPoDate = data.invoice.client_po_date || data.campaign?.client_po_date;
+  if (clientPoNumber) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Client PO/WO', rightColX, detailRowY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    const poText = clientPoDate ? `${clientPoNumber} (${formatDate(clientPoDate)})` : clientPoNumber;
+    doc.text(`: ${poText}`, rightColX + 28, detailRowY);
+  }
+
   yPos = detailRowY + 5;
 
   // ========== BILL TO / SHIP TO (2-column grid) ==========

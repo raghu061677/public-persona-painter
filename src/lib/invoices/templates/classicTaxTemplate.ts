@@ -348,6 +348,16 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   doc.text('HSN/SAC:', colMidX + 5.5, rightY);
   doc.text(HSN_SAC_CODE, colMidX + 32, rightY);
 
+  // Client PO / WO Reference
+  const clientPoNumber = data.invoice.client_po_number || data.campaign?.client_po_number;
+  const clientPoDate = data.invoice.client_po_date || data.campaign?.client_po_date;
+  if (clientPoNumber) {
+    rightY += 5;
+    doc.text('Client PO/WO:', colMidX + 5.5, rightY);
+    const poText = clientPoDate ? `${clientPoNumber} (${formatDate(clientPoDate)})` : clientPoNumber;
+    doc.text(poText, colMidX + 32, rightY);
+  }
+
   yPos += 31;
 
   // ========== 4. CAMPAIGN INFO ==========

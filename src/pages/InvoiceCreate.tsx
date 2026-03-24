@@ -80,7 +80,7 @@ export default function InvoiceCreate() {
     try {
       const { data: campaignsData, error } = await supabase
         .from('campaigns')
-        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, gst_percent, subtotal, start_date, end_date, status, company_id')
+        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, gst_percent, subtotal, start_date, end_date, status, company_id, client_po_number, client_po_date')
         .eq('company_id', companyId)
         .in('status', ['Running', 'Completed', 'Planned'])
         .eq('is_deleted', false)
@@ -205,6 +205,8 @@ export default function InvoiceCreate() {
           total_amount: totalAmount,
           balance_due: totalAmount,
           notes: `Invoice for campaign: ${selectedCampaign.campaign_name}`,
+          client_po_number: (selectedCampaign as any).client_po_number || null,
+          client_po_date: (selectedCampaign as any).client_po_date || null,
           created_by: user.id,
         });
 

@@ -2947,6 +2947,9 @@ export type Database = {
           campaign_name: string
           client_id: string
           client_name: string
+          client_po_date: string | null
+          client_po_document_url: string | null
+          client_po_number: string | null
           company_id: string | null
           created_at: string | null
           created_by: string
@@ -2989,6 +2992,9 @@ export type Database = {
           campaign_name: string
           client_id: string
           client_name: string
+          client_po_date?: string | null
+          client_po_document_url?: string | null
+          client_po_number?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by: string
@@ -3031,6 +3037,9 @@ export type Database = {
           campaign_name?: string
           client_id?: string
           client_name?: string
+          client_po_date?: string | null
+          client_po_document_url?: string | null
+          client_po_number?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string
@@ -6498,6 +6507,8 @@ export type Database = {
           cgst_percent: number | null
           client_id: string
           client_name: string
+          client_po_date: string | null
+          client_po_number: string | null
           company_id: string | null
           created_at: string | null
           created_by: string
@@ -6545,6 +6556,8 @@ export type Database = {
           cgst_percent?: number | null
           client_id: string
           client_name: string
+          client_po_date?: string | null
+          client_po_number?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by: string
@@ -6592,6 +6605,8 @@ export type Database = {
           cgst_percent?: number | null
           client_id?: string
           client_name?: string
+          client_po_date?: string | null
+          client_po_number?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string

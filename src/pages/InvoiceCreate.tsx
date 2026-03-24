@@ -205,6 +205,8 @@ export default function InvoiceCreate() {
           total_amount: totalAmount,
           balance_due: totalAmount,
           notes: `Invoice for campaign: ${selectedCampaign.campaign_name}`,
+          client_po_number: (selectedCampaign as any).client_po_number || null,
+          client_po_date: (selectedCampaign as any).client_po_date || null,
           created_by: user.id,
         });
 

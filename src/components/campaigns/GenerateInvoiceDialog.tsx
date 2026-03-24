@@ -154,6 +154,8 @@ export function GenerateInvoiceDialog({
           status: 'Draft' as const,
           items,
           notes: notes || `Tax Invoice for campaign: ${campaign.campaign_name}`,
+          client_po_number: campaign.client_po_number || null,
+          client_po_date: campaign.client_po_date || null,
           created_by: user.id,
         })
         .select()

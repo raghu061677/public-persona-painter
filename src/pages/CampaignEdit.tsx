@@ -205,7 +205,7 @@ export default function CampaignEdit() {
   const fetchClients = async () => {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, company, is_gst_applicable')
+      .select('id, name, company, is_gst_applicable, billing_state')
       .order('name');
     setClients(data || []);
   };

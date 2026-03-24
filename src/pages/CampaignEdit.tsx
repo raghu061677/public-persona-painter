@@ -1687,7 +1687,7 @@ export default function CampaignEdit() {
                   </div>
                   <div className="text-right">
                     <span className="text-muted-foreground">
-                      GST ({isGstApplicable ? `${effectiveGstPercent}%` : 'N/A'}):
+                      {isGstApplicable ? (taxType === 'igst' ? `IGST (${effectiveGstPercent}%)` : `CGST+SGST (${effectiveGstPercent}%)`) : 'GST (N/A)'}:
                     </span>
                     <span className="ml-2 font-medium">{formatCurrency(gstAmount)}</span>
                   </div>

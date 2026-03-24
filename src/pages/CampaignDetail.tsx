@@ -42,7 +42,7 @@ import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetail
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
 import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
-import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
+import { CampaignSignedROUpload } from "@/components/campaigns/CampaignSignedROUpload";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 import { CampaignRenewalChain } from "@/components/campaigns/CampaignRenewalChain";

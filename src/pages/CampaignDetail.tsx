@@ -613,17 +613,20 @@ export default function CampaignDetail() {
           )}
         </div>
         )}
-        {/* Signed Release Order */}
-        {signedRoData && (
-          <div className="mb-6">
-            <SignedRODocumentCard
-              planId={signedRoData.planId}
-              signedRoUrl={signedRoData.url}
-              signedRoUploadedAt={signedRoData.uploadedAt}
-              onViewPlan={() => navigate(`/admin/plans/${signedRoData.planId}`)}
-            />
-          </div>
-        )}
+        {/* Signed Release Order - with upload from campaign */}
+        <div className="mb-6">
+          <CampaignSignedROUpload
+            campaignId={campaign.id}
+            planId={signedRoData?.planId || campaign.plan_id || null}
+            planSignedRoUrl={signedRoData?.url || null}
+            planSignedRoUploadedAt={signedRoData?.uploadedAt || null}
+            campaignSignedRoUrl={campaign.signed_ro_url || null}
+            campaignSignedRoUploadedAt={campaign.signed_ro_uploaded_at || null}
+            onUploadComplete={refreshData}
+            onViewPlan={signedRoData?.planId ? () => navigate(`/admin/plans/${signedRoData.planId}`) : undefined}
+            canEdit={canEditThisCampaign}
+          />
+        </div>
 
         {/* Health Alerts */}
         <div className="mb-6">

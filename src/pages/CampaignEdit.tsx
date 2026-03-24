@@ -126,6 +126,10 @@ export default function CampaignEdit() {
   const [manualDiscountAmount, setManualDiscountAmount] = useState(0);
   const [manualDiscountReason, setManualDiscountReason] = useState("");
   
+  // Client PO / Work Order reference
+  const [clientPoNumber, setClientPoNumber] = useState("");
+  const [clientPoDate, setClientPoDate] = useState<Date | undefined>();
+  
   // Duration settings
   const [durationMode, setDurationMode] = useState<DurationMode>('MONTH');
   const [durationValue, setDurationValue] = useState<number>(1);

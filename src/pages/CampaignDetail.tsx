@@ -513,6 +513,17 @@ export default function CampaignDetail() {
                   <p className="text-xs text-muted-foreground">Client ID</p>
                   <p className="text-sm font-medium">{campaign.client_id}</p>
                 </div>
+                {campaign.client_po_number && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Client PO / WO No.</p>
+                    <p className="text-sm font-medium">
+                      {campaign.client_po_number}
+                      {campaign.client_po_date && (
+                        <span className="text-muted-foreground ml-2 text-xs">({formatDate(campaign.client_po_date)})</span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

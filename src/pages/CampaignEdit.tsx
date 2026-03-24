@@ -1447,6 +1447,54 @@ export default function CampaignEdit() {
                   rows={3}
                 />
               </div>
+
+              {/* Client PO / Work Order Reference */}
+              <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Client PO / Work Order Reference</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="clientPoNumber">PO / WO Number</Label>
+                    <Input
+                      id="clientPoNumber"
+                      value={clientPoNumber}
+                      onChange={(e) => setClientPoNumber(e.target.value)}
+                      placeholder="e.g., PO-2025-001"
+                    />
+                  </div>
+                  <div>
+                    <Label>PO / WO Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !clientPoDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {clientPoDate ? format(clientPoDate, "dd MMM yyyy") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={clientPoDate}
+                          onSelect={setClientPoDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Client's Purchase Order or Work Order reference. This will appear on invoices generated for this campaign.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

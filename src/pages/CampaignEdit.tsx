@@ -125,6 +125,7 @@ export default function CampaignEdit() {
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   const [manualDiscountAmount, setManualDiscountAmount] = useState(0);
   const [manualDiscountReason, setManualDiscountReason] = useState("");
+  const [taxType, setTaxType] = useState<'cgst_sgst' | 'igst'>('cgst_sgst');
   
   // Client PO / Work Order reference
   const [clientPoNumber, setClientPoNumber] = useState("");
@@ -204,7 +205,7 @@ export default function CampaignEdit() {
   const fetchClients = async () => {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, company, is_gst_applicable')
+      .select('id, name, company, is_gst_applicable, billing_state')
       .order('name');
     setClients(data || []);
   };
@@ -237,15 +238,25 @@ export default function CampaignEdit() {
     setClientId(campaign.client_id || "");
     setClientName(campaign.client_name || "");
     
-    // Fetch client to get GST applicability
+    // Fetch client to get GST applicability and state for tax type detection
     const { data: clientData } = await supabase
       .from('clients')
-      .select('is_gst_applicable')
+      .select('is_gst_applicable, billing_state')
       .eq('id', campaign.client_id)
       .maybeSingle();
     
     const gstApplicable = clientData?.is_gst_applicable !== false;
     setIsGstApplicable(gstApplicable);
+    
+    // Set tax_type from saved campaign data or auto-detect
+    if ((campaign as any).tax_type) {
+      setTaxType((campaign as any).tax_type === 'igst' ? 'igst' : 'cgst_sgst');
+    } else if (clientData?.billing_state) {
+      // Auto-detect: if client state differs from company state (Telangana), use IGST
+      const companyState = 'Telangana';
+      const clientState = clientData.billing_state;
+      setTaxType(clientState.toLowerCase() !== companyState.toLowerCase() ? 'igst' : 'cgst_sgst');
+    }
     
     const campaignStartDate = campaign.start_date ? new Date(campaign.start_date) : undefined;
     const campaignEndDate = campaign.end_date ? new Date(campaign.end_date) : undefined;
@@ -471,6 +482,14 @@ export default function CampaignEdit() {
       const gstApplicable = client.is_gst_applicable !== false;
       setIsGstApplicable(gstApplicable);
       setGstPercent(gstApplicable ? 18 : 0);
+      
+      // Auto-detect tax type based on client billing state
+      if (client.billing_state) {
+        const companyState = 'Telangana';
+        setTaxType(client.billing_state.toLowerCase() !== companyState.toLowerCase() ? 'igst' : 'cgst_sgst');
+      } else {
+        setTaxType('cgst_sgst');
+      }
     }
   };
 
@@ -1035,6 +1054,10 @@ export default function CampaignEdit() {
           gst_percent: gstPercent,
           gst_amount: gstAmount,
           grand_total: grandTotal,
+          tax_type: taxType,
+          cgst_amount: taxType === 'cgst_sgst' ? gstAmount / 2 : 0,
+          sgst_amount: taxType === 'cgst_sgst' ? gstAmount / 2 : 0,
+          igst_amount: taxType === 'igst' ? gstAmount : 0,
           billing_cycle: durationMode === 'DAYS' ? 'DAILY' : 'MONTHLY',
           client_po_number: clientPoNumber || null,
           client_po_date: clientPoDate ? format(clientPoDate, 'yyyy-MM-dd') : null,
@@ -1552,26 +1575,64 @@ export default function CampaignEdit() {
                   <span className="text-amber-600 font-medium">Not Applicable</span>
                 </div>
               ) : (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">GST</span>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={gstPercent}
-                      onChange={(e) => setGstPercent(Number(e.target.value))}
-                      className="w-16 h-8 text-right"
-                      min="0"
-                      max="100"
-                    />
-                    <span className="text-xs">%</span>
+                <>
+                  {/* GST Type Selector */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">GST Type</span>
+                    <Select value={taxType} onValueChange={(v: 'cgst_sgst' | 'igst') => setTaxType(v)}>
+                      <SelectTrigger className="w-40 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cgst_sgst">CGST + SGST (Intra-state)</SelectItem>
+                        <SelectItem value="igst">IGST (Inter-state)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
+                  
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">GST Rate</span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={gstPercent}
+                        onChange={(e) => setGstPercent(Number(e.target.value))}
+                        className="w-16 h-8 text-right"
+                        min="0"
+                        max="100"
+                      />
+                      <span className="text-xs">%</span>
+                    </div>
+                  </div>
+                </>
               )}
               
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">GST Amount</span>
-                <span className="font-medium">{formatCurrency(gstAmount)}</span>
-              </div>
+              {isGstApplicable && gstAmount > 0 && (
+                taxType === 'igst' ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">IGST ({gstPercent}%)</span>
+                    <span className="font-medium">{formatCurrency(gstAmount)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">CGST ({gstPercent / 2}%)</span>
+                      <span className="font-medium">{formatCurrency(gstAmount / 2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">SGST ({gstPercent / 2}%)</span>
+                      <span className="font-medium">{formatCurrency(gstAmount / 2)}</span>
+                    </div>
+                  </>
+                )
+              )}
+              
+              {!isGstApplicable && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">GST Amount</span>
+                  <span className="font-medium">{formatCurrency(0)}</span>
+                </div>
+              )}
               
               <div className="flex justify-between pt-3 border-t-2">
                 <span className="font-bold">Grand Total</span>
@@ -1626,7 +1687,7 @@ export default function CampaignEdit() {
                   </div>
                   <div className="text-right">
                     <span className="text-muted-foreground">
-                      GST ({isGstApplicable ? `${effectiveGstPercent}%` : 'N/A'}):
+                      {isGstApplicable ? (taxType === 'igst' ? `IGST (${effectiveGstPercent}%)` : `CGST+SGST (${effectiveGstPercent}%)`) : 'GST (N/A)'}:
                     </span>
                     <span className="ml-2 font-medium">{formatCurrency(gstAmount)}</span>
                   </div>

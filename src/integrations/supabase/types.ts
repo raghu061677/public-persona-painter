@@ -2945,6 +2945,7 @@ export type Database = {
           campaign_code: string | null
           campaign_group_id: string | null
           campaign_name: string
+          cgst_amount: number | null
           client_id: string
           client_name: string
           client_po_date: string | null
@@ -2962,6 +2963,7 @@ export type Database = {
           gst_amount: number
           gst_percent: number
           id: string
+          igst_amount: number | null
           is_deleted: boolean | null
           is_historical_entry: boolean | null
           is_recurring: boolean | null
@@ -2977,9 +2979,11 @@ export type Database = {
           public_share_enabled: boolean | null
           public_tracking_token: string | null
           secondary_owner_ids: string[] | null
+          sgst_amount: number | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
           subtotal: number | null
+          tax_type: string | null
           total_amount: number
           total_assets: number | null
           updated_at: string | null
@@ -2990,6 +2994,7 @@ export type Database = {
           campaign_code?: string | null
           campaign_group_id?: string | null
           campaign_name: string
+          cgst_amount?: number | null
           client_id: string
           client_name: string
           client_po_date?: string | null
@@ -3007,6 +3012,7 @@ export type Database = {
           gst_amount: number
           gst_percent: number
           id: string
+          igst_amount?: number | null
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
@@ -3022,9 +3028,11 @@ export type Database = {
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
           secondary_owner_ids?: string[] | null
+          sgst_amount?: number | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null
+          tax_type?: string | null
           total_amount: number
           total_assets?: number | null
           updated_at?: string | null
@@ -3035,6 +3043,7 @@ export type Database = {
           campaign_code?: string | null
           campaign_group_id?: string | null
           campaign_name?: string
+          cgst_amount?: number | null
           client_id?: string
           client_name?: string
           client_po_date?: string | null
@@ -3052,6 +3061,7 @@ export type Database = {
           gst_amount?: number
           gst_percent?: number
           id?: string
+          igst_amount?: number | null
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
@@ -3067,9 +3077,11 @@ export type Database = {
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
           secondary_owner_ids?: string[] | null
+          sgst_amount?: number | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null
+          tax_type?: string | null
           total_amount?: number
           total_assets?: number | null
           updated_at?: string | null
@@ -6541,6 +6553,7 @@ export type Database = {
           sgst_percent: number | null
           status: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          tax_type: string | null
           template_style: string
           terms_days: number
           terms_mode: string
@@ -6590,6 +6603,7 @@ export type Database = {
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          tax_type?: string | null
           template_style?: string
           terms_days?: number
           terms_mode?: string
@@ -6639,6 +6653,7 @@ export type Database = {
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total?: number
+          tax_type?: string | null
           template_style?: string
           terms_days?: number
           terms_mode?: string

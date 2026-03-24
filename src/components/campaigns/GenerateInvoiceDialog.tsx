@@ -135,6 +135,10 @@ export function GenerateInvoiceDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Determine tax_type from campaign
+      const campaignTaxType = (campaign as any).tax_type || 'cgst_sgst';
+      const isIGST = campaignTaxType === 'igst';
+
       // Create invoice - include company_id for RLS
       const { data: invoice, error } = await supabase
         .from('invoices')
@@ -149,6 +153,10 @@ export function GenerateInvoiceDialog({
           sub_total,
           gst_percent: effectiveGstPercent,
           gst_amount,
+          cgst_amount: isIGST ? 0 : gst_amount / 2,
+          sgst_amount: isIGST ? 0 : gst_amount / 2,
+          igst_amount: isIGST ? gst_amount : 0,
+          tax_type: campaignTaxType,
           total_amount,
           balance_due,
           status: 'Draft' as const,

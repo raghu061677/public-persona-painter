@@ -1520,9 +1520,9 @@ export default function CampaignEdit() {
                 </p>
                 <ClientPODocumentUpload
                   campaignId={id!}
-                  documentUrl={(campaign as any)?.client_po_document_url || null}
+                  documentUrl={campaignRecord?.client_po_document_url || null}
                   onUploadComplete={(url) => {
-                    setCampaign((prev: any) => prev ? { ...prev, client_po_document_url: url } : prev);
+                    setCampaignRecord((prev: any) => prev ? { ...prev, client_po_document_url: url } : prev);
                   }}
                 />
               </div>

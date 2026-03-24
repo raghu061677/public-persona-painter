@@ -99,11 +99,16 @@ export function CampaignSignedROUpload({
   const handleView = async () => {
     const path = campaignSignedRoUrl ? campaignStoragePath : planStoragePath;
     if (!path) return;
-    const { data } = await supabase.storage.from("client-documents").createSignedUrl(path, 3600);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
-    } else {
-      window.open(campaignSignedRoUrl || planSignedRoUrl || "", "_blank");
+    try {
+      const { data } = await supabase.storage.from("client-documents").download(path);
+      if (data) {
+        const url = URL.createObjectURL(data);
+        window.open(url, "_blank");
+      } else {
+        toast({ title: "Could not load document", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not load document", variant: "destructive" });
     }
   };
 

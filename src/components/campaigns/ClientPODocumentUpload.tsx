@@ -64,8 +64,17 @@ export function ClientPODocumentUpload({ campaignId, documentUrl, onUploadComple
   };
 
   const handleView = async () => {
-    const { data } = await supabase.storage.from("client-documents").createSignedUrl(storagePath, 3600);
-    window.open(data?.signedUrl || documentUrl || "", "_blank");
+    try {
+      const { data } = await supabase.storage.from("client-documents").download(storagePath);
+      if (data) {
+        const url = URL.createObjectURL(data);
+        window.open(url, "_blank");
+      } else {
+        toast({ title: "Could not load document", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not load document", variant: "destructive" });
+    }
   };
 
   const handleDownload = async () => {

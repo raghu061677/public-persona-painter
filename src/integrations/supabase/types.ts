@@ -2980,6 +2980,9 @@ export type Database = {
           public_tracking_token: string | null
           secondary_owner_ids: string[] | null
           sgst_amount: number | null
+          signed_ro_uploaded_at: string | null
+          signed_ro_uploaded_by: string | null
+          signed_ro_url: string | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
           subtotal: number | null
@@ -3029,6 +3032,9 @@ export type Database = {
           public_tracking_token?: string | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
+          signed_ro_uploaded_at?: string | null
+          signed_ro_uploaded_by?: string | null
+          signed_ro_url?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null
@@ -3078,6 +3084,9 @@ export type Database = {
           public_tracking_token?: string | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
+          signed_ro_uploaded_at?: string | null
+          signed_ro_uploaded_by?: string | null
+          signed_ro_url?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null

@@ -294,6 +294,9 @@ export default function CampaignEdit() {
     // Load manual discount from database
     setManualDiscountAmount(Number(campaign.manual_discount_amount) || 0);
     setManualDiscountReason(campaign.manual_discount_reason || "");
+    // Client PO / Work Order reference
+    setClientPoNumber(campaign.client_po_number || "");
+    setClientPoDate(campaign.client_po_date ? new Date(campaign.client_po_date) : undefined);
     // Use campaign.gst_percent directly - if 0, it should stay 0 (do NOT default to 18)
     // Only if gst_percent is null/undefined AND gstApplicable, we default to 18
     const campaignGstPercent = campaign.gst_percent;

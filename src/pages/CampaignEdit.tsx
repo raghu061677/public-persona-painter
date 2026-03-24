@@ -1036,6 +1036,8 @@ export default function CampaignEdit() {
           gst_amount: gstAmount,
           grand_total: grandTotal,
           billing_cycle: durationMode === 'DAYS' ? 'DAILY' : 'MONTHLY',
+          client_po_number: clientPoNumber || null,
+          client_po_date: clientPoDate ? format(clientPoDate, 'yyyy-MM-dd') : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);

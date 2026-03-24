@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, CalendarIcon, Save, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Save, X, FileText } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";

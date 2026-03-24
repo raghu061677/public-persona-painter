@@ -18,6 +18,7 @@ import { useFormValidation } from "@/hooks/useFormValidation";
 import { campaignEntitySchema } from "@/lib/validation/schemas";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
+import { ClientPODocumentUpload } from "@/components/campaigns/ClientPODocumentUpload";
 import { CampaignAssetsTable } from "@/components/campaigns/CampaignAssetsTable";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

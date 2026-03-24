@@ -125,6 +125,7 @@ export default function CampaignEdit() {
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   const [manualDiscountAmount, setManualDiscountAmount] = useState(0);
   const [manualDiscountReason, setManualDiscountReason] = useState("");
+  const [taxType, setTaxType] = useState<'cgst_sgst' | 'igst'>('cgst_sgst');
   
   // Client PO / Work Order reference
   const [clientPoNumber, setClientPoNumber] = useState("");

@@ -482,6 +482,14 @@ export default function CampaignEdit() {
       const gstApplicable = client.is_gst_applicable !== false;
       setIsGstApplicable(gstApplicable);
       setGstPercent(gstApplicable ? 18 : 0);
+      
+      // Auto-detect tax type based on client billing state
+      if (client.billing_state) {
+        const companyState = 'Telangana';
+        setTaxType(client.billing_state.toLowerCase() !== companyState.toLowerCase() ? 'igst' : 'cgst_sgst');
+      } else {
+        setTaxType('cgst_sgst');
+      }
     }
   };
 

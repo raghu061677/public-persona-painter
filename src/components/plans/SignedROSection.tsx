@@ -119,15 +119,17 @@ export function SignedROSection({
 
   const handleView = async () => {
     if (!signedRoUrl) return;
-    // Re-generate signed URL for viewing
     const storagePath = `plans/${planId}/documents/signed_ro.pdf`;
-    const { data } = await supabase.storage
-      .from("client-documents")
-      .createSignedUrl(storagePath, 3600);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
-    } else {
-      window.open(signedRoUrl, "_blank");
+    try {
+      const { data } = await supabase.storage.from("client-documents").download(storagePath);
+      if (data) {
+        const url = URL.createObjectURL(data);
+        window.open(url, "_blank");
+      } else {
+        toast({ title: "Could not load document", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not load document", variant: "destructive" });
     }
   };
 

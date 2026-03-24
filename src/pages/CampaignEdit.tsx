@@ -238,15 +238,25 @@ export default function CampaignEdit() {
     setClientId(campaign.client_id || "");
     setClientName(campaign.client_name || "");
     
-    // Fetch client to get GST applicability
+    // Fetch client to get GST applicability and state for tax type detection
     const { data: clientData } = await supabase
       .from('clients')
-      .select('is_gst_applicable')
+      .select('is_gst_applicable, billing_state')
       .eq('id', campaign.client_id)
       .maybeSingle();
     
     const gstApplicable = clientData?.is_gst_applicable !== false;
     setIsGstApplicable(gstApplicable);
+    
+    // Set tax_type from saved campaign data or auto-detect
+    if ((campaign as any).tax_type) {
+      setTaxType((campaign as any).tax_type === 'igst' ? 'igst' : 'cgst_sgst');
+    } else if (clientData?.billing_state) {
+      // Auto-detect: if client state differs from company state (Telangana), use IGST
+      const companyState = 'Telangana';
+      const clientState = clientData.billing_state;
+      setTaxType(clientState.toLowerCase() !== companyState.toLowerCase() ? 'igst' : 'cgst_sgst');
+    }
     
     const campaignStartDate = campaign.start_date ? new Date(campaign.start_date) : undefined;
     const campaignEndDate = campaign.end_date ? new Date(campaign.end_date) : undefined;

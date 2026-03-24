@@ -1575,26 +1575,64 @@ export default function CampaignEdit() {
                   <span className="text-amber-600 font-medium">Not Applicable</span>
                 </div>
               ) : (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">GST</span>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={gstPercent}
-                      onChange={(e) => setGstPercent(Number(e.target.value))}
-                      className="w-16 h-8 text-right"
-                      min="0"
-                      max="100"
-                    />
-                    <span className="text-xs">%</span>
+                <>
+                  {/* GST Type Selector */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">GST Type</span>
+                    <Select value={taxType} onValueChange={(v: 'cgst_sgst' | 'igst') => setTaxType(v)}>
+                      <SelectTrigger className="w-40 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cgst_sgst">CGST + SGST (Intra-state)</SelectItem>
+                        <SelectItem value="igst">IGST (Inter-state)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
+                  
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">GST Rate</span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={gstPercent}
+                        onChange={(e) => setGstPercent(Number(e.target.value))}
+                        className="w-16 h-8 text-right"
+                        min="0"
+                        max="100"
+                      />
+                      <span className="text-xs">%</span>
+                    </div>
+                  </div>
+                </>
               )}
               
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">GST Amount</span>
-                <span className="font-medium">{formatCurrency(gstAmount)}</span>
-              </div>
+              {isGstApplicable && gstAmount > 0 && (
+                taxType === 'igst' ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">IGST ({gstPercent}%)</span>
+                    <span className="font-medium">{formatCurrency(gstAmount)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">CGST ({gstPercent / 2}%)</span>
+                      <span className="font-medium">{formatCurrency(gstAmount / 2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">SGST ({gstPercent / 2}%)</span>
+                      <span className="font-medium">{formatCurrency(gstAmount / 2)}</span>
+                    </div>
+                  </>
+                )
+              )}
+              
+              {!isGstApplicable && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">GST Amount</span>
+                  <span className="font-medium">{formatCurrency(0)}</span>
+                </div>
+              )}
               
               <div className="flex justify-between pt-3 border-t-2">
                 <span className="font-bold">Grand Total</span>

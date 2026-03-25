@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuditStore } from "@/hooks/useAuditStore";
 import { usePersistedIssues, type PersistedIssue, type IssueSeverity, type WorkflowStatus } from "@/hooks/usePersistedIssues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

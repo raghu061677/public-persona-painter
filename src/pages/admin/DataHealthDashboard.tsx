@@ -306,7 +306,7 @@ export default function DataHealthDashboard() {
       </div>
 
       {/* Tab toggle */}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="session" className="gap-1.5">
             <Activity className="h-3.5 w-3.5" /> Session

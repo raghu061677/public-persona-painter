@@ -129,8 +129,16 @@ const SESSION_SEVERITY_MAP: Record<string, IssueSeverity> = {
 
 export default function DataHealthDashboard() {
   const { allIssues, snapshots, clear } = useAuditStore();
-  const [tab, setTab] = useState<string>("session");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const [tab, setTab] = useState<string>(urlTab === "persisted" ? "persisted" : "session");
   const isPersisted = tab === "persisted";
+
+  // Sync tab changes back to URL
+  const handleTabChange = useCallback((newTab: string) => {
+    setTab(newTab);
+    setSearchParams({ tab: newTab }, { replace: true });
+  }, [setSearchParams]);
   const { issues: persistedIssues, isLoading, trendData, runs, refetch, updateIssue, isUpdating } = usePersistedIssues(isPersisted);
 
   const [checkFilter, setCheckFilter] = useState<string>("all");

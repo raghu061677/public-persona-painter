@@ -483,7 +483,7 @@ export async function generatePlanPPT(
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
     // Fetch up to 2 distinct photos for this asset
-    const assetPhotos = await fetchAssetPhotosPlan(asset);
+    const assetPhotos = await fetchAssetPhotosPlan(asset, includeQR);
     const photo1Base64 = assetPhotos[0] || (await fetchImageWithCache(await getPlaceholderPngDataUrl()));
     const photo2Base64 = assetPhotos[1] || photo1Base64; // fallback to photo1 if only one available
 

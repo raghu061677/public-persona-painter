@@ -179,10 +179,82 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
 }
 
 /**
+ * Remove QR watermark from top-right corner of an image.
+ * The watermark is a white rounded card ~120x120px in the top-right corner.
+ * We use content-aware fill by sampling the surrounding area.
+ */
+async function removeQRWatermark(dataUrl: string): Promise<string> {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+      img.src = dataUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+
+    ctx.drawImage(img, 0, 0);
+
+    // QR watermark is typically in top-right corner, ~15% of image width
+    const qrSize = Math.min(canvas.width, canvas.height) * 0.15;
+    const margin = qrSize * 0.1;
+    const x = canvas.width - qrSize - margin;
+    const y = margin;
+
+    // Sample color from area just below the QR region for fill
+    const sampleY = y + qrSize + 5;
+    const sampleData = ctx.getImageData(x + qrSize / 2, Math.min(sampleY, canvas.height - 1), 1, 1).data;
+    
+    // Also sample from left of QR region
+    const sampleX = x - 5;
+    const sampleData2 = ctx.getImageData(Math.max(sampleX, 0), y + qrSize / 2, 1, 1).data;
+
+    // Use a gradient fill from the surrounding colors
+    const gradient = ctx.createLinearGradient(x, y, x + qrSize, y + qrSize);
+    gradient.addColorStop(0, `rgb(${sampleData2[0]},${sampleData2[1]},${sampleData2[2]})`);
+    gradient.addColorStop(1, `rgb(${sampleData[0]},${sampleData[1]},${sampleData[2]})`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - 2, y, qrSize + margin + 2, qrSize + 2);
+
+    // Also handle bottom-left logo watermark if present
+    const logoSize = qrSize * 0.8;
+    const logoX = margin;
+    const logoY = canvas.height - logoSize - margin;
+    const sampleLogoRight = ctx.getImageData(
+      Math.min(logoX + logoSize + 5, canvas.width - 1),
+      logoY + logoSize / 2,
+      1, 1
+    ).data;
+    const sampleLogoAbove = ctx.getImageData(
+      logoX + logoSize / 2,
+      Math.max(logoY - 5, 0),
+      1, 1
+    ).data;
+    const gradientLogo = ctx.createLinearGradient(logoX, logoY, logoX + logoSize, logoY + logoSize);
+    gradientLogo.addColorStop(0, `rgb(${sampleLogoAbove[0]},${sampleLogoAbove[1]},${sampleLogoAbove[2]})`);
+    gradientLogo.addColorStop(1, `rgb(${sampleLogoRight[0]},${sampleLogoRight[1]},${sampleLogoRight[2]})`);
+    ctx.fillStyle = gradientLogo;
+    ctx.fillRect(logoX, logoY, logoSize + 2, logoSize + margin + 2);
+
+    return canvas.toDataURL('image/jpeg', 0.92);
+  } catch {
+    return dataUrl;
+  }
+}
+
+/**
  * Fetch up to 2 distinct photos for an asset in Plan PPT.
  * Priority: campaign_assets.photos → media_photos → primary_photo_url
+ * When includeQR=false, QR watermarks are stripped from photos.
  */
-async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]> {
+async function fetchAssetPhotosPlan(asset: PlanAsset, includeQR: boolean = true): Promise<(string | null)[]> {
   const dbId = asset.db_asset_id;
   const results: string[] = [];
 
@@ -204,8 +276,11 @@ async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]
             const urls = Object.values(p).filter((v): v is string => typeof v === "string" && v.length > 0);
             for (const url of urls) {
               if (results.length >= 2) break;
-              const img = await fetchImageWithCache(url);
-              if (img) results.push(img);
+              let img = await fetchImageWithCache(url);
+              if (img) {
+                if (!includeQR) img = await removeQRWatermark(img);
+                results.push(img);
+              }
             }
           }
         }
@@ -226,8 +301,11 @@ async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]
         for (const p of libPhotos) {
           if (results.length >= 2) break;
           if (p.photo_url) {
-            const img = await fetchImageWithCache(p.photo_url);
-            if (img) results.push(img);
+            let img = await fetchImageWithCache(p.photo_url);
+            if (img) {
+              if (!includeQR) img = await removeQRWatermark(img);
+              results.push(img);
+            }
           }
         }
       }
@@ -236,8 +314,11 @@ async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]
 
   // 3) Fallback: primary_photo_url
   if (results.length < 2 && asset.primary_photo_url) {
-    const img = await fetchImageWithCache(asset.primary_photo_url);
-    if (img && !results.includes(img)) results.push(img);
+    let img = await fetchImageWithCache(asset.primary_photo_url);
+    if (img && !results.includes(img)) {
+      if (!includeQR) img = await removeQRWatermark(img);
+      results.push(img);
+    }
   }
 
   return results;

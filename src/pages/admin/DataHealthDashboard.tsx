@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuditStore } from "@/hooks/useAuditStore";
 import { usePersistedIssues, type PersistedIssue, type IssueSeverity, type WorkflowStatus } from "@/hooks/usePersistedIssues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,8 +129,16 @@ const SESSION_SEVERITY_MAP: Record<string, IssueSeverity> = {
 
 export default function DataHealthDashboard() {
   const { allIssues, snapshots, clear } = useAuditStore();
-  const [tab, setTab] = useState<string>("session");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const [tab, setTab] = useState<string>(urlTab === "persisted" ? "persisted" : "session");
   const isPersisted = tab === "persisted";
+
+  // Sync tab changes back to URL
+  const handleTabChange = useCallback((newTab: string) => {
+    setTab(newTab);
+    setSearchParams({ tab: newTab }, { replace: true });
+  }, [setSearchParams]);
   const { issues: persistedIssues, isLoading, trendData, runs, refetch, updateIssue, isUpdating } = usePersistedIssues(isPersisted);
 
   const [checkFilter, setCheckFilter] = useState<string>("all");
@@ -297,7 +306,7 @@ export default function DataHealthDashboard() {
       </div>
 
       {/* Tab toggle */}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="session" className="gap-1.5">
             <Activity className="h-3.5 w-3.5" /> Session

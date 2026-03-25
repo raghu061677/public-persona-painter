@@ -407,7 +407,7 @@ async function sendAlertEmail(
       </span>
     `).join("");
 
-  const dashboardUrl = "https://go-ads.lovable.app/admin/data-health?tab=persisted";
+  const dashboardUrl = "https://app.go-ads.in/admin/data-health?tab=persisted";
   const today = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
 
   const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>

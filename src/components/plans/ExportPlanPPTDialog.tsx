@@ -15,6 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { generatePlanPPT } from '@/lib/plans/generatePlanPPT';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface ExportPlanPPTDialogProps {
   planId: string;
@@ -25,17 +27,16 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assetCount, setAssetCount] = useState(0);
+  const [includeQR, setIncludeQR] = useState(true);
 
   const loadPlanData = async () => {
     try {
-      // Load plan items count
       const { data: items, error } = await supabase
         .from('plan_items')
         .select('id')
         .eq('plan_id', planId);
 
       if (error) throw error;
-
       setAssetCount(items?.length || 0);
     } catch (error: any) {
       console.error('Error loading plan data:', error);
@@ -66,7 +67,6 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
 
     setLoading(true);
     try {
-      // Load plan details
       const { data: plan, error: planError } = await supabase
         .from('plans')
         .select('*')
@@ -75,7 +75,6 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
 
       if (planError) throw planError;
 
-      // Load plan items with asset details
       const { data: planItems, error: itemsError } = await supabase
         .from('plan_items')
         .select('*, asset:media_assets(*)')
@@ -93,21 +92,18 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         return;
       }
 
-      // Load organization settings
       const { data: orgSettings } = await supabase
         .from('organization_settings')
         .select('*')
         .limit(1)
         .single();
 
-      // Load company code settings (for display IDs like MNS-HYD-...)
       const { data: codeSettings } = await supabase
         .from('company_code_settings')
         .select('use_custom_asset_codes, asset_code_prefix')
         .eq('company_id', plan.company_id)
         .maybeSingle();
 
-      // Fallback: if primary_photo_url is missing, use the latest image from media_photos
       const assetIds = planItems.map((i: any) => i.asset?.id).filter(Boolean);
       const { data: photoRows } = await supabase
         .from('media_photos')
@@ -120,10 +116,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         if (!latestPhotoByAsset.has(r.asset_id) && r.photo_url) latestPhotoByAsset.set(r.asset_id, r.photo_url);
       });
 
-      // Format assets for PPT - ALWAYS use formatAssetDisplayCode for asset_id
-      // This ensures UUID never leaks into exports
       const assets = planItems.map((item: any) => {
-        // Use centralized formatAssetDisplayCode utility
         const displayCode = formatAssetDisplayCode({
           mediaAssetCode: item.asset?.media_asset_code,
           fallbackId: item.asset?.id,
@@ -131,8 +124,8 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         });
 
         return {
-          asset_id: displayCode, // Human-readable code, NEVER UUID
-          db_asset_id: item.asset?.id, // Actual DB id for querying photos
+          asset_id: displayCode,
+          db_asset_id: item.asset?.id,
           area: item.asset?.area || '',
           city: item.asset?.city || '',
           location: item.asset?.location || '',
@@ -150,16 +143,15 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         };
       });
 
-      // Generate PPT
       const pptBlob = await generatePlanPPT(
         {
           ...plan,
           assets,
         },
-        orgSettings || {}
+        orgSettings || {},
+        { includeQR }
       );
 
-      // Download
       const url = URL.createObjectURL(pptBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -223,6 +215,20 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
               <p>• Format: Professional branded PowerPoint</p>
               <p>• Includes: Photos, GPS data, pricing, specifications</p>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2 p-3 border rounded-lg">
+            <Checkbox
+              id="include-qr"
+              checked={includeQR}
+              onCheckedChange={(checked) => setIncludeQR(checked === true)}
+            />
+            <Label htmlFor="include-qr" className="text-sm cursor-pointer">
+              Include QR codes on photos
+            </Label>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {includeQR ? 'Photos will include QR watermarks' : 'Clean photos without QR overlays'}
+            </span>
           </div>
 
           {assetCount === 0 && (

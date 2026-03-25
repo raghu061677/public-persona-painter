@@ -243,10 +243,16 @@ async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]
   return results;
 }
 
+export interface PlanPPTExportOptions {
+  includeQR?: boolean;
+}
+
 export async function generatePlanPPT(
   plan: PlanData,
-  orgSettings: OrganizationSettings
+  orgSettings: OrganizationSettings,
+  exportOptions?: PlanPPTExportOptions
 ): Promise<Blob> {
+  const includeQR = exportOptions?.includeQR ?? true;
   const prs = new pptxgen();
 
   // Configure presentation

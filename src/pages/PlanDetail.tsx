@@ -141,8 +141,10 @@ export default function PlanDetail() {
     if (!id) return;
     const { data } = await supabase
       .from('campaigns')
-      .select('id')
+      .select('id, created_at')
       .eq('plan_id', id)
+      .or('is_deleted.is.null,is_deleted.eq.false')
+      .order('created_at', { ascending: true })
       .maybeSingle();
     
     if (data) {
@@ -1044,6 +1046,17 @@ export default function PlanDetail() {
       }
 
       const result = await response.json();
+
+      if (result?.already_converted && result?.campaign_id) {
+        toast({
+          title: "Plan Already Converted",
+          description: `Using existing campaign ${result.campaign_code || result.campaign_id}`,
+        });
+        setShowConvertDialog(false);
+        navigate(`/admin/campaigns/${result.campaign_id}`);
+        return;
+      }
+
       console.log("🎉 Conversion Result:", result);
 
       if (result.error || !result.success) {

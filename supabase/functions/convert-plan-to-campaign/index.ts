@@ -55,6 +55,39 @@ serve(withAuth(async (req) => {
   // Service client for cross-table writes (campaign creation needs to write to multiple tables atomically)
   const supabase = supabaseServiceClient();
 
+  // Hard guard: if any non-deleted campaign already exists for this plan, reuse it.
+  // This protects against stale plans where converted_to_campaign_id was not updated.
+  const { data: existingByPlan, error: existingByPlanError } = await supabase
+    .from('campaigns')
+    .select('id, status, campaign_name, created_at')
+    .eq('plan_id', planId)
+    .or('is_deleted.is.null,is_deleted.eq.false')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingByPlanError) {
+    return jsonError(`Failed to check existing campaigns: ${existingByPlanError.message}`, 500);
+  }
+
+  if (existingByPlan?.id) {
+    await supabase
+      .from('plans')
+      .update({ converted_to_campaign_id: existingByPlan.id, status: 'Converted' })
+      .eq('id', planId)
+      .is('converted_to_campaign_id', null);
+
+    return jsonSuccess({
+      success: true,
+      message: 'Plan was already converted',
+      campaign_id: existingByPlan.id,
+      campaign_code: existingByPlan.id,
+      plan_id: planId,
+      already_converted: true,
+      status: existingByPlan.status || 'Draft',
+    });
+  }
+
   // Atomic lock
   const { data: existingCampaignId, error: lockError } = await supabase
     .rpc("lock_plan_for_conversion", { p_plan_id: planId });
@@ -179,7 +212,10 @@ serve(withAuth(async (req) => {
     return { campaign_id: campaignId, asset_id: item.asset_id, card_rate: item.card_rate||0, negotiated_rate: ep, printing_charges: pc, mounting_charges: mc, total_price: totalPrice, media_type: item.media_type||"Unknown", state: item.state||"", district: item.district||"", city: item.city||"", area: item.area||"", location: item.location||"", direction: item.direction||"", dimensions: item.dimensions||"", total_sqft: item.total_sqft||null, illumination_type: item.illumination_type||"", latitude: item.latitude||null, longitude: item.longitude||null, booking_start_date: sd, booking_end_date: ed, start_date: sd, end_date: ed, booked_days: days, billing_mode: bm, daily_rate: dr, rent_amount: rent, status: "Pending" as const };
   });
   const { error: caErr } = await supabase.from("campaign_assets").insert(caPayload);
-  if (caErr) return jsonError(`Failed to create campaign assets: ${caErr.message}`, 500);
+  if (caErr) {
+    await supabase.from('campaigns').delete().eq('id', campaignId);
+    return jsonError(`Failed to create campaign assets: ${caErr.message}`, 500);
+  }
 
   // NOTE: media_assets.status is NO LONGER the source of truth for booking.
   // Availability is determined dynamically from campaign_assets date overlaps.

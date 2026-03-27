@@ -1057,7 +1057,6 @@ export default function PlanDetail() {
         return;
       }
 
-      const result = await response.json();
       console.log("🎉 Conversion Result:", result);
 
       if (result.error || !result.success) {

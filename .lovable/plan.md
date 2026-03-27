@@ -1,70 +1,34 @@
 
 
-# Add Custom Fields Export + Summary to Booked Media Report
+# Fix: Dropped Assets Not Excluded from Availability & Conflict Checks
 
-## What's Missing vs. Vacant Media Report
+## Problem
+Asset **MNS-HYD-BQS-0045** was dropped from the Akriti campaign (`is_removed = true`), and `media_assets.status` is correctly set to "Available". However, **two critical SQL functions** do not filter out dropped (`is_removed = true`) campaign_assets rows:
 
-The `/admin/reports/vacant-media` (MediaAvailabilityReport) has two features that `/admin/reports/booked-media` currently lacks:
+1. **`fn_media_availability_range`** — Powers the Vacant Media Report. Its `valid_bookings` CTE (line 295-310) has no `is_removed` filter, so the dropped Akriti booking (Mar 22 – Apr 5) still counts as an active booking. The asset shows as "BOOKED_THROUGH_RANGE" instead of "VACANT_NOW".
 
-1. **"Custom Fields Export" button** -- Opens a dialog (`CustomExportDialog`) where users can pick specific fields grouped by category (Core, Location, Specifications, etc.), then export to Excel or PPT with only those fields. The Booked Media page only has a basic "Export Excel" in the `ReportExportMenu` dropdown that exports visible columns.
+2. **`check_asset_conflict`** — Powers conflict detection in plan/campaign asset pickers. Also missing `is_removed` filter, so dropped assets still trigger false conflict warnings.
 
-2. **Summary row in the Excel export** -- The Vacant Media custom export includes a summary section (Total, Available, Booked counts) above the data rows. The Booked Media export has no such summary.
+## Fix (Single Migration)
 
-## Implementation Plan
+### 1. Update `fn_media_availability_range`
+Add `AND COALESCE(ca.is_removed, false) = false` to the `valid_bookings` CTE, right after the existing WHERE conditions (around line 309).
 
-### Step 1: Create Booked Media Custom Export Fields Definition
-**New file: `src/lib/reports/generateCustomBookedMediaExcel.ts`**
+### 2. Update `check_asset_conflict`
+Add `AND COALESCE(ca.is_removed, false) = false` to both SELECT clauses inside the function (the EXISTS check and the jsonb_agg subquery).
 
-Define `ALL_BOOKED_EXPORT_FIELDS` grouped by category:
-- **Core**: S.No, Asset Code
-- **Location**: City, Area, Location, Address, Facing (Direction)
-- **Specifications**: Media Type, Dimensions, Sq.Ft, Illumination
-- **Campaign**: Campaign Name, Client Name, Campaign Status, Installation Status
-- **Dates**: Start Date, End Date, Duration (Days)
-- **Geo Coordinates**: Latitude, Longitude
+### 3. Sync `media_assets.status` for MNS-HYD-BQS-0045
+Run `syncMediaAssetBookingState` after the migration to ensure the cached status field is correct (it already shows "Available", so this is just a safety step).
 
-Each field has a `getValue` function that reads from `BookedMediaRow` and formats appropriately (dates as DD/MM/YYYY, etc.).
+## Impact
+- Dropped assets will correctly appear as "Available" in the Vacant Media Report
+- Dropped assets will no longer trigger false conflict warnings in asset pickers
+- No changes to existing non-dropped bookings
+- No frontend code changes needed
 
-Also define `DEFAULT_CUSTOM_FIELDS`, `FIELD_GROUPS`, and a `generateCustomBookedMediaExcel()` function that:
-- Creates a branded header row
-- Adds a summary section (Total Bookings, Unique Assets, Campaigns, Clients)
-- Writes data rows with campaign-status-based row coloring (green for Completed, red for Cancelled, blue for Running)
-- Downloads the file
-
-### Step 2: Create Booked Media Custom PPT Export
-**New file: `src/lib/reports/generateCustomBookedMediaPpt.ts`**
-
-Similar to `generateCustomAvailabilityPpt.ts`:
-- Cover slide with branding
-- Summary slide with KPI cards (Total Bookings, Unique Assets, Campaigns, Clients)
-- Paginated table slides with selected fields
-- Campaign-status-based row coloring
-
-### Step 3: Create Custom Export Dialog for Booked Media
-**New file: `src/components/reports/BookedMediaCustomExportDialog.tsx`**
-
-A dialog component (similar to `CustomExportDialog`) that:
-- Shows all booked media fields grouped by category with checkboxes
-- Select All / Reset to Default actions
-- "Export Excel" and "Export PPT" buttons
-- Calls the new `generateCustomBookedMediaExcel` and `generateCustomBookedMediaPpt` functions
-
-### Step 4: Update ReportBookedMedia Page
-**Edit: `src/pages/ReportBookedMedia.tsx`**
-
-- Import `BookedMediaCustomExportDialog` and `Settings2` icon
-- Add state: `customExportOpen`
-- Add "Custom Fields Export" button next to the existing `ReportExportMenu` in the header area
-- Wire up the dialog with `filteredData`, date range, and company info
-- Ensure the existing column-toggle Excel export in `ReportExportMenu` continues to work as-is
-
-### Summary of Changes
-| File | Action |
-|------|--------|
-| `src/lib/reports/generateCustomBookedMediaExcel.ts` | Create -- field definitions + Excel generator |
-| `src/lib/reports/generateCustomBookedMediaPpt.ts` | Create -- PPT generator |
-| `src/components/reports/BookedMediaCustomExportDialog.tsx` | Create -- dialog UI |
-| `src/pages/ReportBookedMedia.tsx` | Edit -- add button + dialog integration |
-
-No database or billing changes. All additions are UI + export logic only.
+## Technical Detail
+Both functions will add a single line filter:
+```sql
+AND COALESCE(ca.is_removed, false) = false
+```
 

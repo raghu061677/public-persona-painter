@@ -660,7 +660,7 @@ export async function generatePlanPPT(
           y: 1.6,
           w: 2.5,
           h: 2.5,
-          sizing: { type: 'cover', w: 2.5, h: 2.5 },
+          sizing: { type: 'contain', w: 2.5, h: 2.5 },
         });
       }
     } catch (error) {

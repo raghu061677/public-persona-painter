@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
+import { useEmailTrigger, buildPlanPayload, buildAssetTableHtml } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";

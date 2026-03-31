@@ -1,0 +1,1 @@
+UPDATE invoices SET invoice_type = 'TAX_INVOICE', updated_at = now() WHERE id = 'INV/2025-26/0058' AND invoice_type = 'PROFORMA';

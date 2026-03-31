@@ -218,6 +218,39 @@ export function buildPlanPayload(plan: any, client?: any, company?: any): EmailP
   };
 }
 
+/**
+ * Build an HTML table of asset details for email notifications.
+ */
+export function buildAssetTableHtml(items: any[]): string {
+  if (!items || items.length === 0) return '<p style="color:#94a3b8;">No assets added.</p>';
+  const headerStyle = 'padding:6px 8px;text-align:left;border:1px solid #e2e8f0;background:#f1f5f9;font-size:12px;color:#334155;white-space:nowrap;';
+  const cellStyle = 'padding:6px 8px;border:1px solid #e2e8f0;font-size:12px;color:#475569;';
+  const rows = items.map(item => `<tr>
+    <td style="${cellStyle}">${item.asset_id || ''}</td>
+    <td style="${cellStyle}">${item.area || ''}</td>
+    <td style="${cellStyle}">${item.location || ''}</td>
+    <td style="${cellStyle}">${item.direction || ''}</td>
+    <td style="${cellStyle}">${item.dimensions || ''}</td>
+    <td style="${cellStyle}">${item.total_sqft || ''}</td>
+    <td style="${cellStyle}">${item.illumination_type || ''}</td>
+    <td style="${cellStyle}">${item.media_type || ''}</td>
+  </tr>`).join('');
+
+  return `<table style="width:100%;border-collapse:collapse;margin:8px 0;">
+    <thead><tr>
+      <th style="${headerStyle}">Asset Code</th>
+      <th style="${headerStyle}">Area</th>
+      <th style="${headerStyle}">Location</th>
+      <th style="${headerStyle}">Direction</th>
+      <th style="${headerStyle}">Dimension</th>
+      <th style="${headerStyle}">Sqft</th>
+      <th style="${headerStyle}">Illumination</th>
+      <th style="${headerStyle}">Type</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
 export function buildCampaignPayload(campaign: any, client?: any, company?: any): EmailPayload {
   return {
     campaign_name: campaign?.campaign_name || campaign?.name || '',

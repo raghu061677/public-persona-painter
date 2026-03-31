@@ -49,7 +49,9 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
         <tr><td style="padding: 8px 0; color: #64748b;">Total Amount</td><td style="padding: 8px 0; font-weight: 600;">{{plan_total}}</td></tr>
         <tr><td style="padding: 8px 0; color: #64748b;">Period</td><td style="padding: 8px 0;">{{campaign_start_date}} – {{campaign_end_date}}</td></tr>
       </table>
-      <a href="{{plan_link}}" style="display: inline-block; background: #1e40af; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 8px;">View Plan</a>
+      <h3 style="color: #1e293b; margin: 24px 0 8px;">Asset Details ({{asset_count}} assets)</h3>
+      {{asset_table_html}}
+      <a href="{{plan_link}}" style="display: inline-block; background: #1e40af; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 16px;">View Plan</a>
     `),
   },
   {

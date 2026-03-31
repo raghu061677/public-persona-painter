@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
+import { useEmailTrigger, buildPlanPayload, buildAssetTableHtml } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";
@@ -568,6 +568,9 @@ export default function PlanNew() {
           });
         } else {
           const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
+          // Build asset details table for email
+          emailPayload.asset_count = String(items.length);
+          emailPayload.asset_table_html = buildAssetTableHtml(items);
           const emailResult = await triggerEmail('plan_created_internal', emailPayload,
             [{ to: recipientEmail }], plan.id);
 

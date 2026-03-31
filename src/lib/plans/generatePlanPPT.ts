@@ -345,7 +345,8 @@ export async function generatePlanPPT(
   orgSettings: OrganizationSettings,
   exportOptions?: PlanPPTExportOptions
 ): Promise<Blob> {
-  const includeQR = exportOptions?.includeQR ?? true;
+  const includeQR = exportOptions?.includeQR ?? false;
+  imageCache.clear(); // Clear cache for fresh generation
   const prs = new pptxgen();
 
   // Configure presentation

@@ -55,6 +55,30 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     `),
   },
   {
+    template_key: 'plan_updated_internal',
+    template_name: 'Plan Updated (Internal)',
+    category: 'plan',
+    audience: 'internal',
+    trigger_event: 'plan_updated_internal',
+    send_mode: 'auto',
+    description: 'Internal notification when a plan is updated',
+    subject_template: 'Plan Updated: {{plan_code}} — {{plan_name}}',
+    html_template: WRAPPER(`
+      <h2 style="color: #1e293b; margin-top: 0;">Plan Updated</h2>
+      <p style="color: #475569;">A media plan has been updated with new changes.</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+        <tr><td style="padding: 8px 0; color: #64748b; width: 140px;">Plan Code</td><td style="padding: 8px 0; font-weight: 600;">{{plan_code}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Plan Name</td><td style="padding: 8px 0;">{{plan_name}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Client</td><td style="padding: 8px 0;">{{client_company}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Total Amount</td><td style="padding: 8px 0; font-weight: 600;">{{plan_total}}</td></tr>
+        <tr><td style="padding: 8px 0; color: #64748b;">Period</td><td style="padding: 8px 0;">{{campaign_start_date}} – {{campaign_end_date}}</td></tr>
+      </table>
+      <h3 style="color: #1e293b; margin: 24px 0 8px;">Asset Details ({{asset_count}} assets)</h3>
+      {{asset_table_html}}
+      <a href="{{plan_link}}" style="display: inline-block; background: #1e40af; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 16px;">View Plan</a>
+    `),
+  },
+  {
     template_key: 'plan_approval_requested_internal',
     template_name: 'Plan Approval Requested',
     category: 'plan',

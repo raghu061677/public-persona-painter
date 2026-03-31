@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmailTrigger, buildPlanPayload, buildAssetTableHtml } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";

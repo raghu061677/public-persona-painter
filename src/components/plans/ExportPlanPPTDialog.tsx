@@ -27,7 +27,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assetCount, setAssetCount] = useState(0);
-  const [includeQR, setIncludeQR] = useState(true);
+  const [includeQR, setIncludeQR] = useState(false);
 
   const loadPlanData = async () => {
     try {

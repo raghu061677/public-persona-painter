@@ -118,11 +118,13 @@ async function toFetchableUrl(url: string): Promise<string> {
   return url;
 }
 
-async function ensurePptCompatibleDataUrl(dataUrl: string): Promise<string | null> {
+/**
+ * Resize and convert any image data URL to a PPT-compatible JPEG.
+ * Caps dimensions at maxW×maxH to prevent bloated files and corruption.
+ */
+async function ensurePptCompatibleDataUrl(dataUrl: string, maxW = 1200, maxH = 900): Promise<string | null> {
   if (!dataUrl?.startsWith('data:')) return null;
-  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/png')) return dataUrl;
 
-  // Convert SVG/WebP/etc to JPEG via canvas
   try {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -132,13 +134,23 @@ async function ensurePptCompatibleDataUrl(dataUrl: string): Promise<string | nul
       img.src = dataUrl;
     });
 
+    let w = img.naturalWidth || 1600;
+    let h = img.naturalHeight || 1200;
+
+    // Down-scale if larger than max dimensions
+    if (w > maxW || h > maxH) {
+      const scale = Math.min(maxW / w, maxH / h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || 1600;
-    canvas.height = img.naturalHeight || 1200;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    ctx.drawImage(img, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.9);
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.75);
   } catch {
     return null;
   }
@@ -243,7 +255,7 @@ async function removeQRWatermark(dataUrl: string): Promise<string> {
     ctx.fillStyle = gradientLogo;
     ctx.fillRect(logoX, logoY, logoSize + 2, logoSize + margin + 2);
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.75);
   } catch {
     return dataUrl;
   }
@@ -333,7 +345,8 @@ export async function generatePlanPPT(
   orgSettings: OrganizationSettings,
   exportOptions?: PlanPPTExportOptions
 ): Promise<Blob> {
-  const includeQR = exportOptions?.includeQR ?? true;
+  const includeQR = exportOptions?.includeQR ?? false;
+  imageCache.clear(); // Clear cache for fresh generation
   const prs = new pptxgen();
 
   // Configure presentation
@@ -526,14 +539,14 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // Image 1
+    // Image 1 — contained within slide border with proper gap
     try {
       slide1.addShape(prs.ShapeType.rect, {
         x: 0.4,
         y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        fill: { color: 'FFFFFF' },
+        w: 4.3,
+        h: 3.4,
+        fill: { color: 'F3F4F6' },
         line: { color: 'E5E7EB', width: 1 },
       });
 
@@ -542,34 +555,34 @@ export async function generatePlanPPT(
           data: photo1Base64,
           x: 0.4,
           y: 1.5,
-          w: 4.5,
-          h: 3.8,
-          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+          w: 4.3,
+          h: 3.4,
+          sizing: { type: 'contain', w: 4.3, h: 3.4 },
         });
       }
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
 
-    // Image 2
+    // Image 2 — contained within slide border with proper gap
     try {
       slide1.addShape(prs.ShapeType.rect, {
-        x: 5.1,
+        x: 5.0,
         y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        fill: { color: 'FFFFFF' },
+        w: 4.3,
+        h: 3.4,
+        fill: { color: 'F3F4F6' },
         line: { color: 'E5E7EB', width: 1 },
       });
 
       if (photo2Base64) {
         slide1.addImage({
           data: photo2Base64,
-          x: 5.1,
+          x: 5.0,
           y: 1.5,
-          w: 4.5,
-          h: 3.8,
-          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+          w: 4.3,
+          h: 3.4,
+          sizing: { type: 'contain', w: 4.3, h: 3.4 },
         });
       }
     } catch (error) {
@@ -648,7 +661,7 @@ export async function generatePlanPPT(
           y: 1.6,
           w: 2.5,
           h: 2.5,
-          sizing: { type: 'cover', w: 2.5, h: 2.5 },
+          sizing: { type: 'contain', w: 2.5, h: 2.5 },
         });
       }
     } catch (error) {

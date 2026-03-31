@@ -139,80 +139,15 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
 }
 
 /**
- * Remove QR watermark from top-right corner and logo from bottom-left.
- * Paints over those regions with sampled surrounding colors.
- */
-async function removeQRWatermark(dataUrl: string): Promise<string> {
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-      img.src = dataUrl;
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return dataUrl;
-    ctx.drawImage(img, 0, 0);
-
-    // QR watermark region: top-right corner, ~18% of shorter dimension
-    const shortSide = Math.min(canvas.width, canvas.height);
-    const qrSize = shortSide * 0.18;
-    const margin = qrSize * 0.08;
-    const qrX = canvas.width - qrSize - margin;
-    const qrY = margin;
-
-    // Sample colors around the QR region for natural fill
-    const sampleBelow = ctx.getImageData(qrX + qrSize / 2, Math.min(qrY + qrSize + 10, canvas.height - 1), 1, 1).data;
-    const sampleLeft = ctx.getImageData(Math.max(qrX - 10, 0), qrY + qrSize / 2, 1, 1).data;
-    const sampleAbove = ctx.getImageData(qrX + qrSize / 2, Math.max(qrY - 5, 0), 1, 1).data;
-
-    // Fill with averaged color for cleaner result
-    const avgR = Math.round((sampleBelow[0] + sampleLeft[0] + sampleAbove[0]) / 3);
-    const avgG = Math.round((sampleBelow[1] + sampleLeft[1] + sampleAbove[1]) / 3);
-    const avgB = Math.round((sampleBelow[2] + sampleLeft[2] + sampleAbove[2]) / 3);
-    
-    ctx.fillStyle = `rgb(${avgR},${avgG},${avgB})`;
-    ctx.fillRect(qrX - 5, qrY - 2, qrSize + margin + 10, qrSize + 10);
-
-    // Bottom-left logo region
-    const logoSize = qrSize * 0.85;
-    const logoX = margin;
-    const logoY = canvas.height - logoSize - margin;
-    const sampleRight = ctx.getImageData(
-      Math.min(logoX + logoSize + 10, canvas.width - 1),
-      logoY + logoSize / 2, 1, 1
-    ).data;
-    const sampleTop = ctx.getImageData(
-      logoX + logoSize / 2,
-      Math.max(logoY - 10, 0), 1, 1
-    ).data;
-    const avgLR = Math.round((sampleRight[0] + sampleTop[0]) / 2);
-    const avgLG = Math.round((sampleRight[1] + sampleTop[1]) / 2);
-    const avgLB = Math.round((sampleRight[2] + sampleTop[2]) / 2);
-    ctx.fillStyle = `rgb(${avgLR},${avgLG},${avgLB})`;
-    ctx.fillRect(logoX - 2, logoY - 2, logoSize + 10, logoSize + margin + 10);
-
-    return canvas.toDataURL('image/jpeg', 0.75);
-  } catch {
-    return dataUrl;
-  }
-}
-
-/**
  * Fetch up to 2 distinct photos for an asset in Plan PPT.
- * When includeQR=false, QR watermarks are stripped from photos.
+ * When includeQR=false, only clean library/primary photos are used.
  */
 async function fetchAssetPhotosPlan(asset: PlanAsset, includeQR: boolean = true): Promise<(string | null)[]> {
   const dbId = asset.db_asset_id;
   const results: string[] = [];
 
-  // 1) Campaign proof photos (latest first)
-  if (dbId) {
+   // 1) Campaign proof photos (latest first) only when QR-enabled export is requested
+   if (includeQR && dbId) {
     try {
       const { data: campAssets } = await supabase
         .from("campaign_assets")
@@ -230,10 +165,7 @@ async function fetchAssetPhotosPlan(asset: PlanAsset, includeQR: boolean = true)
             for (const url of urls) {
               if (results.length >= 2) break;
               let img = await fetchImageWithCache(url);
-              if (img) {
-                if (!includeQR) img = await removeQRWatermark(img);
-                results.push(img);
-              }
+               if (img) results.push(img);
             }
           }
         }
@@ -255,10 +187,7 @@ async function fetchAssetPhotosPlan(asset: PlanAsset, includeQR: boolean = true)
           if (results.length >= 2) break;
           if (p.photo_url) {
             let img = await fetchImageWithCache(p.photo_url);
-            if (img) {
-              if (!includeQR) img = await removeQRWatermark(img);
-              results.push(img);
-            }
+             if (img) results.push(img);
           }
         }
       }
@@ -269,7 +198,6 @@ async function fetchAssetPhotosPlan(asset: PlanAsset, includeQR: boolean = true)
   if (results.length < 2 && asset.primary_photo_url) {
     let img = await fetchImageWithCache(asset.primary_photo_url);
     if (img && !results.includes(img)) {
-      if (!includeQR) img = await removeQRWatermark(img);
       results.push(img);
     }
   }

@@ -578,6 +578,7 @@ export function MonthlyInvoiceGenerator({
         gst_percent: totals.gstPercent,
         gst_amount: totals.gstAmount,
         gst_mode: gstMode,
+        tax_type: gstMode === 'IGST' ? 'igst' : 'cgst_sgst',
         cgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
         sgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
         igst_percent: gstMode === 'IGST' ? totals.gstPercent : 0,

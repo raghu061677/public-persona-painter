@@ -230,9 +230,11 @@
    const invoiceType = invoice.invoice_type || 'TAX_INVOICE';
    const termsLabel = getTermsLabel(invoice.terms_mode || 'DUE_ON_RECEIPT', invoice.terms_days || 0);
    const subtotal = parseFloat(invoice.sub_total) || 0;
-   const cgst = invoice.cgst_amount || (invoice.gst_amount ? invoice.gst_amount / 2 : 0);
-   const sgst = invoice.sgst_amount || (invoice.gst_amount ? invoice.gst_amount / 2 : 0);
-   const igst = invoice.igst_amount || 0;
+    // Determine if inter-state: check tax_type first, then gst_mode as fallback
+    const isInterState = invoice.tax_type === 'igst' || invoice.gst_mode === 'IGST';
+    const cgst = isInterState ? 0 : (invoice.cgst_amount || (invoice.gst_amount ? invoice.gst_amount / 2 : 0));
+    const sgst = isInterState ? 0 : (invoice.sgst_amount || (invoice.gst_amount ? invoice.gst_amount / 2 : 0));
+    const igst = isInterState ? (invoice.igst_amount || invoice.gst_amount || 0) : 0;
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
    const balanceDue = invoice.balance_due != null ? parseFloat(invoice.balance_due) : grandTotal;
     const paidAmount = parseFloat(String(invoice.paid_amount)) || 0;

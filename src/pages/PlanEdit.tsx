@@ -684,6 +684,26 @@ export default function PlanEdit() {
         title: "Success",
         description: "Plan updated successfully",
       });
+
+      // Trigger plan_updated_internal email
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const recipientEmail = company?.email || currentUser?.email || '';
+        if (recipientEmail) {
+          const emailPayload = buildPlanPayload(
+            { ...formData, id, grand_total: grandTotal },
+            { name: formData.client_name, email: '' },
+            company
+          );
+          emailPayload.asset_count = String(items.length);
+          emailPayload.asset_table_html = buildAssetTableHtml(items);
+          triggerEmail('plan_updated_internal', emailPayload,
+            [{ to: recipientEmail }], id);
+        }
+      } catch (emailErr) {
+        console.warn('[PlanEdit] Email trigger warning:', emailErr);
+      }
+
       navigate(`/admin/plans/${id}`);
     } catch (error: any) {
       toast({

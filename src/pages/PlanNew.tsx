@@ -568,6 +568,9 @@ export default function PlanNew() {
           });
         } else {
           const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
+          // Build asset details table for email
+          emailPayload.asset_count = String(items.length);
+          emailPayload.asset_table_html = buildAssetTableHtml(items);
           const emailResult = await triggerEmail('plan_created_internal', emailPayload,
             [{ to: recipientEmail }], plan.id);
 

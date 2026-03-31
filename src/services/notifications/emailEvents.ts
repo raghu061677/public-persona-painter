@@ -28,6 +28,15 @@ export const EMAIL_EVENTS: Record<string, EmailEventDefinition> = {
     source_module: 'plans',
     description: 'Notify internal team when a new plan is created',
   },
+  plan_updated_internal: {
+    event_key: 'plan_updated_internal',
+    label: 'Plan Updated',
+    category: 'plan',
+    audience: 'internal',
+    send_mode: 'auto',
+    source_module: 'plans',
+    description: 'Notify internal team when a plan is updated',
+  },
   plan_approval_requested_internal: {
     event_key: 'plan_approval_requested_internal',
     label: 'Plan Approval Requested',

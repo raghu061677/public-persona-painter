@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmailTrigger, buildPlanPayload, buildAssetTableHtml } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";
@@ -67,6 +69,8 @@ export default function PlanEdit() {
   const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
   const submittingRef = useRef(false);
+  const { trigger: triggerEmail } = useEmailTrigger();
+  const { company } = useCompany();
   
   // Enterprise RBAC: determine access mode for this plan
   const perms = useRecordPermissions(planRecord, 'plans');
@@ -680,6 +684,26 @@ export default function PlanEdit() {
         title: "Success",
         description: "Plan updated successfully",
       });
+
+      // Trigger plan_updated_internal email
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const recipientEmail = company?.email || currentUser?.email || '';
+        if (recipientEmail) {
+          const emailPayload = buildPlanPayload(
+            { ...formData, id, grand_total: grandTotal },
+            { name: formData.client_name, email: '' },
+            company
+          );
+          emailPayload.asset_count = String(items.length);
+          emailPayload.asset_table_html = buildAssetTableHtml(items);
+          triggerEmail('plan_updated_internal', emailPayload,
+            [{ to: recipientEmail }], id);
+        }
+      } catch (emailErr) {
+        console.warn('[PlanEdit] Email trigger warning:', emailErr);
+      }
+
       navigate(`/admin/plans/${id}`);
     } catch (error: any) {
       toast({

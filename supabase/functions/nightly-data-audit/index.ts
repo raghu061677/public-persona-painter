@@ -1,11 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// v3.0 - Phase-6 Security: Dual auth (HMAC for cron OR admin user)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import {
+  requireHmac,
+  getAuthContext,
+  isPlatformAdmin,
+  supabaseServiceClient,
+  AuthError,
+  getCorsHeaders,
+} from '../_shared/auth.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 // ── Canonical status sets ──
 const CAMPAIGN_STATUSES = ["Draft","Upcoming","Running","Completed","Cancelled","Archived"];
@@ -50,14 +53,46 @@ interface Issue {
   severity: string;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+/**
+ * Dual auth: accepts either HMAC (cron) or authenticated platform admin.
+ */
+async function authenticateRequest(req: Request, rawBody: string): Promise<void> {
+  // Try HMAC first (cron path)
+  const hasHmacHeaders = req.headers.get('X-GoAds-Timestamp') && req.headers.get('X-GoAds-Signature');
+  if (hasHmacHeaders) {
+    await requireHmac(req, rawBody);
+    return;
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceKey);
+  // Fallback: require authenticated platform admin
+  const ctx = await getAuthContext(req);
+  const isAdmin = await isPlatformAdmin(ctx.userId);
+  if (!isAdmin) {
+    throw new AuthError('Only platform admins or HMAC-authenticated cron can run nightly audit', 403);
+  }
+}
+
+Deno.serve(async (req) => {
+  const responseHeaders = getCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: responseHeaders });
+  }
+
+  const rawBody = await req.text();
+
+  try {
+    await authenticateRequest(req, rawBody);
+  } catch (error) {
+    const status = error instanceof AuthError ? error.statusCode : 401;
+    const msg = error instanceof Error ? error.message : 'Authentication failed';
+    return new Response(
+      JSON.stringify({ error: msg }),
+      { status, headers: { ...responseHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = supabaseServiceClient();
 
   const runId = crypto.randomUUID();
   const issues: Issue[] = [];
@@ -254,7 +289,7 @@ serve(async (req) => {
         severity_counts: severityCounts,
         alerts,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...responseHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Nightly audit error:", error);
@@ -267,7 +302,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...responseHeaders, "Content-Type": "application/json" } }
     );
   }
 });

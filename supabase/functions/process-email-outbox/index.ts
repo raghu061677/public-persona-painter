@@ -1,21 +1,50 @@
 /**
- * process-email-outbox — Processes queued emails from email_outbox table
- * Renders templates, sends via tenant provider or falls back to platform Resend
- * Logs delivery attempts in email_delivery_logs
+ * process-email-outbox — v2.0 Phase-6 Security
+ * Processes queued emails from email_outbox table.
+ * Dual auth: HMAC (cron) or authenticated admin user.
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import {
+  requireHmac,
+  getAuthContext,
+  requireRole,
+  supabaseServiceClient,
+  AuthError,
+  getCorsHeaders,
+} from '../_shared/auth.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+/**
+ * Dual auth: accepts either HMAC (cron) or authenticated admin/finance user.
+ */
+async function authenticateRequest(req: Request, rawBody: string): Promise<void> {
+  const hasHmacHeaders = req.headers.get('X-GoAds-Timestamp') && req.headers.get('X-GoAds-Signature');
+  if (hasHmacHeaders) {
+    await requireHmac(req, rawBody);
+    return;
+  }
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
+}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const responseHeaders = getCorsHeaders(req);
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, serviceKey);
+  if (req.method === 'OPTIONS') return new Response(null, { headers: responseHeaders });
+
+  const rawBody = await req.text();
+
+  try {
+    await authenticateRequest(req, rawBody);
+  } catch (error) {
+    const status = error instanceof AuthError ? error.statusCode : 401;
+    const msg = error instanceof Error ? error.message : 'Authentication failed';
+    return new Response(
+      JSON.stringify({ error: msg }),
+      { status, headers: { ...responseHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = supabaseServiceClient();
 
   // Fetch queued emails (max 20 per batch)
   const { data: outboxItems, error: fetchErr } = await supabase
@@ -143,6 +172,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({ processed, total: outboxItems.length }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...responseHeaders, 'Content-Type': 'application/json' },
   });
 });

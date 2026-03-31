@@ -471,9 +471,37 @@ export default function PlanNew() {
         const discountType = 'Amount';
         const discountValue = discountMonthly;
         const printingRate = pricing?.printing_rate || 0;
+        const mountingRate = pricing?.mounting_rate || 0;
+        const printing = pricing?.printing_charges || 0;
+        const mounting = pricing?.mounting_charges || 0;
         
-        const netPrice = salesPrice - discountAmount;
-        const subtotal = netPrice + printing + mounting;
+        // Per-asset dates: use asset-level dates if set, otherwise fallback to plan dates
+        const assetStartDate = pricing.start_date 
+          ? (typeof pricing.start_date === 'string' ? pricing.start_date : new Date(pricing.start_date).toISOString().split('T')[0])
+          : formatForSupabase(toDateOnly(formData.start_date));
+        const assetEndDate = pricing.end_date 
+          ? (typeof pricing.end_date === 'string' ? pricing.end_date : new Date(pricing.end_date).toISOString().split('T')[0])
+          : formatForSupabase(toDateOnly(formData.end_date));
+        
+        // Calculate booked days for this asset
+        const startD = new Date(assetStartDate);
+        const endD = new Date(assetEndDate);
+        const assetBookedDays = pricing.booked_days || Math.max(1, Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        
+        // Per-asset billing mode
+        const billingMode = pricing.billing_mode || 'PRORATA_30';
+        
+        // Calculate daily rate and rent amount
+        const BILLING_CYCLE_DAYS = 30;
+        const dailyRate = pricing.daily_rate || (salesPrice / BILLING_CYCLE_DAYS);
+        const rentAmount = pricing.rent_amount || (dailyRate * assetBookedDays);
+        
+        // Discount amount is the pro-rated discount for the booked period
+        const discountAmount = calcProRata(discountMonthly, assetBookedDays);
+        
+        const netPrice = salesPrice - discountMonthly;
+        const proRata = calcProRata(netPrice, assetBookedDays);
+        const subtotal = proRata + printing + mounting;
         const itemGst = (subtotal * parseFloat(formData.gst_percent)) / 100;
         const totalWithGst = subtotal + itemGst;
 

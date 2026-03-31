@@ -497,10 +497,10 @@ export default function PlanNew() {
         const rentAmount = pricing.rent_amount || (dailyRate * assetBookedDays);
         
         // Discount amount is the pro-rated discount for the booked period
-        const discountAmount = calcProRata(discountMonthly, assetBookedDays);
+        const discountAmount = calculateProRata(discountMonthly, assetBookedDays);
         
         const netPrice = salesPrice - discountMonthly;
-        const proRata = calcProRata(netPrice, assetBookedDays);
+        const proRata = calculateProRata(netPrice, assetBookedDays);
         const subtotal = proRata + printing + mounting;
         const itemGst = (subtotal * parseFloat(formData.gst_percent)) / 100;
         const totalWithGst = subtotal + itemGst;

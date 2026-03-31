@@ -538,14 +538,14 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // Image 1
+    // Image 1 — contained within slide border with proper gap
     try {
       slide1.addShape(prs.ShapeType.rect, {
         x: 0.4,
         y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        fill: { color: 'FFFFFF' },
+        w: 4.3,
+        h: 3.4,
+        fill: { color: 'F3F4F6' },
         line: { color: 'E5E7EB', width: 1 },
       });
 
@@ -554,34 +554,34 @@ export async function generatePlanPPT(
           data: photo1Base64,
           x: 0.4,
           y: 1.5,
-          w: 4.5,
-          h: 3.8,
-          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+          w: 4.3,
+          h: 3.4,
+          sizing: { type: 'contain', w: 4.3, h: 3.4 },
         });
       }
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
 
-    // Image 2
+    // Image 2 — contained within slide border with proper gap
     try {
       slide1.addShape(prs.ShapeType.rect, {
-        x: 5.1,
+        x: 5.0,
         y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        fill: { color: 'FFFFFF' },
+        w: 4.3,
+        h: 3.4,
+        fill: { color: 'F3F4F6' },
         line: { color: 'E5E7EB', width: 1 },
       });
 
       if (photo2Base64) {
         slide1.addImage({
           data: photo2Base64,
-          x: 5.1,
+          x: 5.0,
           y: 1.5,
-          w: 4.5,
-          h: 3.8,
-          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+          w: 4.3,
+          h: 3.4,
+          sizing: { type: 'contain', w: 4.3, h: 3.4 },
         });
       }
     } catch (error) {

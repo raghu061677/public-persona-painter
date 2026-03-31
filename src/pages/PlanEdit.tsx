@@ -69,7 +69,7 @@ export default function PlanEdit() {
   const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
   const submittingRef = useRef(false);
-  const { triggerEmail } = useEmailTrigger();
+  const { trigger: triggerEmail } = useEmailTrigger();
   const { company } = useCompany();
   
   // Enterprise RBAC: determine access mode for this plan

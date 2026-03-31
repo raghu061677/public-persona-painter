@@ -255,7 +255,7 @@ async function removeQRWatermark(dataUrl: string): Promise<string> {
     ctx.fillStyle = gradientLogo;
     ctx.fillRect(logoX, logoY, logoSize + 2, logoSize + margin + 2);
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.75);
   } catch {
     return dataUrl;
   }

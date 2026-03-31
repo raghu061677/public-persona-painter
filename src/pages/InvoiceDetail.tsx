@@ -229,7 +229,7 @@ export default function InvoiceDetail() {
                 invoiceId={invoice.id}
                 currentType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={!canEdit}
+                readOnly={false}
               />
               <PaymentTermsEditor
                 invoiceId={invoice.id}

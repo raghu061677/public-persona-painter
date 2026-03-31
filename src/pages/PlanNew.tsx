@@ -465,8 +465,11 @@ export default function PlanNew() {
         // Priority: negotiated_price > sales_price > card_rate
         const cardRate = asset.card_rate || 0;
         const salesPrice = pricing?.negotiated_price || pricing?.sales_price || cardRate;
-        const discountType = pricing?.discount_type || 'Percent';
-        const discountValue = pricing?.discount_value || 0;
+        
+        // Calculate discount as Amount (card_rate - sales_price), consistent with PlanEdit.tsx
+        const discountMonthly = cardRate - salesPrice;
+        const discountType = 'Amount';
+        const discountValue = discountMonthly;
         const printingRate = pricing?.printing_rate || 0;
         const mountingRate = pricing?.mounting_rate || 0;
         const printing = pricing?.printing_charges || 0;
@@ -489,15 +492,16 @@ export default function PlanNew() {
         const billingMode = pricing.billing_mode || 'PRORATA_30';
         
         // Calculate daily rate and rent amount
+        const BILLING_CYCLE_DAYS = 30;
         const dailyRate = pricing.daily_rate || (salesPrice / BILLING_CYCLE_DAYS);
         const rentAmount = pricing.rent_amount || (dailyRate * assetBookedDays);
         
-        const discountAmount = discountType === 'Percent'
-          ? (salesPrice * discountValue) / 100
-          : discountValue;
+        // Discount amount is the pro-rated discount for the booked period
+        const discountAmount = calculateProRata(discountMonthly, assetBookedDays);
         
-        const netPrice = salesPrice - discountAmount;
-        const subtotal = netPrice + printing + mounting;
+        const netPrice = salesPrice - discountMonthly;
+        const proRata = calculateProRata(netPrice, assetBookedDays);
+        const subtotal = proRata + printing + mounting;
         const itemGst = (subtotal * parseFloat(formData.gst_percent)) / 100;
         const totalWithGst = subtotal + itemGst;
 

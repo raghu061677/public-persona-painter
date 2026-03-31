@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
         severity_counts: severityCounts,
         alerts,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...responseHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Nightly audit error:", error);

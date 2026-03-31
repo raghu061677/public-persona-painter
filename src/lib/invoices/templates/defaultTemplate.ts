@@ -365,7 +365,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // Collect HSN/SAC data for summary
   const hsnSummary: Record<string, { taxable: number; cgstRate: number; cgstAmount: number; sgstRate: number; sgstAmount: number; igstRate: number; igstAmount: number }> = {};
   const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
-  const isInterState = data.invoice.tax_type === 'igst';
+  const isInterState = data.invoice.tax_type === 'igst' || data.invoice.gst_mode === 'IGST';
 
   const tableData = data.items.map((item: any, index: number) => {
     const assetCode = item.asset_code || item.asset_id || '';

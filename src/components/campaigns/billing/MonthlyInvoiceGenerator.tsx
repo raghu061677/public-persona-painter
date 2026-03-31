@@ -275,8 +275,13 @@ export function MonthlyInvoiceGenerator({
         setClientState(clientSt);
         setCompanyState(companySt);
         
-        // Determine GST mode
-        if (clientSt && companySt && 
+        // Determine GST mode: prioritize campaign's saved tax_type
+        const campaignTaxType = (campaign as any).tax_type;
+        if (campaignTaxType === 'igst') {
+          setGstMode('IGST');
+        } else if (campaignTaxType === 'cgst_sgst') {
+          setGstMode('CGST_SGST');
+        } else if (clientSt && companySt && 
             clientSt.toLowerCase().trim() === companySt.toLowerCase().trim()) {
           setGstMode('CGST_SGST');
         } else if (clientSt) {
@@ -578,6 +583,7 @@ export function MonthlyInvoiceGenerator({
         gst_percent: totals.gstPercent,
         gst_amount: totals.gstAmount,
         gst_mode: gstMode,
+        tax_type: gstMode === 'IGST' ? 'igst' : 'cgst_sgst',
         cgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
         sgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
         igst_percent: gstMode === 'IGST' ? totals.gstPercent : 0,

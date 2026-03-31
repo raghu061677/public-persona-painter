@@ -137,9 +137,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
           media_type: item.asset?.media_type || '',
           latitude: item.asset?.latitude,
           longitude: item.asset?.longitude,
-          google_street_view_url: item.asset?.google_street_view_url,
           primary_photo_url: item.asset?.primary_photo_url || latestPhotoByAsset.get(item.asset?.id) || undefined,
-          qr_code_url: item.asset?.qr_code_url,
         };
       });
 
@@ -155,7 +153,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
       const url = URL.createObjectURL(pptBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Plan_${planId}_Proposal.pptx`;
+      link.download = `${planId}_presentation.pptx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

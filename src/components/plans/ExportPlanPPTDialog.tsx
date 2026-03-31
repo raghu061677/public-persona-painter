@@ -153,7 +153,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
       const url = URL.createObjectURL(pptBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Plan_${planId}_Proposal.pptx`;
+      link.download = `${planId}_presentation.pptx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

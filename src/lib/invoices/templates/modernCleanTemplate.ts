@@ -331,7 +331,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
 
     // Aggregate HSN/SAC summary data
     const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
-    const isInterState = data.invoice.tax_type === 'igst';
+    const isInterState = data.invoice.tax_type === 'igst' || data.invoice.gst_mode === 'IGST';
     const taxableForItem = itemTotal;
     
     if (!hsnSummary[hsnSac]) {

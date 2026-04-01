@@ -500,7 +500,7 @@ export function useStrategicIntelligence() {
       totalClients,
       activeCampaigns,
     };
-  }, [periodInvoices, periodExpenses, campaigns, periodCampaignAssets, mediaAssets, assetROI, paymentMap, dateRange, clients]);
+  }, [periodInvoices, periodExpenses, campaigns, periodCampaignAssets, mediaAssets, assetROI, paymentMap, dateRange, clients, creditNotes]);
 
   // Revenue trend by month (12 months) - consistent accrual basis
   const revenueTrend = useMemo(() => {

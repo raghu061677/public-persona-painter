@@ -154,6 +154,7 @@ export default function InvoiceDetail() {
     );
   }
 
+  const isDraft = isDraftInvoiceId(invoice.id);
   // Invoice is locked if status is not Draft
   const isLocked = invoice.status !== 'Draft';
   const canEdit = isAdmin && !isLocked;

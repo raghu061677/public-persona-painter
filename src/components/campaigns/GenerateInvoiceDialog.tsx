@@ -159,6 +159,7 @@ export function GenerateInvoiceDialog({
           total_amount,
           balance_due,
           status: 'Draft' as const,
+          is_draft: true,
           items,
           notes: notes || `Tax Invoice for campaign: ${campaign.campaign_name}`,
           client_po_number: campaign.client_po_number || null,

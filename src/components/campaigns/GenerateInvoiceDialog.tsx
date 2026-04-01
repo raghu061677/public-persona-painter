@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { generateInvoiceId } from "@/utils/finance";
+import { generateDraftInvoiceId } from "@/utils/finance";
 
 interface GenerateInvoiceDialogProps {
   campaign: any;

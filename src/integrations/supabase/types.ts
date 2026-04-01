@@ -6090,6 +6090,30 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_counters: {
+        Row: {
+          fy_label: string
+          id: string
+          last_seq: number
+          prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          fy_label: string
+          id?: string
+          last_seq?: number
+          prefix: string
+          updated_at?: string | null
+        }
+        Update: {
+          fy_label?: string
+          id?: string
+          last_seq?: number
+          prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           area: string | null
@@ -6533,6 +6557,7 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string
+          draft_number: string | null
           due_date: string
           estimation_id: string | null
           gst_amount: number
@@ -6547,6 +6572,7 @@ export type Database = {
           invoice_period_start: string | null
           invoice_series_prefix: string | null
           invoice_type: string
+          is_draft: boolean | null
           is_monthly_split: boolean | null
           items: Json | null
           notes: string | null
@@ -6583,6 +6609,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by: string
+          draft_number?: string | null
           due_date: string
           estimation_id?: string | null
           gst_amount: number
@@ -6597,6 +6624,7 @@ export type Database = {
           invoice_period_start?: string | null
           invoice_series_prefix?: string | null
           invoice_type?: string
+          is_draft?: boolean | null
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
@@ -6633,6 +6661,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string
+          draft_number?: string | null
           due_date?: string
           estimation_id?: string | null
           gst_amount?: number
@@ -6647,6 +6676,7 @@ export type Database = {
           invoice_period_start?: string | null
           invoice_series_prefix?: string | null
           invoice_type?: string
+          is_draft?: boolean | null
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
@@ -13194,6 +13224,10 @@ export type Database = {
         }[]
       }
       extract_state_code: { Args: { client_id: string }; Returns: string }
+      finalize_invoice_number: {
+        Args: { p_draft_id: string; p_gst_rate?: number }
+        Returns: string
+      }
       fn_assets_ending_within: {
         Args: { days_ahead: number }
         Returns: {

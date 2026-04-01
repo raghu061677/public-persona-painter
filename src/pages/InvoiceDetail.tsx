@@ -305,7 +305,7 @@ export default function InvoiceDetail() {
               <Alert>
                 <Lock className="h-4 w-4" />
                 <AlertDescription>
-                  Settings are locked because this invoice has been finalized. To make corrections, create a Credit Note.
+                  Financial fields are locked. You can still edit Notes, PO Reference, and Due Date below.
                 </AlertDescription>
               </Alert>
             )}
@@ -314,7 +314,7 @@ export default function InvoiceDetail() {
                 invoiceId={invoice.id}
                 currentType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={isFinalized}
+                readOnly={false}
               />
               <PaymentTermsEditor
                 invoiceId={invoice.id}
@@ -324,20 +324,19 @@ export default function InvoiceDetail() {
                 dueDate={invoice.due_date}
                 invoiceType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={!canEdit}
+                readOnly={false}
               />
             </div>
 
-            {invoice.notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{invoice.notes}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Editable metadata fields - always available */}
+            <InvoiceMetadataEditor
+              invoiceId={invoice.id}
+              notes={invoice.notes || ''}
+              poNumber={invoice.client_po_number || ''}
+              poDate={invoice.client_po_date || ''}
+              dueDate={invoice.due_date || ''}
+              onUpdate={fetchInvoice}
+            />
           </TabsContent>
 
           <TabsContent value="payments" className="mt-6">

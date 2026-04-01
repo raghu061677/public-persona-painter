@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Trash2, Lock, FileText, Send } from "lucide-react";
+import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck } from "lucide-react";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
@@ -29,6 +29,7 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
+  const [previewNumber, setPreviewNumber] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
@@ -64,12 +65,41 @@ export default function InvoiceDetail() {
       navigate('/finance/invoices');
     } else {
       setInvoice(data);
+      // Fetch preview number for draft invoices
+      if (data && isDraftInvoiceId(data.id)) {
+        fetchPreviewNumber(data.company_id, data.gst_percent);
+      }
     }
     setLoading(false);
   };
 
+  const fetchPreviewNumber = async (companyId: string, gstPercent: number) => {
+    try {
+      const { data, error } = await supabase.rpc('preview_next_invoice_number', {
+        p_company_id: companyId,
+        p_gst_rate: gstPercent || 18,
+      });
+      if (!error && data) {
+        setPreviewNumber(data);
+      }
+    } catch {
+      // Non-critical, ignore
+    }
+  };
+
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
+    if (!invoice) return;
+    // Only allow deleting draft invoices
+    if (!isDraftInvoiceId(invoice.id) && invoice.status !== 'Draft') {
+      toast({
+        title: "Cannot Delete",
+        description: "Finalized invoices cannot be deleted. Use Credit Notes instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this draft invoice? This action cannot be undone.")) return;
 
     const { error } = await supabase
       .from('invoices')
@@ -85,7 +115,7 @@ export default function InvoiceDetail() {
     } else {
       toast({
         title: "Success",
-        description: "Invoice deleted successfully",
+        description: "Draft invoice deleted successfully",
       });
       navigate('/admin/invoices');
     }
@@ -96,7 +126,7 @@ export default function InvoiceDetail() {
     
     const isDraft = isDraftInvoiceId(invoice.id);
     const confirmMsg = isDraft
-      ? "This will assign a permanent invoice number and mark it as 'Sent'. This action cannot be undone. Continue?"
+      ? `This will assign permanent invoice number${previewNumber ? ` (${previewNumber})` : ''} and lock the invoice from further financial edits. This action cannot be undone. Continue?`
       : "Mark this invoice as 'Sent' to client? This will lock the invoice from further edits.";
     
     if (!confirm(confirmMsg)) return;
@@ -155,20 +185,42 @@ export default function InvoiceDetail() {
   }
 
   const isDraft = isDraftInvoiceId(invoice.id);
-  // Invoice is locked if status is not Draft
-  const isLocked = invoice.status !== 'Draft';
-  const canEdit = isAdmin && !isLocked;
+  // Invoice is locked once finalized (not Draft status and not a draft ID)
+  const isFinalized = !isDraft && invoice.status !== 'Draft';
+  const canEdit = isAdmin && !isFinalized;
+  const creditedAmount = invoice.credited_amount || 0;
+  const effectiveBalance = (invoice.total_amount || 0) - creditedAmount - (invoice.paid_amount || 0);
 
   return (
     <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
-        {/* Finalize Lock Warning */}
-        {isLocked && (
+        {/* Draft Invoice Number Preview */}
+        {isDraft && previewNumber && (
+          <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <strong>Next Invoice Number:</strong> {previewNumber}
+              <span className="block text-xs mt-1 text-blue-600 dark:text-blue-400">
+                Finalizing this invoice will assign this permanent number and lock financial edits. 
+                If another invoice is finalized first, the actual number may differ.
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Finalized Lock Warning */}
+        {isFinalized && (
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              This invoice is finalized ({invoice.status}) and cannot be edited. To make changes, create a credit note or adjustment.
+              <strong>Invoice Finalized</strong> — This invoice is locked ({invoice.status}). 
+              Financial fields cannot be edited. To make corrections, create a Credit Note.
+              {creditedAmount > 0 && (
+                <span className="block mt-1">
+                  Credits Applied: {formatINR(creditedAmount)} | Effective Balance: {formatINR(Math.max(0, effectiveBalance))}
+                </span>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -186,7 +238,7 @@ export default function InvoiceDetail() {
                 ) : (
                   invoice.id
                 )}
-                {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
+                {isFinalized && <ShieldCheck className="h-5 w-5 text-green-600" />}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {isDraft && <span className="text-xs font-mono mr-2">({invoice.id})</span>}
@@ -200,10 +252,10 @@ export default function InvoiceDetail() {
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
             <ActionGuard module="finance" action="edit">
-            {isAdmin && invoice.status !== 'Draft' && (
+            {isAdmin && isFinalized && (
               <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.id} />
             )}
-            {isAdmin && invoice.status === 'Draft' && (
+            {isAdmin && !isFinalized && invoice.status === 'Draft' && (
               <Button onClick={handleMarkAsSent} className="bg-primary">
                 <Send className="mr-2 h-4 w-4" />
                 {isDraft ? 'Finalize & Send' : 'Mark as Sent'}
@@ -211,15 +263,15 @@ export default function InvoiceDetail() {
             )}
             </ActionGuard>
             <ActionGuard module="finance" action="delete">
-            {isAdmin && invoice.status === 'Draft' && (
+            {isAdmin && isDraft && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                Delete Draft
               </Button>
             )}
             </ActionGuard>
             <ActionGuard module="finance" action="approve">
-            {isAdmin && invoice.status !== 'Draft' && (
+            {isAdmin && isFinalized && !['Fully Credited', 'Cancelled'].includes(invoice.status) && (
               <Button variant="outline" onClick={() => setCreditNoteDialogOpen(true)}>
                 <FileText className="mr-2 h-4 w-4" />
                 Credit Note
@@ -246,11 +298,11 @@ export default function InvoiceDetail() {
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6 space-y-6">
-            {isLocked && (
+            {isFinalized && (
               <Alert>
                 <Lock className="h-4 w-4" />
                 <AlertDescription>
-                  Settings are locked because this invoice has been finalized.
+                  Settings are locked because this invoice has been finalized. To make corrections, create a Credit Note.
                 </AlertDescription>
               </Alert>
             )}
@@ -259,7 +311,7 @@ export default function InvoiceDetail() {
                 invoiceId={invoice.id}
                 currentType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={false}
+                readOnly={isFinalized}
               />
               <PaymentTermsEditor
                 invoiceId={invoice.id}
@@ -307,7 +359,7 @@ export default function InvoiceDetail() {
         </Tabs>
 
         {/* Credit Note Dialog */}
-        {invoice && invoice.status !== 'Draft' && (
+        {invoice && isFinalized && !['Fully Credited', 'Cancelled'].includes(invoice.status) && (
           <CreateCreditNoteDialog
             open={creditNoteDialogOpen}
             onOpenChange={setCreditNoteDialogOpen}
@@ -317,7 +369,7 @@ export default function InvoiceDetail() {
               client_id: invoice.client_id,
               company_id: invoice.company_id,
               total_amount: invoice.total_amount,
-              balance_due: invoice.balance_due,
+              balance_due: Math.max(0, effectiveBalance),
               gst_mode: invoice.gst_mode,
             }}
             onCreditNoteCreated={fetchInvoice}

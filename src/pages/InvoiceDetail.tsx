@@ -105,7 +105,7 @@ export default function InvoiceDetail() {
       if (isDraft) {
         // Finalize: assign permanent number via atomic counter
         const gstRate = invoice.gst_percent || 0;
-        const permanentId = await finalizeInvoiceNumber(supabase, invoice.id, gstRate);
+        const permanentId = await finalizeInvoiceNumber(supabase, invoice.id, gstRate, invoice.company_id);
         
         toast({
           title: "Invoice Finalized",

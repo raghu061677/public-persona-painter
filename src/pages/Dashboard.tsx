@@ -162,7 +162,8 @@ const Dashboard = () => {
       const { data: invoicesData } = await supabase
         .from("invoices")
         .select("status, total_amount, gst_amount")
-        .eq("company_id", selectedCompanyId);
+        .eq("company_id", selectedCompanyId)
+        .eq("is_draft", false);
 
       let totalRevenue = 0;
       let gstCollected = 0;

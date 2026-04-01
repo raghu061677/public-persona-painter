@@ -206,7 +206,7 @@ export default function InvoiceDetail() {
             {isAdmin && invoice.status === 'Draft' && (
               <Button onClick={handleMarkAsSent} className="bg-primary">
                 <Send className="mr-2 h-4 w-4" />
-                Mark as Sent
+                {isDraft ? 'Finalize & Send' : 'Mark as Sent'}
               </Button>
             )}
             </ActionGuard>

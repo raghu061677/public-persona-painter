@@ -131,6 +131,7 @@ export function useStrategicIntelligence() {
       setCampaignAssets(caRes.data || []);
       setMediaAssets(maRes.data || []);
       setClients(clRes.data || []);
+      setCreditNotes(cnRes.data || []);
     } catch (e) {
       console.error("Strategic Intelligence load error:", e);
     } finally {

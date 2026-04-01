@@ -6092,6 +6092,7 @@ export type Database = {
       }
       invoice_counters: {
         Row: {
+          company_id: string
           fy_label: string
           id: string
           last_seq: number
@@ -6099,6 +6100,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id: string
           fy_label: string
           id?: string
           last_seq?: number
@@ -6106,13 +6108,22 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string
           fy_label?: string
           id?: string
           last_seq?: number
           prefix?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoice_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_items: {
         Row: {
@@ -13224,10 +13235,16 @@ export type Database = {
         }[]
       }
       extract_state_code: { Args: { client_id: string }; Returns: string }
-      finalize_invoice_number: {
-        Args: { p_draft_id: string; p_gst_rate?: number }
-        Returns: string
-      }
+      finalize_invoice_number:
+        | { Args: { p_draft_id: string; p_gst_rate?: number }; Returns: string }
+        | {
+            Args: {
+              p_company_id?: string
+              p_draft_id: string
+              p_gst_rate: number
+            }
+            Returns: string
+          }
       fn_assets_ending_within: {
         Args: { days_ahead: number }
         Returns: {

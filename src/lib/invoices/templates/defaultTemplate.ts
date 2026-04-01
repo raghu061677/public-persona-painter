@@ -444,7 +444,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   }
 
   const bankStartY = yPos;
-  const totalsBoxWidth = 82;
+  const totalsBoxWidth = 79;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
   const bankBoxWidth = totalsBoxX - leftMargin - 3;
 

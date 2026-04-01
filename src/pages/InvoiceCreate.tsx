@@ -198,6 +198,7 @@ export default function InvoiceCreate() {
           invoice_date: invoiceDate,
           due_date: dueDate,
           status: 'Draft',
+          is_draft: true,
           items: items,
           sub_total: subTotal,
           gst_percent: 18,

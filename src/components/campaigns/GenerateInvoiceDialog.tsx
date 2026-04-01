@@ -72,9 +72,8 @@ export function GenerateInvoiceDialog({
         .select('terms')
         .single();
 
-      // Generate invoice ID - pass effective GST rate for correct prefix (INV vs INV-Z)
-      const gstRateForId = isGstApplicable ? (campaign.gst_percent ?? 0) : 0;
-      const invoiceId = await generateInvoiceId(supabase, gstRateForId);
+      // Generate draft invoice ID - permanent number assigned on finalization
+      const invoiceId = generateDraftInvoiceId();
 
       // Fetch media_asset_code for all assets to avoid storing UUIDs as asset_code
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);

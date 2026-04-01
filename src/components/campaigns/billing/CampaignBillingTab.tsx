@@ -384,8 +384,8 @@ export function CampaignBillingTab({
           description: `Invoice ${existingInvoice.id} updated for ${period.label}`,
         });
       } else {
-        // Generate new invoice ID and INSERT - pass GST rate for correct prefix
-        const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
+        // Generate draft invoice ID - permanent number assigned on finalization
+        const invoiceId = generateDraftInvoiceId();
 
         const { error } = await supabase.from('invoices').insert({
           id: invoiceId,

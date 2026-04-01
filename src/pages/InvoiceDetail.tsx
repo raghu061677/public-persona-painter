@@ -7,7 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck, Save } from "lucide-react";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
@@ -17,6 +20,7 @@ import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPane
 import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
 import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
 import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
+import { InvoiceMetadataEditor } from "@/components/invoices/InvoiceMetadataEditor";
 import { CreditNotesList } from "@/components/finance/CreditNotesList";
 import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -302,7 +306,7 @@ export default function InvoiceDetail() {
               <Alert>
                 <Lock className="h-4 w-4" />
                 <AlertDescription>
-                  Settings are locked because this invoice has been finalized. To make corrections, create a Credit Note.
+                  Financial fields are locked. You can still edit Notes, PO Reference, and Due Date below.
                 </AlertDescription>
               </Alert>
             )}
@@ -311,7 +315,7 @@ export default function InvoiceDetail() {
                 invoiceId={invoice.id}
                 currentType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={isFinalized}
+                readOnly={false}
               />
               <PaymentTermsEditor
                 invoiceId={invoice.id}
@@ -321,20 +325,19 @@ export default function InvoiceDetail() {
                 dueDate={invoice.due_date}
                 invoiceType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={!canEdit}
+                readOnly={false}
               />
             </div>
 
-            {invoice.notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{invoice.notes}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Editable metadata fields - always available */}
+            <InvoiceMetadataEditor
+              invoiceId={invoice.id}
+              notes={invoice.notes || ''}
+              poNumber={invoice.client_po_number || ''}
+              poDate={invoice.client_po_date || ''}
+              dueDate={invoice.due_date || ''}
+              onUpdate={fetchInvoice}
+            />
           </TabsContent>
 
           <TabsContent value="payments" className="mt-6">

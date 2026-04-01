@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Trash2, Lock, FileText, Send } from "lucide-react";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
-import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
+import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { InvoicePDFExport } from "@/components/invoices/InvoicePDFExport";
 import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPanel";

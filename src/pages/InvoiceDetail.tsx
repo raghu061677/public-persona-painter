@@ -21,6 +21,8 @@ import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
 import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
 import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
 import { InvoiceMetadataEditor } from "@/components/invoices/InvoiceMetadataEditor";
+import { CreditNotesList } from "@/components/finance/CreditNotesList";
+import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {

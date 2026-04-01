@@ -406,6 +406,7 @@ export function CampaignBillingTab({
           total_amount: amounts.total,
           balance_due: amounts.total,
           status: 'Draft',
+          is_draft: true,
           items,
           notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,

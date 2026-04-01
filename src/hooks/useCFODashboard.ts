@@ -164,7 +164,7 @@ export function useCFODashboard() {
     setLoading(true);
     try {
       const [invRes, payRes, expRes, caRes, cmpRes] = await Promise.all([
-        supabase.from("invoices").select("id, invoice_no, invoice_date, due_date, total_amount, paid_amount, balance_due, status, campaign_id, client_id, clients(name)").eq("company_id", company.id),
+        supabase.from("invoices").select("id, invoice_no, invoice_date, due_date, total_amount, paid_amount, balance_due, status, campaign_id, client_id, clients(name)").eq("company_id", company.id).eq("is_draft", false),
         supabase.from("payment_records").select("id, invoice_id, amount, payment_date, method").eq("company_id", company.id),
         supabase.from("expenses").select("id, category, amount, total_amount, expense_date, vendor_name, campaign_id").eq("company_id", company.id),
         supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount"),

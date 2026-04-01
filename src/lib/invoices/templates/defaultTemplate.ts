@@ -1,6 +1,5 @@
-// Default Existing Template - Improved Layout with Ship To + Dimension/Illumination
-// This is the DEFAULT template with full shipping address and OOH-specific columns
-// Updated: Fixed location line, added HSN/SAC Summary at end, fixed totals alignment
+// Default Existing Template - Zoho-style Layout with Compact Alignment
+// Professional GST-compliant invoice with tighter spacing & cleaner visual hierarchy
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -40,82 +39,92 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  // Standardized margins: 20mm top, 12mm left/right, 15mm bottom
-  const leftMargin = 12;
-  const rightMargin = 12;
+  const leftMargin = 10;
+  const rightMargin = 10;
   const contentWidth = pageWidth - leftMargin - rightMargin;
 
-  // Company info
   const companyName = data.company?.name || data.orgSettings?.organization_name || 'Matrix Network Solutions';
   const companyGSTIN = data.company?.gstin || data.orgSettings?.gstin || '36AATFM4107H2Z3';
   
   const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
-  const docTitle = invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+  const isDraft = data.invoice.is_draft === true;
+  const docTitle = isDraft ? 'PROFORMA INVOICE' : (invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE');
   
-  let yPos = 20;
+  let yPos = 14;
 
-  // ========== HEADER SECTION ==========
-  const logoWidth = 42;
-  const logoHeight = 32;
+  // ========== HEADER SECTION (Compact) ==========
+  const logoWidth = 36;
+  const logoHeight = 26;
   let logoEndX = leftMargin;
 
   if (data.logoBase64) {
     try {
       doc.addImage(data.logoBase64, 'PNG', leftMargin, yPos, logoWidth, logoHeight);
-      logoEndX = leftMargin + logoWidth + 6;
+      logoEndX = leftMargin + logoWidth + 5;
     } catch (e) {
       console.log('Logo rendering error:', e);
     }
   }
 
-  // Company Name - Bold
-  let textY = yPos + 4;
-  doc.setFontSize(14);
+  // Company Name
+  let textY = yPos + 3;
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text(companyName, logoEndX, textY);
 
-  // Company Address lines - tighter spacing
-  textY += 5;
-  doc.setFontSize(7.5);
+  // Company Address - tighter
+  textY += 4.5;
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(80, 80, 80);
   doc.text(COMPANY_ADDRESS.line1, logoEndX, textY);
-  textY += 3;
+  textY += 2.8;
   doc.text(COMPANY_ADDRESS.line2, logoEndX, textY);
-  textY += 3;
+  textY += 2.8;
   doc.text(`${COMPANY_ADDRESS.cityLine} ${COMPANY_ADDRESS.country}`, logoEndX, textY);
-
-  // Contact info
-  textY += 3.5;
-  doc.text(`Phone: ${COMPANY_ADDRESS.phone}`, logoEndX, textY);
   textY += 3;
-  doc.text(COMPANY_ADDRESS.email, logoEndX, textY);
+  doc.text(`Phone: ${COMPANY_ADDRESS.phone}  |  ${COMPANY_ADDRESS.email}`, logoEndX, textY);
 
-  // GSTIN on same line as document title
-  textY += 4;
-  doc.setFont('helvetica', 'normal');
+  // GSTIN below contact
+  textY += 3;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(60, 60, 60);
   doc.text(`GSTIN: ${companyGSTIN}`, logoEndX, textY);
 
-  // Document title - Right aligned at GSTIN level
-  doc.setFontSize(16);
+  // Document title - right-aligned, vertically centered with header
+  const titleY = yPos + 10;
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(30, 64, 130);
-  doc.text(docTitle, pageWidth - rightMargin, textY, { align: 'right' });
+  doc.text(docTitle, pageWidth - rightMargin, titleY, { align: 'right' });
 
-  yPos = yPos + logoHeight + 4;
+  yPos = yPos + logoHeight + 2;
 
-  // Horizontal divider
+  // Thin divider line
+  doc.setDrawColor(30, 64, 130);
+  doc.setLineWidth(0.6);
+  doc.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
+  yPos += 0.6;
   doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.4);
+  doc.setLineWidth(0.2);
   doc.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
 
-  yPos += 2;
+  yPos += 3;
 
-  // ========== INVOICE DETAILS (Compact 2-column grid) ==========
-  const leftColX = leftMargin;
-  const rightColX = pageWidth / 2 + 10;
-  const labelWidth = 26;
+  // ========== INVOICE DETAILS (Zoho-style: light background band) ==========
+  const detailBandHeight = 20;
+  doc.setFillColor(248, 249, 250);
+  doc.rect(leftMargin, yPos - 1, contentWidth, detailBandHeight, 'F');
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.2);
+  doc.rect(leftMargin, yPos - 1, contentWidth, detailBandHeight, 'S');
+
+  const leftColX = leftMargin + 3;
+  const rightColX = pageWidth / 2 + 8;
+  const labelW = 24;
+  const rLabelW = 26;
   
   const termsMode = data.invoice.terms_mode || 'DUE_ON_RECEIPT';
   const termsDays = data.invoice.terms_days || 0;
@@ -124,92 +133,56 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     termsMode === 'NET_45' ? '45 Net Days' :
     termsMode === 'CUSTOM' ? `${termsDays} Net Days` : 'Due on Receipt';
 
-  const invoiceNoLabel = invoiceType === 'PROFORMA' ? 'Proforma No' : 'Invoice No';
+  const invoiceNoLabel = invoiceType === 'PROFORMA' || isDraft ? 'Proforma No' : 'Invoice No';
 
   doc.setFontSize(7.5);
-  let detailRowY = yPos + 4;
+  let detailRowY = yPos + 3;
+
+  // Helper for detail rows
+  const drawDetailRow = (lx: number, ly: number, label: string, value: string, lw: number) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, lx, ly);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 30);
+    doc.text(`: ${value}`, lx + lw, ly);
+  };
 
   // Row 1
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text(invoiceNoLabel, leftColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${data.invoice.id || data.invoice.invoice_no}`, leftColX + labelWidth, detailRowY);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Place Of Supply', rightColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${data.invoice.place_of_supply || 'Telangana (36)'}`, rightColX + 28, detailRowY);
+  drawDetailRow(leftColX, detailRowY, invoiceNoLabel, data.invoice.id || data.invoice.invoice_no, labelW);
+  drawDetailRow(rightColX, detailRowY, 'Place Of Supply', data.invoice.place_of_supply || 'Telangana (36)', rLabelW);
   
   detailRowY += 4;
 
   // Row 2
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Invoice Date', leftColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${formatDate(data.invoice.invoice_date)}`, leftColX + labelWidth, detailRowY);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Sales Person', rightColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${data.invoice.sales_person || data.company?.owner_name || 'Raghunath Gajula'}`, rightColX + 28, detailRowY);
+  drawDetailRow(leftColX, detailRowY, 'Invoice Date', formatDate(data.invoice.invoice_date), labelW);
+  drawDetailRow(rightColX, detailRowY, 'Sales Person', data.invoice.sales_person || data.company?.owner_name || 'Raghunath Gajula', rLabelW);
   
   detailRowY += 4;
 
   // Row 3
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Terms', leftColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${termsLabel}`, leftColX + labelWidth, detailRowY);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Due Date', rightColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${formatDate(data.invoice.due_date)}`, rightColX + 28, detailRowY);
+  drawDetailRow(leftColX, detailRowY, 'Terms', termsLabel, labelW);
+  drawDetailRow(rightColX, detailRowY, 'Due Date', formatDate(data.invoice.due_date), rLabelW);
 
   detailRowY += 4;
 
-  // Row 4 - HSN/SAC
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('HSN/SAC', leftColX, detailRowY);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`: ${HSN_SAC_CODE}`, leftColX + labelWidth, detailRowY);
+  // Row 4 - HSN/SAC + Client PO
+  drawDetailRow(leftColX, detailRowY, 'HSN/SAC', HSN_SAC_CODE, labelW);
 
-  // Client PO/WO on right side of Row 4
   const clientPoNumber = data.invoice.client_po_number || data.campaign?.client_po_number;
   const clientPoDate = data.invoice.client_po_date || data.campaign?.client_po_date;
   if (clientPoNumber) {
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text('Client PO/WO', rightColX, detailRowY);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
     const poText = clientPoDate ? `${clientPoNumber} (${formatDate(clientPoDate)})` : clientPoNumber;
-    doc.text(`: ${poText}`, rightColX + 28, detailRowY);
+    drawDetailRow(rightColX, detailRowY, 'Client PO/WO', poText, rLabelW);
   }
 
-  yPos = detailRowY + 5;
+  yPos = yPos - 1 + detailBandHeight + 3;
 
-  // ========== BILL TO / SHIP TO (2-column grid) ==========
+  // ========== BILL TO / SHIP TO (Auto-height, compact) ==========
   const colMidX = pageWidth / 2;
-  const leftColWidth = colMidX - leftMargin - 3;
-  const rightColWidth = pageWidth - rightMargin - colMidX - 3;
-  const boxHeight = 32;
+  const leftColWidth = colMidX - leftMargin - 2;
+  const rightColWidth = pageWidth - rightMargin - colMidX - 2;
 
-  // Build Bill To address
   const billTo = {
     name: data.client.name || 'Client',
     address1: data.client.billing_address_line1 || data.client.address || '',
@@ -220,7 +193,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     gstin: data.client.gst_number || '',
   };
 
-  // Build Ship To address (fallback to Bill To if empty)
   const hasShippingAddress = !!(data.client.shipping_address_line1 || data.client.shipping_city);
   const shipTo = {
     name: data.client.name || 'Client',
@@ -229,140 +201,122 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     city: data.client.shipping_city || billTo.city,
     state: data.client.shipping_state || billTo.state,
     pincode: data.client.shipping_pincode || billTo.pincode,
-    gstin: data.client.gst_number || '', // Same GSTIN for shipping
+    gstin: data.client.gst_number || '',
     sameAsBillTo: !hasShippingAddress,
   };
 
-  // Headers
+  // Measure address content height
+  const measureAddressHeight = (addr: typeof billTo, maxW: number): number => {
+    let h = 4; // name
+    if (addr.address1) {
+      const lines = doc.splitTextToSize(addr.address1, maxW - 6);
+      h += Math.min(lines.length, 2) * 2.8;
+    }
+    if (addr.address2) h += 2.8;
+    const csp = [addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+    if (csp) h += 2.8;
+    if (addr.gstin) h += 4;
+    return h + 3; // padding
+  };
+
+  const billH = measureAddressHeight(billTo, leftColWidth);
+  const shipH = measureAddressHeight(shipTo, rightColWidth);
+  const boxHeight = Math.max(billH, shipH, 20);
+
+  // Headers - rounded-feel with smaller height
+  const headerH = 5;
   doc.setFillColor(30, 64, 130);
-  doc.rect(leftMargin, yPos, leftColWidth, 5.5, 'F');
-  doc.rect(colMidX + 3, yPos, rightColWidth, 5.5, 'F');
+  doc.rect(leftMargin, yPos, leftColWidth, headerH, 'F');
+  doc.rect(colMidX + 2, yPos, rightColWidth, headerH, 'F');
   
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Bill To', leftMargin + 3, yPos + 4);
-  doc.text('Ship To', colMidX + 6, yPos + 4);
+  doc.text('Bill To', leftMargin + 3, yPos + 3.5);
+  doc.text('Ship To', colMidX + 5, yPos + 3.5);
 
-  yPos += 5.5;
+  yPos += headerH;
 
   // Content boxes
   doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.2);
   doc.rect(leftMargin, yPos, leftColWidth, boxHeight, 'S');
-  doc.rect(colMidX + 3, yPos, rightColWidth, boxHeight, 'S');
+  doc.rect(colMidX + 2, yPos, rightColWidth, boxHeight, 'S');
 
-  // Bill To Content
-  let billY = yPos + 4;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(billTo.name, leftMargin + 3, billY);
-  billY += 4;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(60, 60, 60);
-  
-  if (billTo.address1) {
-    const lines = doc.splitTextToSize(billTo.address1, leftColWidth - 8);
-    lines.slice(0, 2).forEach((line: string) => {
-      doc.text(line, leftMargin + 3, billY);
-      billY += 3;
-    });
-  }
-
-  if (billTo.address2) {
-    doc.text(billTo.address2.substring(0, 50), leftMargin + 3, billY);
-    billY += 3;
-  }
-
-  const billCityStatePin = [billTo.city, billTo.state, billTo.pincode].filter(Boolean).join(', ');
-  if (billCityStatePin) {
-    doc.text(billCityStatePin, leftMargin + 3, billY);
-    billY += 3;
-  }
-
-  if (billTo.gstin) {
-    billY += 1;
+  // Render address content
+  const renderAddress = (addr: typeof billTo, startX: number, maxW: number, isSameAsBillTo: boolean = false) => {
+    let ay = yPos + 3.5;
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.text(`GSTIN: ${billTo.gstin}`, leftMargin + 3, billY);
-  }
+    doc.text(addr.name, startX + 3, ay);
+    
+    if (isSameAsBillTo) {
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(140, 140, 140);
+      doc.text('(Same as Bill To)', startX + 3 + doc.getTextWidth(addr.name) + 1.5, ay);
+    }
+    
+    ay += 3.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(70, 70, 70);
+    
+    if (addr.address1) {
+      const lines = doc.splitTextToSize(addr.address1, maxW - 6);
+      lines.slice(0, 2).forEach((line: string) => {
+        doc.text(line, startX + 3, ay);
+        ay += 2.8;
+      });
+    }
+    if (addr.address2) {
+      doc.text(addr.address2.substring(0, 50), startX + 3, ay);
+      ay += 2.8;
+    }
+    const csp = [addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+    if (csp) {
+      doc.text(csp, startX + 3, ay);
+      ay += 2.8;
+    }
+    if (addr.gstin) {
+      ay += 0.5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(30, 30, 30);
+      doc.text(`GSTIN: ${addr.gstin}`, startX + 3, ay);
+    }
+  };
 
-  // Ship To Content
-  let shipY = yPos + 4;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(shipTo.name, colMidX + 6, shipY);
-  
-  // Show "Same as Bill To" indicator if applicable
-  if (shipTo.sameAsBillTo) {
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(120, 120, 120);
-    doc.text('(Same as Bill To)', colMidX + 6 + doc.getTextWidth(shipTo.name) + 2, shipY);
-  }
-  
-  shipY += 4;
+  renderAddress(billTo, leftMargin, leftColWidth);
+  renderAddress(shipTo, colMidX + 2, rightColWidth, shipTo.sameAsBillTo);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(60, 60, 60);
-  
-  if (shipTo.address1) {
-    const lines = doc.splitTextToSize(shipTo.address1, rightColWidth - 8);
-    lines.slice(0, 2).forEach((line: string) => {
-      doc.text(line, colMidX + 6, shipY);
-      shipY += 3;
-    });
-  }
+  yPos = yPos + boxHeight + 3;
 
-  if (shipTo.address2) {
-    doc.text(shipTo.address2.substring(0, 50), colMidX + 6, shipY);
-    shipY += 3;
-  }
-
-  const shipCityStatePin = [shipTo.city, shipTo.state, shipTo.pincode].filter(Boolean).join(', ');
-  if (shipCityStatePin) {
-    doc.text(shipCityStatePin, colMidX + 6, shipY);
-    shipY += 3;
-  }
-
-  if (shipTo.gstin) {
-    shipY += 1;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(`GSTIN: ${shipTo.gstin}`, colMidX + 6, shipY);
-  }
-
-  yPos = yPos + boxHeight + 5;
-
-  // ========== CAMPAIGN INFO ==========
+  // ========== CAMPAIGN INFO (Compact strip) ==========
   if (data.campaign?.campaign_name) {
-    doc.setFontSize(9);
+    doc.setFillColor(243, 244, 246);
+    doc.rect(leftMargin, yPos, contentWidth, 5.5, 'F');
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.2);
+    doc.rect(leftMargin, yPos, contentWidth, 5.5, 'S');
+    
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 64, 175);
-    
-    const campaignLabel = `Campaign: ${data.campaign.campaign_name}`;
-    let campaignDuration = '';
+    doc.text(`Campaign: ${data.campaign.campaign_name}`, leftMargin + 3, yPos + 3.8);
     
     if (data.campaign.start_date && data.campaign.end_date) {
-      campaignDuration = `(${formatDate(data.campaign.start_date)} to ${formatDate(data.campaign.end_date)})`;
-    }
-    
-    doc.text(campaignLabel, leftMargin, yPos);
-    
-    if (campaignDuration) {
       doc.setFont('helvetica', 'normal');
-      doc.text(campaignDuration, pageWidth - rightMargin, yPos, { align: 'right' });
+      doc.setFontSize(7);
+      const campaignDuration = `(${formatDate(data.campaign.start_date)} to ${formatDate(data.campaign.end_date)})`;
+      doc.text(campaignDuration, pageWidth - rightMargin - 3, yPos + 3.8, { align: 'right' });
     }
     
-    yPos += 5;
+    yPos += 8;
   }
 
-  // ========== ITEMS TABLE - FIXED LOCATION LINE ==========
-  // Collect HSN/SAC data for summary
+  // ========== ITEMS TABLE ==========
   const hsnSummary: Record<string, { taxable: number; cgstRate: number; cgstAmount: number; sgstRate: number; sgstAmount: number; igstRate: number; igstAmount: number }> = {};
   const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
   const isInterState = data.invoice.tax_type === 'igst' || data.invoice.gst_mode === 'IGST';
@@ -378,7 +332,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const sqft = item.total_sqft || item.sqft || item.meta?.total_sqft || '';
     const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     
-    // Calculate period info
     const startDate = item.start_date || item.booking_start_date || data.campaign?.start_date;
     const endDate = item.end_date || item.booking_end_date || data.campaign?.end_date;
     let bookingDisplay = 'N/A';
@@ -390,36 +343,30 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
     
-    // Build rich description with asset code
     const descLines: string[] = [];
     if (assetCode && !/^[0-9a-f]{8}-/.test(assetCode)) descLines.push(`[${assetCode}]`);
-    const displayLocation = locationVal || '-';
-    descLines.push(`Location: ${displayLocation}`);
+    descLines.push(`Location: ${locationVal || '-'}`);
     if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
     else descLines.push(`Area: ${areaVal || '-'}`);
     descLines.push(`Media: ${mediaTypeVal} | Lit: ${illuminationVal}`);
     descLines.push(`HSN/SAC: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 
-    // Size column - line-wise display
     const sizeLines: string[] = [];
     if (dimensions) sizeLines.push(`Dimensions: ${dimensions}`);
     if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
     const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
-    // Unit price and subtotal - include printing/mounting if present
     const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || item.rent_amount || 0;
     const printingCost = item.printing_charges || item.printing_cost || 0;
     const mountingCost = item.mounting_charges || item.mounting_cost || 0;
     const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
     
-    // FIXED: Format unit price with full labels
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
     unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
     unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
     const unitPriceDisplay = unitPriceLines.join('\n');
 
-    // Aggregate HSN/SAC summary data
     const taxableForItem = itemTotal;
     
     if (!hsnSummary[hsnSac]) {
@@ -458,27 +405,32 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       fontStyle: 'bold',
       fontSize: 7,
       halign: 'center',
-      cellPadding: 2,
+      cellPadding: 1.8,
     },
     bodyStyles: {
       fontSize: 6.5,
       textColor: [30, 30, 30],
       valign: 'top',
-      cellPadding: 2,
+      cellPadding: 1.8,
+    },
+    alternateRowStyles: {
+      fillColor: [250, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 72, halign: 'left' },
+      0: { cellWidth: 7, halign: 'center' },
+      1: { cellWidth: 74, halign: 'left' },
       2: { cellWidth: 22, halign: 'left' },
-      3: { cellWidth: 28, halign: 'left', fontSize: 6 },
+      3: { cellWidth: 27, halign: 'left', fontSize: 6 },
       4: { cellWidth: 28, halign: 'left' },
-      5: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
     },
     margin: { left: leftMargin, right: rightMargin },
+    tableLineColor: [220, 220, 220],
+    tableLineWidth: 0.2,
   });
 
   // @ts-ignore
-  yPos = doc.lastAutoTable.finalY + 6;
+  yPos = doc.lastAutoTable.finalY + 4;
 
   // ========== BANK DETAILS + FINANCIAL SUMMARY (Side by Side) ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
@@ -486,36 +438,46 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
   const balanceDue = data.invoice.balance_due != null ? parseFloat(data.invoice.balance_due) : grandTotal;
 
-  // Check page space
-  if (yPos > pageHeight - 90) {
+  if (yPos > pageHeight - 80) {
     doc.addPage();
-    yPos = 20;
+    yPos = 15;
   }
 
   const bankStartY = yPos;
-  const totalsBoxWidth = 85;
+  const totalsBoxWidth = 82;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-  const bankBoxWidth = totalsBoxX - leftMargin - 4;
+  const bankBoxWidth = totalsBoxX - leftMargin - 3;
 
-  // Bank Details content (draw box border after we know summary height)
-  doc.setFontSize(10);
+  // Bank Details
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(30, 64, 175);
-  doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
+  doc.text('Bank Details', leftMargin + 3, bankStartY + 5);
 
-  let bankY = bankStartY + 12;
+  let bankY = bankStartY + 10;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(17, 24, 39);
-  doc.text(`Bank: ${bankDetails.bankName}`, leftMargin + 4, bankY);
-  bankY += 5;
-  doc.text(`Branch: ${bankDetails.branch}`, leftMargin + 4, bankY);
-  bankY += 5;
-  doc.text(`A/C No: ${bankDetails.accountNo}`, leftMargin + 4, bankY);
-  bankY += 5;
-  doc.text(`IFSC: ${bankDetails.ifsc}`, leftMargin + 4, bankY);
+  doc.setFontSize(7);
+  doc.setTextColor(40, 40, 40);
 
-  // RIGHT: Financial Summary
+  const bankLines = [
+    ['Bank', bankDetails.bankName],
+    ['Branch', bankDetails.branch],
+    ['A/C Name', bankDetails.accountName],
+    ['A/C No', bankDetails.accountNo],
+    ['IFSC', bankDetails.ifsc],
+  ];
+
+  bankLines.forEach(([label, value]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, leftMargin + 3, bankY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(`: ${value}`, leftMargin + 20, bankY);
+    bankY += 4;
+  });
+
+  // Financial Summary
   const summaryResult = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
@@ -532,46 +494,54 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     isInterState,
   });
 
-  // Draw bank box to match the Total (blue) row bottom
+  // Draw bank box to match Total row
   const bankBoxHeight = summaryResult.totalRowBottomY - bankStartY;
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.2);
   doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
 
-  yPos = Math.max(bankStartY + bankBoxHeight, summaryResult.endY) + 3;
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryResult.endY) + 2;
 
-  // ========== SIGNATURE (right-aligned below financial summary) ==========
-  const signCenterX = totalsBoxX + totalsBoxWidth / 2;
+  // ========== AUTHORIZED SIGNATORY (Compact, right-aligned) ==========
+  if (yPos > pageHeight - 45) {
+    doc.addPage();
+    yPos = 15;
+  }
 
-  doc.setFontSize(9);
+  const signBlockX = totalsBoxX + 8;
+  const signBlockCenterX = totalsBoxX + totalsBoxWidth / 2;
+
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  doc.text('For,', signCenterX, yPos, { align: 'center' });
+  doc.text('For,', signBlockCenterX, yPos, { align: 'center' });
 
   doc.setFont('helvetica', 'bold');
-  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
+  doc.text(companyName, signBlockCenterX, yPos + 4, { align: 'center' });
 
   const stampBase64 = await loadStampImage();
   if (stampBase64) {
     try {
-      const stampSize = 28;
-      doc.addImage(stampBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
+      const stampSize = 22;
+      doc.addImage(stampBase64, 'PNG', signBlockCenterX - stampSize / 2, yPos + 6, stampSize, stampSize);
     } catch {}
   }
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
+  doc.setFontSize(7);
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.2);
+  doc.line(signBlockCenterX - 22, yPos + 28, signBlockCenterX + 22, yPos + 28);
+  doc.text('Authorized Signatory', signBlockCenterX, yPos + 32, { align: 'center' });
 
-  yPos = yPos + 45;
-
-  // Check page space for QR
-  if (yPos > pageHeight - 50) {
-    doc.addPage();
-    yPos = 20;
-  }
+  yPos = yPos + 35;
 
   // ========== PAYMENT QR CODE ==========
+  if (yPos > pageHeight - 45) {
+    doc.addPage();
+    yPos = 15;
+  }
+
   const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
   const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
   const invoiceStatus = data.invoice.status || 'Draft';
@@ -588,37 +558,35 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     y: qrY,
   });
 
-  yPos = Math.max(yPos, qrY + qrHeight) + 4;
+  yPos = Math.max(yPos, qrY + qrHeight) + 3;
 
-  // ========== TERMS & CONDITIONS (Shared Standard) ==========
+  // ========== TERMS & CONDITIONS ==========
   const { renderTermsBoxPDF } = await import('@/lib/terms/standardTerms');
   yPos = renderTermsBoxPDF(doc, yPos, {
     pageWidth,
     pageHeight,
     leftMargin,
     rightMargin,
-    bottomMargin: 15,
+    bottomMargin: 12,
     fontFamily: 'helvetica',
-    onNewPage: () => { doc.addPage(); return 20; },
+    onNewPage: () => { doc.addPage(); return 15; },
     company: data.company,
   });
 
-  yPos += 4;
+  yPos += 3;
 
-  // ========== HSN/SAC SUMMARY TABLE - AT END ==========
-  // Check if need new page
-  if (yPos > pageHeight - 45) {
+  // ========== HSN/SAC SUMMARY TABLE ==========
+  if (yPos > pageHeight - 40) {
     doc.addPage();
-    yPos = 20;
+    yPos = 15;
   }
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(30, 30, 30);
   doc.text('HSN/SAC Summary:', leftMargin, yPos);
-  yPos += 3;
+  yPos += 2;
 
-  // Build HSN summary table data
   const hsnTableBody: any[] = [];
   let totalTaxable = 0;
   let totalCgst = 0;
@@ -635,27 +603,12 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     totalTax += lineTax;
     
     if (isInterState) {
-      hsnTableBody.push([
-        hsn,
-        formatCurrency(values.taxable),
-        `${values.igstRate}%`,
-        formatCurrency(values.igstAmount),
-        formatCurrency(lineTax),
-      ]);
+      hsnTableBody.push([hsn, formatCurrency(values.taxable), `${values.igstRate}%`, formatCurrency(values.igstAmount), formatCurrency(lineTax)]);
     } else {
-      hsnTableBody.push([
-        hsn,
-        formatCurrency(values.taxable),
-        `${values.cgstRate}%`,
-        formatCurrency(values.cgstAmount),
-        `${values.sgstRate}%`,
-        formatCurrency(values.sgstAmount),
-        formatCurrency(lineTax),
-      ]);
+      hsnTableBody.push([hsn, formatCurrency(values.taxable), `${values.cgstRate}%`, formatCurrency(values.cgstAmount), `${values.sgstRate}%`, formatCurrency(values.sgstAmount), formatCurrency(lineTax)]);
     }
   });
 
-  // Total row
   if (isInterState) {
     hsnTableBody.push([
       { content: 'Total', styles: { fontStyle: 'bold' } },
@@ -676,7 +629,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     ]);
   }
 
-  // HSN table columns based on tax type
   const hsnHead = isInterState
     ? [['HSN/SAC', 'Taxable Amount', 'IGST Rate', 'IGST Amount', 'Total Tax']]
     : [['HSN/SAC', 'Taxable Amount', 'CGST Rate', 'CGST Amount', 'SGST Rate', 'SGST Amount', 'Total Tax']];
@@ -690,35 +642,38 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       fillColor: [30, 64, 130],
       textColor: 255,
       fontStyle: 'bold',
-      fontSize: 7,
+      fontSize: 6.5,
       halign: 'center',
+      cellPadding: 1.5,
     },
     bodyStyles: {
-      fontSize: 7,
+      fontSize: 6.5,
       textColor: [40, 40, 40],
       halign: 'center',
+      cellPadding: 1.5,
     },
     columnStyles: isInterState ? {
-      0: { halign: 'left', cellWidth: 28 },
-      1: { halign: 'right', cellWidth: 35 },
-      2: { halign: 'center', cellWidth: 22 },
-      3: { halign: 'right', cellWidth: 30 },
-      4: { halign: 'right', cellWidth: 32 },
+      0: { halign: 'left', cellWidth: 26 },
+      1: { halign: 'right', cellWidth: 34 },
+      2: { halign: 'center', cellWidth: 20 },
+      3: { halign: 'right', cellWidth: 28 },
+      4: { halign: 'right', cellWidth: 30 },
     } : {
-      0: { halign: 'left', cellWidth: 22 },
-      1: { halign: 'right', cellWidth: 28 },
-      2: { halign: 'center', cellWidth: 18 },
-      3: { halign: 'right', cellWidth: 24 },
-      4: { halign: 'center', cellWidth: 18 },
-      5: { halign: 'right', cellWidth: 24 },
-      6: { halign: 'right', cellWidth: 28 },
+      0: { halign: 'left', cellWidth: 20 },
+      1: { halign: 'right', cellWidth: 26 },
+      2: { halign: 'center', cellWidth: 16 },
+      3: { halign: 'right', cellWidth: 22 },
+      4: { halign: 'center', cellWidth: 16 },
+      5: { halign: 'right', cellWidth: 22 },
+      6: { halign: 'right', cellWidth: 26 },
     },
     margin: { left: leftMargin, right: rightMargin },
+    tableLineColor: [220, 220, 220],
+    tableLineWidth: 0.2,
   });
 
   // @ts-ignore
-  yPos = doc.lastAutoTable.finalY + 10;
-
+  yPos = doc.lastAutoTable.finalY + 8;
 
   return doc.output('blob');
 }

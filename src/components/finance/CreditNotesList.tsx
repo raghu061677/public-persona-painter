@@ -71,16 +71,17 @@ export function CreditNotesList({ invoiceId, onCreditNoteChange }: CreditNotesLi
     if (!selectedNote) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from('credit_notes')
-        .update({ status: 'Issued', updated_at: new Date().toISOString() })
-        .eq('id', selectedNote.id);
+      // Use atomic RPC that assigns CN number + updates invoice balance
+      const { data: cnNo, error } = await supabase.rpc('issue_credit_note', {
+        p_credit_note_uuid: selectedNote.id,
+        p_company_id: selectedNote.company_id || '',
+      });
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: `Credit Note ${selectedNote.credit_note_id} issued`,
+        title: 'Credit Note Issued',
+        description: `Permanent number assigned: ${cnNo}`,
       });
       fetchCreditNotes();
       onCreditNoteChange?.();

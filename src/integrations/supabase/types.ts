@@ -4256,6 +4256,38 @@ export type Database = {
           },
         ]
       }
+      credit_note_counters: {
+        Row: {
+          company_id: string
+          fy_label: string
+          id: string
+          last_seq: number
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          fy_label: string
+          id?: string
+          last_seq?: number
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          fy_label?: string
+          id?: string
+          last_seq?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_note_items: {
         Row: {
           amount: number
@@ -4312,6 +4344,7 @@ export type Database = {
           id: string
           igst_amount: number | null
           invoice_id: string
+          issued_at: string | null
           notes: string | null
           reason: string
           sgst_amount: number | null
@@ -4333,6 +4366,7 @@ export type Database = {
           id?: string
           igst_amount?: number | null
           invoice_id: string
+          issued_at?: string | null
           notes?: string | null
           reason: string
           sgst_amount?: number | null
@@ -4354,6 +4388,7 @@ export type Database = {
           id?: string
           igst_amount?: number | null
           invoice_id?: string
+          issued_at?: string | null
           notes?: string | null
           reason?: string
           sgst_amount?: number | null
@@ -6568,6 +6603,7 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string
+          credited_amount: number
           draft_number: string | null
           due_date: string
           estimation_id: string | null
@@ -6620,6 +6656,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by: string
+          credited_amount?: number
           draft_number?: string | null
           due_date: string
           estimation_id?: string | null
@@ -6672,6 +6709,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string
+          credited_amount?: number
           draft_number?: string | null
           due_date?: string
           estimation_id?: string | null
@@ -13675,6 +13713,10 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      issue_credit_note: {
+        Args: { p_company_id: string; p_credit_note_uuid: string }
+        Returns: string
+      }
       list_all_users: {
         Args: never
         Returns: {
@@ -13840,6 +13882,10 @@ export type Database = {
       }
       match_campaign_token: { Args: { p_token: string }; Returns: string }
       normalize_role: { Args: { raw_role: string }; Returns: string }
+      preview_next_invoice_number: {
+        Args: { p_company_id: string; p_gst_rate?: number }
+        Returns: string
+      }
       process_plan_approval: {
         Args: {
           p_approval_id: string

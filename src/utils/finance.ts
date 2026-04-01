@@ -154,11 +154,15 @@ export function generateDraftInvoiceId(): string {
  * Finalize a draft invoice: assigns permanent sequential number
  * Called when invoice is marked as "Sent" or "Finalized"
  */
-export async function finalizeInvoiceNumber(supabase: any, draftId: string, gstRate: number): Promise<string> {
-  const { data, error } = await supabase.rpc('finalize_invoice_number', {
+export async function finalizeInvoiceNumber(supabase: any, draftId: string, gstRate: number, companyId?: string): Promise<string> {
+  const params: Record<string, unknown> = {
     p_draft_id: draftId,
     p_gst_rate: gstRate,
-  });
+  };
+  if (companyId) {
+    params.p_company_id = companyId;
+  }
+  const { data, error } = await supabase.rpc('finalize_invoice_number', params);
   if (error) {
     console.error('Error finalizing invoice number:', error);
     throw new Error('Failed to assign permanent invoice number');

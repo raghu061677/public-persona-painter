@@ -475,14 +475,8 @@ export function MonthlyInvoiceGenerator({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
       
-      // Generate invoice ID using RPC
-      // Use GST-based prefix (INV for taxable, INV-Z for 0% GST)
-      const gstRate = totals.gstPercent || 0;
-      const { data: invoiceIdData, error: idError } = await supabase.rpc('generate_invoice_id', {
-        p_gst_rate: gstRate
-      });
-      if (idError) throw new Error('Failed to generate invoice ID');
-      const invoiceId = invoiceIdData as string;
+      // Generate draft invoice ID - permanent number assigned on finalization
+      const invoiceId = `DRAFT-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
       
       // Build items array for legacy compatibility
       const items = filteredPreviews

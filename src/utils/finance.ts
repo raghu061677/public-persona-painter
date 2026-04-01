@@ -140,6 +140,40 @@ export function getAgingBucket(daysOverdue: number): string {
 }
 
 /**
+ * Generate a temporary draft invoice ID
+ * Format: DRAFT-{timestamp}-{random}
+ * This ID is replaced with a permanent number on finalization/sending.
+ */
+export function generateDraftInvoiceId(): string {
+  const ts = Date.now();
+  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `DRAFT-${ts}-${rand}`;
+}
+
+/**
+ * Finalize a draft invoice: assigns permanent sequential number
+ * Called when invoice is marked as "Sent" or "Finalized"
+ */
+export async function finalizeInvoiceNumber(supabase: any, draftId: string, gstRate: number): Promise<string> {
+  const { data, error } = await supabase.rpc('finalize_invoice_number', {
+    p_draft_id: draftId,
+    p_gst_rate: gstRate,
+  });
+  if (error) {
+    console.error('Error finalizing invoice number:', error);
+    throw new Error('Failed to assign permanent invoice number');
+  }
+  return data as string;
+}
+
+/**
+ * Check if an invoice ID is a draft (temporary) ID
+ */
+export function isDraftInvoiceId(id: string): boolean {
+  return id.startsWith('DRAFT-');
+}
+
+/**
  * Format currency for India
  */
 export function formatINR(amount: number | null | undefined): string {

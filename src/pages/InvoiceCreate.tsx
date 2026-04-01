@@ -182,7 +182,7 @@ export default function InvoiceCreate() {
       });
 
       const gstRate = selectedCampaign.gst_percent || 0;
-      const invoiceId = await generateInvoiceId(supabase, gstRate);
+      const invoiceId = generateDraftInvoiceId();
       const subTotal = selectedCampaign.subtotal || selectedCampaign.grand_total / (1 + gstRate / 100);
       const gstAmount = selectedCampaign.gst_amount || subTotal * (gstRate / 100);
       const totalAmount = selectedCampaign.grand_total;

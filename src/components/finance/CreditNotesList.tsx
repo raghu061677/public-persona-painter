@@ -22,6 +22,7 @@ import {
 interface CreditNote {
   id: string;
   credit_note_id: string;
+  company_id: string;
   credit_date: string;
   reason: string;
   subtotal: number;

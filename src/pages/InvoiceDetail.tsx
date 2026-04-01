@@ -20,8 +20,7 @@ import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPane
 import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
 import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
 import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
-import { CreditNotesList } from "@/components/finance/CreditNotesList";
-import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
+import { InvoiceMetadataEditor } from "@/components/invoices/InvoiceMetadataEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {

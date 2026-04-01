@@ -249,6 +249,7 @@ const Dashboard = () => {
           .from("invoices")
           .select("total_amount")
           .eq("company_id", selectedCompanyId)
+          .eq("is_draft", false)
           .gte("created_at", monthStart)
           .lte("created_at", monthEnd);
         

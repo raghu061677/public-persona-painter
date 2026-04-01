@@ -11,7 +11,7 @@ import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
 import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
-import { generateInvoiceId } from "@/utils/finance";
+import { generateDraftInvoiceId } from "@/utils/finance";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";

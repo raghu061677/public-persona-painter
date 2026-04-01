@@ -175,8 +175,8 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      // Generate invoice ID using campaign GST rate for correct prefix (INV vs INV-Z)
-      const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
+      // Generate draft invoice ID - permanent number assigned on finalization
+      const invoiceId = generateDraftInvoiceId();
 
       // Fetch media_asset_code for all campaign assets
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);

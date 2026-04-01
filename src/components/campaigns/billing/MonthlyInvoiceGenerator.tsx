@@ -587,6 +587,7 @@ export function MonthlyInvoiceGenerator({
         total_amount: totals.grandTotal,
         balance_due: totals.grandTotal,
         status: 'Draft',
+        is_draft: true,
         items,
         notes: `Monthly billing for ${campaign.campaign_name} - ${format(periodStart, 'MMMM yyyy')}`,
         created_by: userData.user.id,

@@ -96,6 +96,7 @@ export function useStrategicIntelligence() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [creditNotes, setCreditNotes] = useState<any[]>([]);
 
   const dateRange = useMemo((): DateRange => {
     const now = new Date();

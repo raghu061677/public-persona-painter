@@ -181,10 +181,15 @@ export default function InvoiceDetail() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
-                {invoice.id}
+                {isDraft ? (
+                  <span className="text-muted-foreground">Draft Invoice</span>
+                ) : (
+                  invoice.id
+                )}
                 {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
               </h1>
               <p className="text-muted-foreground mt-1">
+                {isDraft && <span className="text-xs font-mono mr-2">({invoice.id})</span>}
                 {invoice.invoice_type === 'PROFORMA' ? 'Proforma Invoice' : 'Tax Invoice'} for {invoice.client_name}
               </p>
             </div>

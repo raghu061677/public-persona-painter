@@ -116,7 +116,7 @@ export function useOOHIntelligence() {
         supabase.from("campaigns").select("id, campaign_name, client_id, client_name, status, start_date, end_date").eq("company_id", company.id),
         supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, area, location, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount, total_sqft, booking_start_date, booking_end_date, direction, dimensions"),
         supabase.from("media_assets").select("id, city, area, media_type, total_sqft, status, company_id").eq("company_id", company.id),
-        supabase.from("invoices").select("id, campaign_id, total_amount, status").eq("company_id", company.id),
+        supabase.from("invoices").select("id, campaign_id, total_amount, status").eq("company_id", company.id).eq("is_draft", false),
         supabase.from("expenses").select("id, campaign_id, total_amount, category, allocation_type").eq("company_id", company.id).eq("allocation_type", "Campaign"),
       ]);
       setCampaigns(cmpRes.data || []);

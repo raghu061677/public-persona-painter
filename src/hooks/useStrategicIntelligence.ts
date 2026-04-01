@@ -112,7 +112,7 @@ export function useStrategicIntelligence() {
     setLoading(true);
     try {
       const [invRes, payRes, expRes, cmpRes, caRes, maRes, clRes] = await Promise.all([
-        supabase.from("invoices").select("id, campaign_id, client_id, client_name, total_amount, status, invoice_date, due_date, payment_terms").eq("company_id", company.id),
+        supabase.from("invoices").select("id, campaign_id, client_id, client_name, total_amount, status, invoice_date, due_date, payment_terms").eq("company_id", company.id).eq("is_draft", false),
         supabase.from("payment_records").select("id, invoice_id, amount, payment_date").eq("company_id", company.id),
         supabase.from("expenses").select("id, amount, category, expense_date, campaign_id, asset_id, vendor_name").eq("company_id", company.id),
         supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, company_id, clients(name)").eq("company_id", company.id),

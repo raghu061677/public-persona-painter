@@ -58,7 +58,8 @@ export function AdvancedDashboard() {
         supabase
           .from("invoices")
           .select("total_amount, invoice_date, status, client_name")
-          .eq("company_id", company.id),
+          .eq("company_id", company.id)
+          .eq("is_draft", false),
         supabase
           .from("campaigns")
           .select("id, status, grand_total, created_at")

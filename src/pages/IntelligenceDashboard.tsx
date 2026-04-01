@@ -112,7 +112,7 @@ export default function IntelligenceDashboard() {
     const vacantCount = (totalCount || 0) - bookedCount;
     const [{ count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
       supabase.from("campaigns").select("*", { count: "exact", head: true }).in("status", ["Running", "Upcoming"]),
-      supabase.from("invoices").select("total_amount").eq("status", "Paid"),
+      supabase.from("invoices").select("total_amount").eq("status", "Paid").eq("is_draft", false),
     ]);
     const totalRevenue = (revenueData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
     const total = totalCount || 0;

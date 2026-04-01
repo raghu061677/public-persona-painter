@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { formatINR, generateInvoiceId } from "@/utils/finance";
+import { formatINR, generateDraftInvoiceId } from "@/utils/finance";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";

@@ -11,7 +11,7 @@ import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
 import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
-import { generateInvoiceId } from "@/utils/finance";
+import { generateDraftInvoiceId } from "@/utils/finance";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -175,8 +175,8 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      // Generate invoice ID using campaign GST rate for correct prefix (INV vs INV-Z)
-      const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
+      // Generate draft invoice ID - permanent number assigned on finalization
+      const invoiceId = generateDraftInvoiceId();
 
       // Fetch media_asset_code for all campaign assets
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
@@ -384,8 +384,8 @@ export function CampaignBillingTab({
           description: `Invoice ${existingInvoice.id} updated for ${period.label}`,
         });
       } else {
-        // Generate new invoice ID and INSERT - pass GST rate for correct prefix
-        const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
+        // Generate draft invoice ID - permanent number assigned on finalization
+        const invoiceId = generateDraftInvoiceId();
 
         const { error } = await supabase.from('invoices').insert({
           id: invoiceId,
@@ -406,6 +406,7 @@ export function CampaignBillingTab({
           total_amount: amounts.total,
           balance_due: amounts.total,
           status: 'Draft',
+          is_draft: true,
           items,
           notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,

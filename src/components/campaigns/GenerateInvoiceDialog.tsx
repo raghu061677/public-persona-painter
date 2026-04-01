@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { generateInvoiceId } from "@/utils/finance";
+import { generateDraftInvoiceId } from "@/utils/finance";
 
 interface GenerateInvoiceDialogProps {
   campaign: any;
@@ -72,9 +72,8 @@ export function GenerateInvoiceDialog({
         .select('terms')
         .single();
 
-      // Generate invoice ID - pass effective GST rate for correct prefix (INV vs INV-Z)
-      const gstRateForId = isGstApplicable ? (campaign.gst_percent ?? 0) : 0;
-      const invoiceId = await generateInvoiceId(supabase, gstRateForId);
+      // Generate draft invoice ID - permanent number assigned on finalization
+      const invoiceId = generateDraftInvoiceId();
 
       // Fetch media_asset_code for all assets to avoid storing UUIDs as asset_code
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
@@ -160,6 +159,7 @@ export function GenerateInvoiceDialog({
           total_amount,
           balance_due,
           status: 'Draft' as const,
+          is_draft: true,
           items,
           notes: notes || `Tax Invoice for campaign: ${campaign.campaign_name}`,
           client_po_number: campaign.client_po_number || null,

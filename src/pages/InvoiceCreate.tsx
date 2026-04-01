@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { formatINR, generateInvoiceId } from "@/utils/finance";
+import { formatINR, generateDraftInvoiceId } from "@/utils/finance";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
@@ -182,7 +182,7 @@ export default function InvoiceCreate() {
       });
 
       const gstRate = selectedCampaign.gst_percent || 0;
-      const invoiceId = await generateInvoiceId(supabase, gstRate);
+      const invoiceId = generateDraftInvoiceId();
       const subTotal = selectedCampaign.subtotal || selectedCampaign.grand_total / (1 + gstRate / 100);
       const gstAmount = selectedCampaign.gst_amount || subTotal * (gstRate / 100);
       const totalAmount = selectedCampaign.grand_total;
@@ -198,6 +198,7 @@ export default function InvoiceCreate() {
           invoice_date: invoiceDate,
           due_date: dueDate,
           status: 'Draft',
+          is_draft: true,
           items: items,
           sub_total: subTotal,
           gst_percent: 18,

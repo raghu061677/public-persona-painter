@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Trash2, Lock, FileText, Send } from "lucide-react";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
-import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
+import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { InvoicePDFExport } from "@/components/invoices/InvoicePDFExport";
 import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPanel";
@@ -92,25 +92,49 @@ export default function InvoiceDetail() {
   };
 
   const handleMarkAsSent = async () => {
-    if (!confirm("Mark this invoice as 'Sent' to client? This will lock the invoice from further edits.")) return;
+    if (!invoice) return;
+    
+    const isDraft = isDraftInvoiceId(invoice.id);
+    const confirmMsg = isDraft
+      ? "This will assign a permanent invoice number and mark it as 'Sent'. This action cannot be undone. Continue?"
+      : "Mark this invoice as 'Sent' to client? This will lock the invoice from further edits.";
+    
+    if (!confirm(confirmMsg)) return;
 
-    const { error } = await supabase
-      .from('invoices')
-      .update({ status: 'Sent', updated_at: new Date().toISOString() })
-      .eq('id', invoiceId);
+    try {
+      if (isDraft) {
+        // Finalize: assign permanent number via atomic counter
+        const gstRate = invoice.gst_percent || 0;
+        const permanentId = await finalizeInvoiceNumber(supabase, invoice.id, gstRate);
+        
+        toast({
+          title: "Invoice Finalized",
+          description: `Permanent number assigned: ${permanentId}`,
+        });
+        
+        // Navigate to the new permanent URL
+        navigate(`/admin/invoices/view/${encodeURIComponent(permanentId)}`, { replace: true });
+      } else {
+        // Already has permanent number, just update status
+        const { error } = await supabase
+          .from('invoices')
+          .update({ status: 'Sent', updated_at: new Date().toISOString() })
+          .eq('id', invoiceId);
 
-    if (error) {
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Invoice marked as Sent",
+        });
+        fetchInvoice();
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update invoice status",
+        description: error.message || "Failed to update invoice status",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Invoice marked as Sent",
-      });
-      fetchInvoice();
     }
   };
 
@@ -130,6 +154,7 @@ export default function InvoiceDetail() {
     );
   }
 
+  const isDraft = isDraftInvoiceId(invoice.id);
   // Invoice is locked if status is not Draft
   const isLocked = invoice.status !== 'Draft';
   const canEdit = isAdmin && !isLocked;
@@ -156,10 +181,15 @@ export default function InvoiceDetail() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
-                {invoice.id}
+                {isDraft ? (
+                  <span className="text-muted-foreground">Draft Invoice</span>
+                ) : (
+                  invoice.id
+                )}
                 {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
               </h1>
               <p className="text-muted-foreground mt-1">
+                {isDraft && <span className="text-xs font-mono mr-2">({invoice.id})</span>}
                 {invoice.invoice_type === 'PROFORMA' ? 'Proforma Invoice' : 'Tax Invoice'} for {invoice.client_name}
               </p>
             </div>
@@ -176,7 +206,7 @@ export default function InvoiceDetail() {
             {isAdmin && invoice.status === 'Draft' && (
               <Button onClick={handleMarkAsSent} className="bg-primary">
                 <Send className="mr-2 h-4 w-4" />
-                Mark as Sent
+                {isDraft ? 'Finalize & Send' : 'Mark as Sent'}
               </Button>
             )}
             </ActionGuard>

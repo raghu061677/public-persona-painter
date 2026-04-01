@@ -121,24 +121,18 @@ export function CreateCreditNoteDialog({
 
     setIsLoading(true);
     try {
-      // Generate credit note ID
-      const { data: creditNoteId, error: idError } = await supabase.rpc('generate_credit_note_id', {
-        p_company_id: invoice.company_id,
-      });
-
-      if (idError) throw idError;
-
       // Calculate GST splits
       const gstMode = invoice.gst_mode || 'CGST_SGST';
       const cgstAmount = gstMode === 'CGST_SGST' ? gstAmount / 2 : 0;
       const sgstAmount = gstMode === 'CGST_SGST' ? gstAmount / 2 : 0;
       const igstAmount = gstMode === 'IGST' ? gstAmount : 0;
 
-      // Insert credit note
+      // Insert credit note as Draft first (with temp ID)
+      const tempCnId = `CN-DRAFT-${Date.now()}`;
       const { data: creditNote, error: insertError } = await supabase
         .from('credit_notes')
         .insert({
-          credit_note_id: creditNoteId,
+          credit_note_id: tempCnId,
           company_id: invoice.company_id,
           invoice_id: invoice.id,
           client_id: invoice.client_id,
@@ -151,7 +145,7 @@ export function CreateCreditNoteDialog({
           sgst_amount: sgstAmount,
           igst_amount: igstAmount,
           total_amount: totalAmount,
-          status: issueImmediately ? 'Issued' : 'Draft',
+          status: 'Draft',
         })
         .select()
         .single();
@@ -171,10 +165,25 @@ export function CreateCreditNoteDialog({
 
       if (itemsError) throw itemsError;
 
-      toast({
-        title: 'Success',
-        description: `Credit Note ${creditNoteId} ${issueImmediately ? 'issued' : 'created as draft'}`,
-      });
+      // If issue immediately, use atomic RPC
+      if (issueImmediately) {
+        const { data: cnNo, error: issueError } = await supabase.rpc('issue_credit_note', {
+          p_credit_note_uuid: creditNote.id,
+          p_company_id: invoice.company_id,
+        });
+
+        if (issueError) throw issueError;
+
+        toast({
+          title: 'Credit Note Issued',
+          description: `Permanent number assigned: ${cnNo}`,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `Credit Note saved as draft`,
+        });
+      }
 
       onCreditNoteCreated();
       onOpenChange(false);

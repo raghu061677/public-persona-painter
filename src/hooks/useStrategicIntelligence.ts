@@ -96,6 +96,7 @@ export function useStrategicIntelligence() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [creditNotes, setCreditNotes] = useState<any[]>([]);
 
   const dateRange = useMemo((): DateRange => {
     const now = new Date();
@@ -111,8 +112,8 @@ export function useStrategicIntelligence() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [invRes, payRes, expRes, cmpRes, caRes, maRes, clRes] = await Promise.all([
-        supabase.from("invoices").select("id, campaign_id, client_id, client_name, total_amount, status, invoice_date, due_date, payment_terms").eq("company_id", company.id).eq("is_draft", false),
+      const [invRes, payRes, expRes, cmpRes, caRes, maRes, clRes, cnRes] = await Promise.all([
+        supabase.from("invoices").select("id, campaign_id, client_id, client_name, total_amount, credited_amount, status, invoice_date, due_date, payment_terms").eq("company_id", company.id).eq("is_draft", false),
         supabase.from("payment_records").select("id, invoice_id, amount, payment_date").eq("company_id", company.id),
         supabase.from("expenses").select("id, amount, category, expense_date, campaign_id, asset_id, vendor_name").eq("company_id", company.id),
         supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, company_id, clients(name)").eq("company_id", company.id),
@@ -121,6 +122,7 @@ export function useStrategicIntelligence() {
         supabase.from("media_assets").select("id, city, area, media_type, total_sqft, status, card_rate, base_rate, location").eq("company_id", company.id),
         // FIX #7: Load clients directly for accurate count
         supabase.from("clients").select("id, name").eq("company_id", company.id),
+        supabase.from("credit_notes").select("id, invoice_id, total_amount, status, credit_date").eq("company_id", company.id).eq("status", "Issued"),
       ]);
       setInvoices(invRes.data || []);
       setPayments(payRes.data || []);
@@ -129,6 +131,7 @@ export function useStrategicIntelligence() {
       setCampaignAssets(caRes.data || []);
       setMediaAssets(maRes.data || []);
       setClients(clRes.data || []);
+      setCreditNotes(cnRes.data || []);
     } catch (e) {
       console.error("Strategic Intelligence load error:", e);
     } finally {
@@ -429,8 +432,16 @@ export function useStrategicIntelligence() {
 
   // ── F) Executive KPIs (period-aware, consistent definitions) ──
   const executiveKPIs = useMemo((): ExecutiveKPIs => {
-    // FIX #4: Unified accrual-basis definition: Revenue = invoiced, Profit = invoiced - expenses
-    const periodRevenue = periodInvoices.reduce((s, i) => s + Math.max(0, Number(i.total_amount) || 0), 0);
+    // FIX #4: Unified accrual-basis definition: Revenue = invoiced - credits, Profit = net revenue - expenses
+    const grossInvoiced = periodInvoices.reduce((s, i) => s + Math.max(0, Number(i.total_amount) || 0), 0);
+    // Net out issued credit notes for the period
+    const periodCreditTotal = creditNotes
+      .filter(cn => {
+        const d = cn.credit_date ? new Date(cn.credit_date) : null;
+        return d && d >= dateRange.from! && d <= dateRange.to!;
+      })
+      .reduce((s: number, cn: any) => s + (Number(cn.total_amount) || 0), 0);
+    const periodRevenue = Math.max(0, grossInvoiced - periodCreditTotal);
     const periodExpenseTotal = periodExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
     const periodProfit = periodRevenue - periodExpenseTotal;
 
@@ -489,7 +500,7 @@ export function useStrategicIntelligence() {
       totalClients,
       activeCampaigns,
     };
-  }, [periodInvoices, periodExpenses, campaigns, periodCampaignAssets, mediaAssets, assetROI, paymentMap, dateRange, clients]);
+  }, [periodInvoices, periodExpenses, campaigns, periodCampaignAssets, mediaAssets, assetROI, paymentMap, dateRange, clients, creditNotes]);
 
   // Revenue trend by month (12 months) - consistent accrual basis
   const revenueTrend = useMemo(() => {

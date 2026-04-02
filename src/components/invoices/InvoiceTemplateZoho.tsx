@@ -250,7 +250,7 @@
      'India'
    ].filter(Boolean);
    const clientAddress = billingAddressParts.join('\n');
-   const clientGstin = client?.gstin || '';
+   const clientGstin = client?.gstin || client?.gst_number || '';
  
    return (
      <div className="bg-white text-black p-6 space-y-4 max-w-4xl mx-auto print:p-0 font-sans text-sm">

@@ -156,6 +156,7 @@ const OperationsAnalytics = lazy(() => import("./pages/OperationsAnalytics"));
 const PlanComparison = lazy(() => import("./pages/PlanComparison"));
 const ProformasList = lazy(() => import("./pages/ProformasList"));
 const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
+const ProformaCreate = lazy(() => import("./pages/ProformaCreate"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const MonthClose = lazy(() => import("./pages/MonthClose"));
 const GeneratePayables = lazy(() => import("./pages/GeneratePayables"));

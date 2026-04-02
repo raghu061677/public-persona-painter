@@ -142,6 +142,9 @@ interface CampaignAssetsTableProps {
   onAddAssets: () => void;
   onBulkPrinting: () => void;
   onBulkMounting: () => void;
+  onBulkNegotiatedRate?: () => void;
+  onBulkDates?: () => void;
+  onBulkDays?: () => void;
 }
 
 export function CampaignAssetsTable({

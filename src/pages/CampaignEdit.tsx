@@ -1060,6 +1060,7 @@ export default function CampaignEdit() {
     total_sqft: asset.total_sqft,
     dimensions: asset.dimensions,
     areaSqft: asset.total_sqft,
+    card_rate: asset.card_rate,
   }));
 
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useCompanyContext } from "@/contexts/CompanyContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useGSTReportData } from "@/hooks/useGSTReportData";
 import { filingPeriodLabel, MONTH_NAMES } from "@/lib/gst-format";
 import { GSTSummaryCardsFixed } from "@/components/gst/GSTSummaryCards";

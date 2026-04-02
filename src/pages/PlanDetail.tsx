@@ -212,7 +212,7 @@ export default function PlanDetail() {
     checkAvailability();
   }, [showConvertDialog, campaignData.start_date, campaignData.end_date]);
 
-
+  useEffect(() => {
     checkAdminStatus();
     fetchPlan();
     fetchPlanItems();

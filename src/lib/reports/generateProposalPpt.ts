@@ -524,16 +524,7 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       });
     }
 
-    // QR code on Slide A — bottom-right of details slide, gold frame
-    const qrBase64 = await fetchQR(row.qr_code_url);
-    if (qrBase64) {
-      slideA.addShape("rect" as any, {
-        x: 8.35, y: 5.7, w: 1.15, h: 1.15,
-        fill: { color: CHARCOAL_DEEP },
-        line: { color: GOLD, width: 1 },
-      });
-      slideA.addImage({ data: qrBase64, x: 8.42, y: 5.77, w: 1.0, h: 1.0 });
-    }
+    // QR code removed — was causing PPT repair issues due to encoded URLs
 
     addPremiumFooter(slideA, companyName, slideNum, totalSlides);
 

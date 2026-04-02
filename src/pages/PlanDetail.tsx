@@ -138,7 +138,81 @@ export default function PlanDetail() {
     }
   };
 
+  // Pre-conversion availability check when convert dialog opens
   useEffect(() => {
+    if (!showConvertDialog || !planItems.length) return;
+    const checkAvailability = async () => {
+      setCheckingAvailability(true);
+      setPreConversionConflicts([]);
+      try {
+        const startDate = campaignData.start_date || plan?.start_date;
+        const endDate = campaignData.end_date || plan?.end_date;
+        if (!startDate || !endDate) return;
+
+        const conflicts: typeof preConversionConflicts = [];
+        
+        // Check each asset for conflicts using campaign_assets overlap
+        for (const item of planItems) {
+          const assetId = item.asset_id;
+          if (!assetId) continue;
+
+          const { data: overlaps } = await supabase
+            .from('campaign_assets')
+            .select(`
+              asset_id,
+              campaign_id,
+              effective_start_date,
+              effective_end_date,
+              booking_start_date,
+              booking_end_date,
+              start_date,
+              end_date,
+              is_removed,
+              campaigns!campaign_assets_campaign_id_fkey (
+                id,
+                campaign_name,
+                campaign_code,
+                status
+              )
+            `)
+            .eq('asset_id', assetId)
+            .eq('is_removed', false)
+            .not('campaigns.status', 'in', '("Cancelled","Completed")');
+
+          if (overlaps) {
+            for (const booking of overlaps) {
+              const campaign = booking.campaigns as any;
+              if (!campaign || ['Cancelled', 'Completed'].includes(campaign?.status)) continue;
+
+              const bStart = booking.effective_start_date || booking.booking_start_date || booking.start_date;
+              const bEnd = booking.effective_end_date || booking.booking_end_date || booking.end_date;
+              if (!bStart || !bEnd) continue;
+
+              // Overlap check: existing_start <= requested_end AND existing_end >= requested_start
+              if (bStart <= endDate && bEnd >= startDate) {
+                conflicts.push({
+                  asset_id: assetId,
+                  display_code: item.display_asset_id || assetId,
+                  location: item.location || item.area || '',
+                  campaign_name: campaign?.campaign_name || campaign?.campaign_code || campaign?.id || 'Unknown',
+                  booked_from: bStart,
+                  booked_to: bEnd,
+                });
+              }
+            }
+          }
+        }
+        setPreConversionConflicts(conflicts);
+      } catch (err) {
+        console.error('[PreConversionCheck] Error:', err);
+      } finally {
+        setCheckingAvailability(false);
+      }
+    };
+    checkAvailability();
+  }, [showConvertDialog, campaignData.start_date, campaignData.end_date]);
+
+
     checkAdminStatus();
     fetchPlan();
     fetchPlanItems();

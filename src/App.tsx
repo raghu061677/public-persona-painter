@@ -159,6 +159,7 @@ const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
 const ProformaCreate = lazy(() => import("./pages/ProformaCreate"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const MonthClose = lazy(() => import("./pages/MonthClose"));
+const GSTReports = lazy(() => import("./pages/GSTReports"));
 const GeneratePayables = lazy(() => import("./pages/GeneratePayables"));
 const FinanceOverrideRequests = lazy(() => import("./pages/FinanceOverrideRequests"));
 const Install = lazy(() => import("./pages/Install"));

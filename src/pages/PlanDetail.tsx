@@ -1645,10 +1645,8 @@ export default function PlanDetail() {
             </div>
           </DialogContent>
         </Dialog>
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+
+
 
         {/* Export Links Section */}
         {plan.export_links && (plan.export_links.ppt_url || plan.export_links.excel_url || plan.export_links.pdf_url) && (

@@ -1031,13 +1031,24 @@ export default function CampaignEdit() {
     []
   );
 
-  // Build assetPricing map for compatibility with BulkPrintingDialog and BulkMountingDialog
+  // Build assetPricing map for compatibility with Bulk dialogs
   const assetPricing = campaignAssets.reduce((acc, asset) => {
+    const startStr = asset.start_date
+      ? (typeof asset.start_date === 'string' ? asset.start_date : format(asset.start_date as Date, 'yyyy-MM-dd'))
+      : undefined;
+    const endStr = asset.end_date
+      ? (typeof asset.end_date === 'string' ? asset.end_date : format(asset.end_date as Date, 'yyyy-MM-dd'))
+      : undefined;
     acc[asset.id] = {
       printing_rate: asset.printing_rate_per_sqft || 0,
       printing_charges: asset.printing_charges || 0,
       mounting_rate: asset.mounting_rate_per_sqft || 0,
       mounting_charges: asset.mounting_charges || 0,
+      negotiated_price: asset.negotiated_rate || 0,
+      start_date: startStr,
+      end_date: endStr,
+      booked_days: asset.booked_days || 0,
+      billing_mode: asset.billing_mode || 'PRORATA_30',
     };
     return acc;
   }, {} as Record<string, any>);

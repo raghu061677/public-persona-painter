@@ -28,7 +28,7 @@ function currentFYMonths() {
 }
 
 const GSTReports = () => {
-  const { company } = useCompanyContext();
+  const { company } = useCompany();
   const defaults = currentFYMonths();
   const [filingMonth, setFilingMonth] = useState(defaults.month);
   const [filingYear, setFilingYear] = useState(defaults.year);

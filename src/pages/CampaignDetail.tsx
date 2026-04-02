@@ -340,12 +340,12 @@ export default function CampaignDetail() {
                     />
                   </ActionGuard>
                 )}
-                <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
+                <CampaignPDFReport campaign={campaign} campaignAssets={activeAssets} />
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />
                 <ExportProofDialog
                   campaignId={campaign.id}
                   campaignName={campaign.campaign_name}
-                  assets={campaignAssets}
+                  assets={activeAssets}
                 />
                 <Button variant="outline" size="sm" onClick={refreshData}>
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -644,10 +644,10 @@ export default function CampaignDetail() {
         {/* Timeline and Performance - Enhanced with borders */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <div className="border rounded-lg p-1 bg-card/50">
-            <CampaignTimelineCard campaign={campaign} campaignAssets={campaignAssets} />
+            <CampaignTimelineCard campaign={campaign} campaignAssets={activeAssets} />
           </div>
           <div className="border rounded-lg p-1 bg-card/50">
-            <CampaignPerformanceMetrics campaign={campaign} campaignAssets={campaignAssets} />
+            <CampaignPerformanceMetrics campaign={campaign} campaignAssets={activeAssets} />
           </div>
         </div>
 
@@ -674,7 +674,7 @@ export default function CampaignDetail() {
               <Card className="border">
                 <CardContent className="pt-6">
                   <CampaignDetailAssetsTable
-                    assets={campaignAssets}
+                    assets={activeAssets}
                     campaignId={campaign.id}
                     companyPrefix={assetCodePrefix}
                     companyName={company?.name}
@@ -698,7 +698,7 @@ export default function CampaignDetail() {
                 <CardContent className="pt-6">
                   <OperationsBoard
                     campaignId={campaign.id}
-                    assets={campaignAssets}
+                    assets={activeAssets}
                     onUpdate={refreshData}
                     assetCodePrefix={assetCodePrefix}
                     companyName={company?.name}
@@ -710,7 +710,7 @@ export default function CampaignDetail() {
             <TabsContent value="proof" className="mt-4">
               <Card className="border">
                 <CardContent className="pt-6">
-                  <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
+                  <ProofGallery assets={activeAssets} onUpdate={refreshData} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -735,7 +735,7 @@ export default function CampaignDetail() {
                   manual_discount_amount: campaign.manual_discount_amount,
                   manual_discount_reason: campaign.manual_discount_reason,
                 }}
-                campaignAssets={campaignAssets}
+                campaignAssets={activeAssets}
                 displayCost={roundedDisplayCost}
                 onRefresh={refreshData}
               />

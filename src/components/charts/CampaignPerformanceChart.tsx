@@ -4,6 +4,7 @@ import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
+import { computeCampaignAssetCounts } from "@/lib/availability/campaignAssetHelpers";
 
 interface CampaignPerformanceChartProps {
   campaignId: string;
@@ -22,16 +23,24 @@ export function CampaignPerformanceChart({ campaignId }: CampaignPerformanceChar
   const fetchData = async () => {
     const { data } = await supabase
       .from("campaign_assets")
-      .select("status")
+      .select("status, is_removed")
       .eq("campaign_id", campaignId);
 
     if (data) {
+      const records = data.map((asset, index) => ({
+        id: `row-${index}`,
+        asset_id: `asset-${index}`,
+        status: asset.status,
+        is_removed: asset.is_removed,
+      }));
+      const counts = computeCampaignAssetCounts(records);
+      const activeRecords = records.filter((asset) => !asset.is_removed);
       const stats = {
-        total: data.length,
-        pending: data.filter((a) => a.status === "Pending" || a.status === "Assigned").length,
-        installed: data.filter((a) => a.status === "Installed" || a.status === "In Progress" || a.status === "QA Pending").length,
-        verified: data.filter((a) => a.status === "Completed" || a.status === "Verified").length,
-        rejected: data.filter((a) => a.status === "Failed").length,
+        total: counts.active,
+        pending: counts.pending,
+        installed: counts.installed,
+        verified: counts.verified,
+        rejected: activeRecords.filter((a) => a.status === "Failed").length,
       };
       setChartData(stats);
     }

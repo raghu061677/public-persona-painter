@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, FileText, ShieldCheck, AlertTriangle, XCircle, Save } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
+import { GSTExportContext } from "@/lib/gst-exports";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MONTH_NAMES[i + 1] }));
 
@@ -39,7 +40,26 @@ const GSTReports = () => {
     return { companyId: company.id, filingMonth, filingYear };
   }, [company?.id, filingMonth, filingYear]);
 
-  const { summary, b2b, b2c, creditNotes, hsn, statewise, validation, loading, error, readiness, refresh } = useGSTReportData(filters);
+  const { summary, b2b, b2c, creditNotes, hsn, statewise, validation, invoiceRegister, loading, error, readiness, refresh } = useGSTReportData(filters);
+
+  const exportContext: GSTExportContext | null = useMemo(() => {
+    if (!company) return null;
+    return {
+      companyName: company.name || "Company",
+      filingMonth,
+      filingYear,
+      summary,
+      b2b,
+      b2c,
+      creditNotes,
+      hsn,
+      statewise,
+      validation,
+      invoiceRegister,
+    };
+  }, [company, filingMonth, filingYear, summary, b2b, b2c, creditNotes, hsn, statewise, validation, invoiceRegister]);
+
+  const hasBlockingIssues = validation.some((v: any) => v.severity === "blocking");
 
   if (!company) {
     return <LoadingState message="Loading company context..." />;
@@ -54,7 +74,6 @@ const GSTReports = () => {
     }
   };
 
-  // Year options: current year and previous 2
   const yearOptions = Array.from({ length: 3 }, (_, i) => {
     const y = defaults.year - i;
     return { value: String(y), label: String(y) };
@@ -62,7 +81,6 @@ const GSTReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -78,7 +96,6 @@ const GSTReports = () => {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-muted/30 rounded-lg p-3 border">
         <Select value={String(filingMonth)} onValueChange={(v) => setFilingMonth(Number(v))}>
           <SelectTrigger className="w-[140px] h-9 bg-background">
@@ -107,23 +124,20 @@ const GSTReports = () => {
           Refresh
         </Button>
 
-        <Button variant="outline" size="sm" disabled title="Coming in Phase 3">
+        <Button variant="outline" size="sm" disabled title="Coming in Phase 4">
           <Save className="h-4 w-4 mr-1" />
           Save Snapshot
         </Button>
       </div>
 
-      {/* Summary Cards */}
       <GSTSummaryCardsFixed summary={summary} loading={loading} />
 
-      {/* Error */}
       {error && (
         <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
           {error}
         </div>
       )}
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -166,7 +180,7 @@ const GSTReports = () => {
             <GSTValidationTab data={validation} loading={loading} />
           </TabsContent>
           <TabsContent value="exports">
-            <GSTExportsTab />
+            <GSTExportsTab exportContext={exportContext} hasBlockingIssues={hasBlockingIssues} />
           </TabsContent>
         </div>
       </Tabs>

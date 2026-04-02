@@ -1545,12 +1545,55 @@ export default function PlanDetail() {
         </div>
 
         {/* Convert to Campaign Dialog */}
-        <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
-          <DialogContent className="max-w-md">
+        <Dialog open={showConvertDialog} onOpenChange={(open) => {
+          setShowConvertDialog(open);
+          if (!open) {
+            setPreConversionConflicts([]);
+            setCheckingAvailability(false);
+          }
+        }}>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Convert to Campaign</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Availability Check Section */}
+              {checkingAvailability && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Checking asset availability...</span>
+                </div>
+              )}
+              {!checkingAvailability && preConversionConflicts.length > 0 && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-destructive font-semibold text-sm">
+                    <Ban className="h-4 w-4" />
+                    {preConversionConflicts.length} asset(s) already booked in this period
+                  </div>
+                  <ul className="space-y-2 max-h-48 overflow-y-auto">
+                    {preConversionConflicts.map((c, i) => (
+                      <li key={i} className="text-xs bg-destructive/10 p-2 rounded">
+                        <strong>{c.display_code}</strong>
+                        {c.location && <span className="text-muted-foreground"> — {c.location}</span>}
+                        <br />
+                        <span className="text-muted-foreground">
+                          Booked for "<span className="font-medium">{c.campaign_name}</span>" ({c.booked_from} to {c.booked_to})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-destructive">
+                    Remove conflicting assets from the plan or adjust dates before converting.
+                  </p>
+                </div>
+              )}
+              {!checkingAvailability && preConversionConflicts.length === 0 && planItems.length > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 text-sm text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  All {planItems.length} assets are available for the selected dates
+                </div>
+              )}
+
               <div>
                 <Label>Display Name / Campaign Name</Label>
                 <Input
@@ -1587,13 +1630,21 @@ export default function PlanDetail() {
                   rows={3}
                 />
               </div>
-              <Button onClick={handleConvertToCampaign} disabled={isConverting} className="w-full bg-green-600 hover:bg-green-700">
+              <Button 
+                onClick={handleConvertToCampaign} 
+                disabled={isConverting || checkingAvailability || preConversionConflicts.length > 0} 
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
+              >
                 {isConverting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Rocket className="mr-2 h-4 w-4" />
                 )}
-                {isConverting ? "Converting..." : "Create Campaign"}
+                {isConverting ? "Converting..." : preConversionConflicts.length > 0 ? "Resolve Conflicts First" : "Create Campaign"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
               </Button>
             </div>
           </DialogContent>

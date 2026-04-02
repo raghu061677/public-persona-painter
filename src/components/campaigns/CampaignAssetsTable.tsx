@@ -52,6 +52,9 @@ import {
   ChevronDown,
   Printer,
   Hammer,
+  DollarSign,
+  CalendarDays,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CampaignAssetDurationCell } from "./CampaignAssetDurationCell";

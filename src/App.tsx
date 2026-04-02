@@ -159,6 +159,7 @@ const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
 const ProformaCreate = lazy(() => import("./pages/ProformaCreate"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const MonthClose = lazy(() => import("./pages/MonthClose"));
+const GSTReports = lazy(() => import("./pages/GSTReports"));
 const GeneratePayables = lazy(() => import("./pages/GeneratePayables"));
 const FinanceOverrideRequests = lazy(() => import("./pages/FinanceOverrideRequests"));
 const Install = lazy(() => import("./pages/Install"));
@@ -455,6 +456,7 @@ const App = () => (
               <Route path="proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/month-close" element={<ProtectedRoute requireAuth><ModernAppLayout><MonthClose /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/gst-reports" element={<ProtectedRoute requireAuth><ModernAppLayout><GSTReports /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/generate-payables" element={<ProtectedRoute requireAuth><ModernAppLayout><GeneratePayables /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/override-requests" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceOverrideRequests /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/concession-allocation" element={<ProtectedRoute requireAuth><ModernAppLayout><ConcessionAllocation /></ModernAppLayout></ProtectedRoute>} />

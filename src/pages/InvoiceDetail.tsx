@@ -374,6 +374,8 @@ export default function InvoiceDetail() {
               total_amount: invoice.total_amount,
               balance_due: Math.max(0, effectiveBalance),
               gst_mode: invoice.gst_mode,
+              gst_percent: invoice.gst_percent,
+              items: invoice.items,
             }}
             onCreditNoteCreated={fetchInvoice}
           />

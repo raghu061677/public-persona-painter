@@ -186,6 +186,7 @@ export const NAV_CONFIG: NavConfig = {
           items: [
             { label: "Month Close", href: "/admin/finance/month-close", icon: CalendarDays },
             { label: "Concessions", href: "/admin/finance/concession-allocation", icon: Layers },
+            { label: "GST Reports", href: "/admin/finance/gst-reports", icon: FileText },
           ],
         },
       ],

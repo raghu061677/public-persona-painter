@@ -82,7 +82,7 @@ import { BulkBillingModeDialog } from "./BulkBillingModeDialog";
 import { PlanHoldDialog } from "./PlanHoldDialog";
 import { PlanReleaseHoldDialog } from "./PlanReleaseHoldDialog";
 type SortDirection = 'asc' | 'desc' | null;
-type SortableColumn = 'asset_id' | 'location' | 'area';
+type SortableColumn = 'asset_id' | 'location' | 'area' | 'start_date' | 'end_date';
 
 interface SortConfig {
   column: SortableColumn | null;

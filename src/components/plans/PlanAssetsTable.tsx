@@ -225,6 +225,14 @@ export function PlanAssetsTable({
             aVal = a.booked_days || plan.duration_days;
             bVal = b.booked_days || plan.duration_days;
             break;
+          case 'start_date':
+            aVal = a.start_date || '';
+            bVal = b.start_date || '';
+            break;
+          case 'end_date':
+            aVal = a.end_date || '';
+            bVal = b.end_date || '';
+            break;
           default:
             aVal = '';
             bVal = '';

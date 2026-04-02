@@ -132,20 +132,23 @@ serve(withAuth(async (req) => {
 
   const { data: existingBookings } = await supabase
     .from("campaign_assets")
-    .select("id, campaign_id, asset_id, booking_start_date, booking_end_date, start_date, end_date, campaigns!inner(id, campaign_name, client_name, status, plan_id)")
+    .select("id, campaign_id, asset_id, booking_start_date, booking_end_date, start_date, end_date, effective_start_date, effective_end_date, is_removed, campaigns!inner(id, campaign_name, client_name, status, plan_id)")
     .in("asset_id", assetIds)
-    .not("campaigns.status", "in", '("Completed","Cancelled","Archived")');
+    .eq("is_removed", false);
 
+  const excludedStatuses = ['Completed', 'Cancelled', 'Archived'];
   const conflicts: any[] = [];
   for (const booking of (existingBookings || [])) {
     const dates = assetDateMap.get(booking.asset_id);
     if (!dates) continue;
     const campaign = booking.campaigns as any;
+    if (!campaign) continue;
+    if (excludedStatuses.includes(campaign?.status)) continue;
     if (campaign?.plan_id === planId) continue;
-    const es = toDateString(booking.booking_start_date || booking.start_date);
-    const ee = toDateString(booking.booking_end_date || booking.end_date);
+    const es = toDateString(booking.effective_start_date || booking.booking_start_date || booking.start_date);
+    const ee = toDateString(booking.effective_end_date || booking.booking_end_date || booking.end_date);
     if (datesOverlap(es, ee, dates.start_date, dates.end_date)) {
-      conflicts.push({ asset_id: booking.asset_id, campaign_id: campaign?.id, campaign_name: campaign?.campaign_name });
+      conflicts.push({ asset_id: booking.asset_id, campaign_id: campaign?.id, campaign_name: campaign?.campaign_name, location: '', city: '', booked_from: es, booked_to: ee });
     }
   }
 

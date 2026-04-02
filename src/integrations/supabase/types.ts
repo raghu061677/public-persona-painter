@@ -3527,6 +3527,8 @@ export type Database = {
           gst_number: string | null
           id: string
           is_gst_applicable: boolean | null
+          is_registered: boolean
+          legal_name: string | null
           name: string
           notes: string | null
           owner_id: string | null
@@ -3542,6 +3544,7 @@ export type Database = {
           shipping_same_as_billing: boolean | null
           shipping_state: string | null
           state: string | null
+          state_code: string | null
           tan_number: string | null
           tds_applicable: boolean
           tds_notes: string | null
@@ -3569,6 +3572,8 @@ export type Database = {
           gst_number?: string | null
           id: string
           is_gst_applicable?: boolean | null
+          is_registered?: boolean
+          legal_name?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
@@ -3584,6 +3589,7 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
           tds_notes?: string | null
@@ -3611,6 +3617,8 @@ export type Database = {
           gst_number?: string | null
           id?: string
           is_gst_applicable?: boolean | null
+          is_registered?: boolean
+          legal_name?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
@@ -3626,6 +3634,7 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
           tds_notes?: string | null
@@ -3753,6 +3762,7 @@ export type Database = {
           secondary_color: string | null
           slug: string | null
           state: string | null
+          state_code: string | null
           status: Database["public"]["Enums"]["company_status"]
           terms_conditions: string[] | null
           theme_color: string | null
@@ -3785,6 +3795,7 @@ export type Database = {
           secondary_color?: string | null
           slug?: string | null
           state?: string | null
+          state_code?: string | null
           status?: Database["public"]["Enums"]["company_status"]
           terms_conditions?: string[] | null
           theme_color?: string | null
@@ -3817,6 +3828,7 @@ export type Database = {
           secondary_color?: string | null
           slug?: string | null
           state?: string | null
+          state_code?: string | null
           status?: Database["public"]["Enums"]["company_status"]
           terms_conditions?: string[] | null
           theme_color?: string | null
@@ -4328,12 +4340,22 @@ export type Database = {
             referencedRelation: "credit_notes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_note_items_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "gst_credit_note_documents_v"
+            referencedColumns: ["credit_note_uuid"]
+          },
         ]
       }
       credit_notes: {
         Row: {
+          cess_amount: number
           cgst_amount: number | null
+          client_gstin_snapshot: string | null
           client_id: string
+          client_name_snapshot: string | null
           company_id: string
           created_at: string | null
           created_by: string | null
@@ -4344,18 +4366,26 @@ export type Database = {
           id: string
           igst_amount: number | null
           invoice_id: string
+          is_cancelled: boolean
           issued_at: string | null
           notes: string | null
+          original_invoice_no_snapshot: string | null
+          place_of_supply_snapshot: string | null
           reason: string
           sgst_amount: number | null
           status: string
           subtotal: number
+          supplier_state_code_snapshot: string | null
+          tax_type: string | null
           total_amount: number
           updated_at: string | null
         }
         Insert: {
+          cess_amount?: number
           cgst_amount?: number | null
+          client_gstin_snapshot?: string | null
           client_id: string
+          client_name_snapshot?: string | null
           company_id: string
           created_at?: string | null
           created_by?: string | null
@@ -4366,18 +4396,26 @@ export type Database = {
           id?: string
           igst_amount?: number | null
           invoice_id: string
+          is_cancelled?: boolean
           issued_at?: string | null
           notes?: string | null
+          original_invoice_no_snapshot?: string | null
+          place_of_supply_snapshot?: string | null
           reason: string
           sgst_amount?: number | null
           status?: string
           subtotal?: number
+          supplier_state_code_snapshot?: string | null
+          tax_type?: string | null
           total_amount?: number
           updated_at?: string | null
         }
         Update: {
+          cess_amount?: number
           cgst_amount?: number | null
+          client_gstin_snapshot?: string | null
           client_id?: string
+          client_name_snapshot?: string | null
           company_id?: string
           created_at?: string | null
           created_by?: string | null
@@ -4388,12 +4426,17 @@ export type Database = {
           id?: string
           igst_amount?: number | null
           invoice_id?: string
+          is_cancelled?: boolean
           issued_at?: string | null
           notes?: string | null
+          original_invoice_no_snapshot?: string | null
+          place_of_supply_snapshot?: string | null
           reason?: string
           sgst_amount?: number | null
           status?: string
           subtotal?: number
+          supplier_state_code_snapshot?: string | null
+          tax_type?: string | null
           total_amount?: number
           updated_at?: string | null
         }
@@ -4425,6 +4468,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
           },
           {
             foreignKeyName: "credit_notes_invoice_id_fkey"
@@ -6080,6 +6179,62 @@ export type Database = {
           },
         ]
       }
+      gst_return_snapshots: {
+        Row: {
+          company_id: string
+          created_at: string
+          export_version: number
+          filing_month: number
+          filing_year: number
+          generated_at: string
+          generated_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          source_hash: string | null
+          summary_json: Json
+          validation_json: Json
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          export_version?: number
+          filing_month: number
+          filing_year: number
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          source_hash?: string | null
+          summary_json?: Json
+          validation_json?: Json
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          export_version?: number
+          filing_month?: number
+          filing_year?: number
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          source_hash?: string | null
+          summary_json?: Json
+          validation_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gst_return_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_logs: {
         Row: {
           created_at: string | null
@@ -6170,12 +6325,15 @@ export type Database = {
           bill_start_date: string
           billable_days: number
           campaign_asset_id: string | null
+          cgst_amount: number
           created_at: string | null
           description: string | null
           dimension_text: string | null
           direction: string | null
+          gst_rate: number | null
           hsn_sac: string | null
           id: string
+          igst_amount: number
           illumination: string | null
           invoice_id: string
           line_total: number
@@ -6183,8 +6341,11 @@ export type Database = {
           media_type: string | null
           mounting_cost: number | null
           printing_cost: number | null
+          quantity: number | null
           rate_type: string
           rate_value: number
+          sgst_amount: number
+          unit: string | null
         }
         Insert: {
           area?: string | null
@@ -6195,12 +6356,15 @@ export type Database = {
           bill_start_date: string
           billable_days: number
           campaign_asset_id?: string | null
+          cgst_amount?: number
           created_at?: string | null
           description?: string | null
           dimension_text?: string | null
           direction?: string | null
+          gst_rate?: number | null
           hsn_sac?: string | null
           id?: string
+          igst_amount?: number
           illumination?: string | null
           invoice_id: string
           line_total?: number
@@ -6208,8 +6372,11 @@ export type Database = {
           media_type?: string | null
           mounting_cost?: number | null
           printing_cost?: number | null
+          quantity?: number | null
           rate_type?: string
           rate_value?: number
+          sgst_amount?: number
+          unit?: string | null
         }
         Update: {
           area?: string | null
@@ -6220,12 +6387,15 @@ export type Database = {
           bill_start_date?: string
           billable_days?: number
           campaign_asset_id?: string | null
+          cgst_amount?: number
           created_at?: string | null
           description?: string | null
           dimension_text?: string | null
           direction?: string | null
+          gst_rate?: number | null
           hsn_sac?: string | null
           id?: string
+          igst_amount?: number
           illumination?: string | null
           invoice_id?: string
           line_total?: number
@@ -6233,8 +6403,11 @@ export type Database = {
           media_type?: string | null
           mounting_cost?: number | null
           printing_cost?: number | null
+          quantity?: number | null
           rate_type?: string
           rate_value?: number
+          sgst_amount?: number
+          unit?: string | null
         }
         Relationships: [
           {
@@ -6243,6 +6416,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "campaign_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
           },
           {
             foreignKeyName: "invoice_items_invoice_id_fkey"
@@ -6321,6 +6550,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "campaign_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
           },
           {
             foreignKeyName: "invoice_line_items_invoice_id_fkey"
@@ -6468,6 +6753,62 @@ export type Database = {
             foreignKeyName: "invoice_reminders_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoice_aging_report"
             referencedColumns: ["invoice_id"]
           },
@@ -6593,11 +6934,16 @@ export type Database = {
           balance_due: number
           billing_month: string | null
           billing_period_id: string | null
+          billing_state_code_snapshot: string | null
           campaign_id: string | null
+          cancelled_at: string | null
+          cess_amount: number
           cgst_amount: number | null
           cgst_percent: number | null
+          client_gstin_snapshot: string | null
           client_id: string
           client_name: string
+          client_name_snapshot: string | null
           client_po_date: string | null
           client_po_number: string | null
           company_id: string | null
@@ -6607,6 +6953,7 @@ export type Database = {
           draft_number: string | null
           due_date: string
           estimation_id: string | null
+          finalized_at: string | null
           gst_amount: number
           gst_mode: string | null
           gst_percent: number
@@ -6619,6 +6966,7 @@ export type Database = {
           invoice_period_start: string | null
           invoice_series_prefix: string | null
           invoice_type: string
+          is_cancelled: boolean
           is_draft: boolean | null
           is_monthly_split: boolean | null
           items: Json | null
@@ -6630,11 +6978,14 @@ export type Database = {
           pdf_template_version: number | null
           place_of_supply: string | null
           reference_plan_id: string | null
+          reverse_charge_applicable: boolean
+          round_off_amount: number
           sales_person: string | null
           sgst_amount: number | null
           sgst_percent: number | null
           status: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          supplier_state_code: string | null
           tax_type: string | null
           template_style: string
           terms_days: number
@@ -6646,11 +6997,16 @@ export type Database = {
           balance_due: number
           billing_month?: string | null
           billing_period_id?: string | null
+          billing_state_code_snapshot?: string | null
           campaign_id?: string | null
+          cancelled_at?: string | null
+          cess_amount?: number
           cgst_amount?: number | null
           cgst_percent?: number | null
+          client_gstin_snapshot?: string | null
           client_id: string
           client_name: string
+          client_name_snapshot?: string | null
           client_po_date?: string | null
           client_po_number?: string | null
           company_id?: string | null
@@ -6660,6 +7016,7 @@ export type Database = {
           draft_number?: string | null
           due_date: string
           estimation_id?: string | null
+          finalized_at?: string | null
           gst_amount: number
           gst_mode?: string | null
           gst_percent?: number
@@ -6672,6 +7029,7 @@ export type Database = {
           invoice_period_start?: string | null
           invoice_series_prefix?: string | null
           invoice_type?: string
+          is_cancelled?: boolean
           is_draft?: boolean | null
           is_monthly_split?: boolean | null
           items?: Json | null
@@ -6683,11 +7041,14 @@ export type Database = {
           pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
+          reverse_charge_applicable?: boolean
+          round_off_amount?: number
           sales_person?: string | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          supplier_state_code?: string | null
           tax_type?: string | null
           template_style?: string
           terms_days?: number
@@ -6699,11 +7060,16 @@ export type Database = {
           balance_due?: number
           billing_month?: string | null
           billing_period_id?: string | null
+          billing_state_code_snapshot?: string | null
           campaign_id?: string | null
+          cancelled_at?: string | null
+          cess_amount?: number
           cgst_amount?: number | null
           cgst_percent?: number | null
+          client_gstin_snapshot?: string | null
           client_id?: string
           client_name?: string
+          client_name_snapshot?: string | null
           client_po_date?: string | null
           client_po_number?: string | null
           company_id?: string | null
@@ -6713,6 +7079,7 @@ export type Database = {
           draft_number?: string | null
           due_date?: string
           estimation_id?: string | null
+          finalized_at?: string | null
           gst_amount?: number
           gst_mode?: string | null
           gst_percent?: number
@@ -6725,6 +7092,7 @@ export type Database = {
           invoice_period_start?: string | null
           invoice_series_prefix?: string | null
           invoice_type?: string
+          is_cancelled?: boolean
           is_draft?: boolean | null
           is_monthly_split?: boolean | null
           items?: Json | null
@@ -6736,11 +7104,14 @@ export type Database = {
           pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
+          reverse_charge_applicable?: boolean
+          round_off_amount?: number
           sales_person?: string | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total?: number
+          supplier_state_code?: string | null
           tax_type?: string | null
           template_style?: string
           terms_days?: number
@@ -9027,6 +9398,62 @@ export type Database = {
             foreignKeyName: "payment_confirmations_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoice_aging_report"
             referencedColumns: ["invoice_id"]
           },
@@ -10702,6 +11129,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
           },
           {
             foreignKeyName: "receipts_invoice_id_fkey"
@@ -12413,6 +12896,554 @@ export type Database = {
           },
         ]
       }
+      gst_b2b_v: {
+        Row: {
+          cess_amount: number | null
+          cgst_amount: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          credited_amount: number | null
+          filing_month: number | null
+          filing_year: number | null
+          finalized_at: string | null
+          gstin: string | null
+          igst_amount: number | null
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_no: string | null
+          invoice_status: string | null
+          invoice_type: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          place_of_supply_state_code: string | null
+          reverse_charge_applicable: boolean | null
+          round_off_amount: number | null
+          sgst_amount: number | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_value: number | null
+          total_invoice_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_b2c_v: {
+        Row: {
+          cess_amount: number | null
+          cgst_amount: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          credited_amount: number | null
+          filing_month: number | null
+          filing_year: number | null
+          finalized_at: string | null
+          gstin: string | null
+          igst_amount: number | null
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_no: string | null
+          invoice_status: string | null
+          invoice_type: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          place_of_supply_state_code: string | null
+          reverse_charge_applicable: boolean | null
+          round_off_amount: number | null
+          sgst_amount: number | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_value: number | null
+          total_invoice_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_credit_note_documents_v: {
+        Row: {
+          cess_adjustment: number | null
+          cgst_adjustment: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          credit_note_no: string | null
+          credit_note_uuid: string | null
+          filing_month: number | null
+          filing_year: number | null
+          gstin: string | null
+          igst_adjustment: number | null
+          invoice_id: string | null
+          issued_at: string | null
+          original_invoice_no: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          reason: string | null
+          sgst_adjustment: number | null
+          status: string | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_adjustment: number | null
+          total_adjustment_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
+        ]
+      }
+      gst_credit_note_register_v: {
+        Row: {
+          cess_adjustment: number | null
+          cgst_adjustment: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          document_date: string | null
+          document_id: string | null
+          document_kind: string | null
+          document_no: string | null
+          filing_month: number | null
+          filing_year: number | null
+          gstin: string | null
+          igst_adjustment: number | null
+          original_invoice_no: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          reason: string | null
+          sgst_adjustment: number | null
+          status: string | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_adjustment: number | null
+          total_adjustment_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_hsn_summary_v: {
+        Row: {
+          cess_amount: number | null
+          cgst_amount: number | null
+          company_id: string | null
+          filing_month: number | null
+          filing_year: number | null
+          hsn_sac_code: string | null
+          hsn_sac_type: string | null
+          igst_amount: number | null
+          invoice_count: number | null
+          item_description: string | null
+          sgst_amount: number | null
+          taxable_value: number | null
+          total_quantity: number | null
+          total_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_invoice_documents_v: {
+        Row: {
+          cess_amount: number | null
+          cgst_amount: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          credited_amount: number | null
+          filing_month: number | null
+          filing_year: number | null
+          finalized_at: string | null
+          gstin: string | null
+          igst_amount: number | null
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_no: string | null
+          invoice_status: string | null
+          invoice_type: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          place_of_supply_state_code: string | null
+          reverse_charge_applicable: boolean | null
+          round_off_amount: number | null
+          sgst_amount: number | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_value: number | null
+          total_invoice_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_invoice_register_v: {
+        Row: {
+          cess_amount: number | null
+          cgst_amount: number | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          credited_amount: number | null
+          document_date: string | null
+          document_id: string | null
+          document_kind: string | null
+          document_no: string | null
+          filing_month: number | null
+          filing_year: number | null
+          finalized_at: string | null
+          gstin: string | null
+          igst_amount: number | null
+          original_invoice_no: string | null
+          party_type: string | null
+          place_of_supply: string | null
+          place_of_supply_state_code: string | null
+          reverse_charge_applicable: boolean | null
+          round_off_amount: number | null
+          sgst_amount: number | null
+          status: string | null
+          supplier_state_code: string | null
+          supply_nature: string | null
+          tax_type: string | null
+          taxable_value: number | null
+          total_document_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_monthly_summary_v: {
+        Row: {
+          b2b_taxable_value: number | null
+          b2c_taxable_value: number | null
+          company_id: string | null
+          credit_note_cgst_reduction: number | null
+          credit_note_count: number | null
+          credit_note_igst_reduction: number | null
+          credit_note_sgst_reduction: number | null
+          credit_note_taxable_reduction: number | null
+          credit_note_total_reduction: number | null
+          filing_month: number | null
+          filing_year: number | null
+          gross_cgst_amount: number | null
+          gross_igst_amount: number | null
+          gross_invoice_taxable_value: number | null
+          gross_sgst_amount: number | null
+          gross_total_invoice_value: number | null
+          invoice_count: number | null
+          net_cgst_amount: number | null
+          net_igst_amount: number | null
+          net_sgst_amount: number | null
+          net_taxable_value: number | null
+          net_total_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_statewise_summary_v: {
+        Row: {
+          b2b_taxable_value: number | null
+          b2c_taxable_value: number | null
+          cgst_amount: number | null
+          company_id: string | null
+          filing_month: number | null
+          filing_year: number | null
+          igst_amount: number | null
+          invoice_count: number | null
+          place_of_supply: string | null
+          place_of_supply_state_code: string | null
+          sgst_amount: number | null
+          total_invoice_value: number | null
+          total_taxable_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_validation_v: {
+        Row: {
+          company_id: string | null
+          filing_month: number | null
+          filing_year: number | null
+          issue_code: string | null
+          issue_message: string | null
+          severity: string | null
+          source_document_no: string | null
+          source_id: string | null
+          source_table: string | null
+          suggested_fix: string | null
+        }
+        Relationships: []
+      }
       invoice_aging_report: {
         Row: {
           aging_bucket: string | null
@@ -13681,6 +14712,7 @@ export type Database = {
           username: string
         }[]
       }
+      gst_state_code: { Args: { state_name: string }; Returns: string }
       has_company_role: {
         Args: { _required_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean

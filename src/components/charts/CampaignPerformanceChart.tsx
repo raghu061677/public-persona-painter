@@ -27,13 +27,20 @@ export function CampaignPerformanceChart({ campaignId }: CampaignPerformanceChar
       .eq("campaign_id", campaignId);
 
     if (data) {
-      const counts = computeCampaignAssetCounts(data);
+      const records = data.map((asset, index) => ({
+        id: `row-${index}`,
+        asset_id: `asset-${index}`,
+        status: asset.status,
+        is_removed: asset.is_removed,
+      }));
+      const counts = computeCampaignAssetCounts(records);
+      const activeRecords = records.filter((asset) => !asset.is_removed);
       const stats = {
         total: counts.active,
         pending: counts.pending,
         installed: counts.installed,
         verified: counts.verified,
-        rejected: 0,
+        rejected: activeRecords.filter((a) => a.status === "Failed").length,
       };
       setChartData(stats);
     }

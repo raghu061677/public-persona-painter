@@ -225,6 +225,14 @@ export function PlanAssetsTable({
             aVal = a.booked_days || plan.duration_days;
             bVal = b.booked_days || plan.duration_days;
             break;
+          case 'start_date':
+            aVal = a.start_date || '';
+            bVal = b.start_date || '';
+            break;
+          case 'end_date':
+            aVal = a.end_date || '';
+            bVal = b.end_date || '';
+            break;
           default:
             aVal = '';
             bVal = '';
@@ -524,8 +532,16 @@ export function PlanAssetsTable({
                 </TableHead>
               )}
               {showIllumination && <TableHead>Illumination</TableHead>}
-              {showAssetDates && <TableHead>Start Date</TableHead>}
-              {showAssetDates && <TableHead>End Date</TableHead>}
+              {showAssetDates && (
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50" onClick={() => handleSort('start_date')}>
+                  <span className="flex items-center">Start Date {getSortIcon('start_date')}</span>
+                </TableHead>
+              )}
+              {showAssetDates && (
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50" onClick={() => handleSort('end_date')}>
+                  <span className="flex items-center">End Date {getSortIcon('end_date')}</span>
+                </TableHead>
+              )}
               {showBookedDays && (
                 <TableHead 
                   className="text-center cursor-pointer hover:bg-muted/50"

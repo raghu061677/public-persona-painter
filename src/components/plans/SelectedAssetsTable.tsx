@@ -82,7 +82,7 @@ import { BulkBillingModeDialog } from "./BulkBillingModeDialog";
 import { PlanHoldDialog } from "./PlanHoldDialog";
 import { PlanReleaseHoldDialog } from "./PlanReleaseHoldDialog";
 type SortDirection = 'asc' | 'desc' | null;
-type SortableColumn = 'asset_id' | 'location' | 'area';
+type SortableColumn = 'asset_id' | 'location' | 'area' | 'start_date' | 'end_date';
 
 interface SortConfig {
   column: SortableColumn | null;
@@ -255,6 +255,20 @@ export function SelectedAssetsTable({
           aValue = (a.area || '').toLowerCase();
           bValue = (b.area || '').toLowerCase();
           break;
+        case 'start_date': {
+          const aP = assetPricing[a.id];
+          const bP = assetPricing[b.id];
+          aValue = (aP?.start_date || '');
+          bValue = (bP?.start_date || '');
+          break;
+        }
+        case 'end_date': {
+          const aP = assetPricing[a.id];
+          const bP = assetPricing[b.id];
+          aValue = (aP?.end_date || '');
+          bValue = (bP?.end_date || '');
+          break;
+        }
         default:
           return 0;
       }
@@ -611,7 +625,25 @@ export function SelectedAssetsTable({
               {isColumnVisible('dimensions') && <TableHead>Dimensions</TableHead>}
               {isColumnVisible('total_sqft') && <TableHead>Sqft</TableHead>}
               {isColumnVisible('illumination') && <TableHead>Illumination</TableHead>}
-              {isColumnVisible('asset_dates') && <TableHead className="w-56">Start / End Dates</TableHead>}
+              {isColumnVisible('asset_dates') && (
+                <TableHead className="w-56">
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="cursor-pointer select-none hover:text-primary flex items-center"
+                      onClick={() => handleSort('start_date')}
+                    >
+                      Start{getSortIcon('start_date')}
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span 
+                      className="cursor-pointer select-none hover:text-primary flex items-center"
+                      onClick={() => handleSort('end_date')}
+                    >
+                      End{getSortIcon('end_date')}
+                    </span>
+                  </div>
+                </TableHead>
+              )}
               {isColumnVisible('days') && <TableHead className="w-20">Days</TableHead>}
               {isColumnVisible('billing_mode') && <TableHead className="w-36">Billing Mode</TableHead>}
               {isColumnVisible('card_rate') && <TableHead>Card Rate</TableHead>}

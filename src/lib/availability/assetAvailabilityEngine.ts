@@ -362,9 +362,11 @@ function summarizeForRange(
   }
 
   // Find bookings that overlap the requested range
+  // Exclude dropped bookings (is_removed assets show availability_status = 'AVAILABLE' in the view)
   const overlapping = rows.filter(r =>
     r.booking_start_date && r.booking_end_date &&
     r.booking_type !== null &&
+    r.availability_status !== 'AVAILABLE' &&
     rangesOverlap(r.booking_start_date, r.booking_end_date, rangeStart, rangeEnd)
   );
 

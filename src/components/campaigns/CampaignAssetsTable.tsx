@@ -361,6 +361,19 @@ export function CampaignAssetsTable({
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem onClick={onBulkNegotiatedRate}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Bulk Negotiated Rate
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem onClick={onBulkDates}>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Bulk Asset Dates
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem onClick={onBulkDays}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Bulk Asset Days
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuCheckboxItem onClick={onBulkPrinting}>
                         <Printer className="h-4 w-4 mr-2" />
                         Bulk Printing

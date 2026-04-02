@@ -145,16 +145,20 @@ export default function PlanDetail() {
       setCheckingAvailability(true);
       setPreConversionConflicts([]);
       try {
-        const startDate = campaignData.start_date || plan?.start_date;
-        const endDate = campaignData.end_date || plan?.end_date;
-        if (!startDate || !endDate) return;
+        const campaignStartDate = campaignData.start_date || plan?.start_date;
+        const campaignEndDate = campaignData.end_date || plan?.end_date;
+        if (!campaignStartDate || !campaignEndDate) return;
 
         const conflicts: typeof preConversionConflicts = [];
         
-        // Check each asset for conflicts using campaign_assets overlap
+        // Check each asset for conflicts using its own item-level dates (not campaign header dates)
         for (const item of planItems) {
           const assetId = item.asset_id;
           if (!assetId) continue;
+
+          // Use item-level dates first, fall back to campaign header dates
+          const itemStartDate = item.start_date || item.display_from || campaignStartDate;
+          const itemEndDate = item.end_date || item.display_to || campaignEndDate;
 
           const { data: overlaps } = await supabase
             .from('campaign_assets')
@@ -188,8 +192,8 @@ export default function PlanDetail() {
               const bEnd = booking.effective_end_date || booking.booking_end_date || booking.end_date;
               if (!bStart || !bEnd) continue;
 
-              // Overlap check: existing_start <= requested_end AND existing_end >= requested_start
-              if (bStart <= endDate && bEnd >= startDate) {
+              // Overlap check using ITEM-LEVEL dates: existing_start <= item_end AND existing_end >= item_start
+              if (bStart <= itemEndDate && bEnd >= itemStartDate) {
                 conflicts.push({
                   asset_id: assetId,
                   display_code: item.display_asset_id || assetId,

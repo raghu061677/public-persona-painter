@@ -255,6 +255,20 @@ export function SelectedAssetsTable({
           aValue = (a.area || '').toLowerCase();
           bValue = (b.area || '').toLowerCase();
           break;
+        case 'start_date': {
+          const aP = assetPricing[a.id];
+          const bP = assetPricing[b.id];
+          aValue = (aP?.start_date || '');
+          bValue = (bP?.start_date || '');
+          break;
+        }
+        case 'end_date': {
+          const aP = assetPricing[a.id];
+          const bP = assetPricing[b.id];
+          aValue = (aP?.end_date || '');
+          bValue = (bP?.end_date || '');
+          break;
+        }
         default:
           return 0;
       }

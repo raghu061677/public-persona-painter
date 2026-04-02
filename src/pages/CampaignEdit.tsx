@@ -1831,6 +1831,39 @@ export default function CampaignEdit() {
         assetPricing={assetPricing}
         onBulkUpdate={handleBulkUpdate}
       />
+
+      {/* Bulk Negotiated Rate Dialog */}
+      <BulkNegotiatedRateDialog
+        open={showBulkNegotiatedRateDialog}
+        onOpenChange={setShowBulkNegotiatedRateDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={startDate}
+        planEndDate={endDate}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Dates Dialog */}
+      <BulkAssetDatesDialog
+        open={showBulkDatesDialog}
+        onOpenChange={setShowBulkDatesDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Days Dialog */}
+      <BulkAssetDaysDialog
+        open={showBulkDaysDialog}
+        onOpenChange={setShowBulkDaysDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={startDate}
+        onBulkUpdate={handleBulkUpdate}
+      />
     </div>
   );
 }

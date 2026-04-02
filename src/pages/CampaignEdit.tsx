@@ -954,7 +954,7 @@ export default function CampaignEdit() {
     }));
   };
 
-  // Bulk update handler - applies multiple field updates at once (used by BulkPrintingDialog and BulkMountingDialog)
+  // Bulk update handler - applies multiple field updates at once (used by Bulk dialogs)
   const handleBulkUpdate = useCallback(
     (updates: Array<{ assetId: string; field: string; value: any }>) => {
       setCampaignAssets(prev => {
@@ -976,6 +976,7 @@ export default function CampaignEdit() {
           // Map from dialog field names to campaign asset field names
           const mappedUpdate: Record<string, any> = {};
           
+          // Printing fields
           if ('printing_rate' in assetUpdate) {
             mappedUpdate.printing_rate_per_sqft = assetUpdate.printing_rate;
           }
@@ -994,7 +995,36 @@ export default function CampaignEdit() {
             mappedUpdate.mounting_charges = assetUpdate.mounting_charges;
           }
           
-          return { ...asset, ...mappedUpdate };
+          // Negotiated rate fields (from BulkNegotiatedRateDialog)
+          if ('negotiated_price' in assetUpdate) {
+            mappedUpdate.negotiated_rate = assetUpdate.negotiated_price;
+          }
+          if ('rent_amount' in assetUpdate) {
+            mappedUpdate.rent_amount = assetUpdate.rent_amount;
+          }
+          if ('daily_rate' in assetUpdate) {
+            mappedUpdate.daily_rate = assetUpdate.daily_rate;
+          }
+          
+          // Date fields (from BulkAssetDatesDialog / BulkAssetDaysDialog)
+          if ('start_date' in assetUpdate) {
+            mappedUpdate.start_date = assetUpdate.start_date;
+          }
+          if ('end_date' in assetUpdate) {
+            mappedUpdate.end_date = assetUpdate.end_date;
+          }
+          if ('booked_days' in assetUpdate) {
+            mappedUpdate.booked_days = assetUpdate.booked_days;
+          }
+          
+          const updated = { ...asset, ...mappedUpdate };
+          
+          // Recalculate total_price if negotiated rate changed
+          if ('negotiated_price' in assetUpdate) {
+            updated.total_price = (updated.negotiated_rate || 0) + (updated.printing_charges || 0) + (updated.mounting_charges || 0);
+          }
+          
+          return updated;
         });
       });
     },

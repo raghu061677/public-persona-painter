@@ -58,6 +58,9 @@ import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAss
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
 import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
+import { BulkNegotiatedRateDialog } from "@/components/plans/BulkNegotiatedRateDialog";
+import { BulkAssetDatesDialog } from "@/components/plans/BulkAssetDatesDialog";
+import { BulkAssetDaysDialog } from "@/components/plans/BulkAssetDaysDialog";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 

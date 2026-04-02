@@ -1736,6 +1736,9 @@ export default function CampaignEdit() {
               onAddAssets={() => setShowAddAssetsDialog(true)}
               onBulkPrinting={() => setShowBulkPrintingDialog(true)}
               onBulkMounting={() => setShowBulkMountingDialog(true)}
+              onBulkNegotiatedRate={() => setShowBulkNegotiatedRateDialog(true)}
+              onBulkDates={() => setShowBulkDatesDialog(true)}
+              onBulkDays={() => setShowBulkDaysDialog(true)}
             />
             
             {/* Totals Row */}

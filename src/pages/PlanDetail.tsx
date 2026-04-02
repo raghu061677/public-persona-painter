@@ -112,6 +112,15 @@ export default function PlanDetail() {
     notes: "",
   });
   const [showDiscount, setShowDiscount] = useState(true);
+  const [preConversionConflicts, setPreConversionConflicts] = useState<Array<{
+    asset_id: string;
+    display_code: string;
+    location: string;
+    campaign_name: string;
+    booked_from: string;
+    booked_to: string;
+  }>>([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Enterprise RBAC: determine access mode for this plan
   const perms = useRecordPermissions(plan, 'plans');

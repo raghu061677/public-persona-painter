@@ -150,6 +150,9 @@ export default function CampaignEdit() {
   // Bulk update dialogs state
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
+  const [showBulkNegotiatedRateDialog, setShowBulkNegotiatedRateDialog] = useState(false);
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [showBulkDaysDialog, setShowBulkDaysDialog] = useState(false);
 
   // Resolve route param to actual campaign id
   useEffect(() => {

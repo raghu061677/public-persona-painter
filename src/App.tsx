@@ -156,6 +156,7 @@ const OperationsAnalytics = lazy(() => import("./pages/OperationsAnalytics"));
 const PlanComparison = lazy(() => import("./pages/PlanComparison"));
 const ProformasList = lazy(() => import("./pages/ProformasList"));
 const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
+const ProformaCreate = lazy(() => import("./pages/ProformaCreate"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const MonthClose = lazy(() => import("./pages/MonthClose"));
 const GeneratePayables = lazy(() => import("./pages/GeneratePayables"));
@@ -450,6 +451,7 @@ const App = () => (
               <Route path="analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/revenue-forecast" element={<Navigate to="/admin/reports/revenue?tab=forecast" replace />} />
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="proformas/new" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaCreate /></ModernAppLayout></ProtectedRoute>} />
               <Route path="proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/month-close" element={<ProtectedRoute requireAuth><ModernAppLayout><MonthClose /></ModernAppLayout></ProtectedRoute>} />

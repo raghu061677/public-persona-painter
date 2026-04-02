@@ -58,6 +58,9 @@ import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAss
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
 import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
+import { BulkNegotiatedRateDialog } from "@/components/plans/BulkNegotiatedRateDialog";
+import { BulkAssetDatesDialog } from "@/components/plans/BulkAssetDatesDialog";
+import { BulkAssetDaysDialog } from "@/components/plans/BulkAssetDaysDialog";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
@@ -147,6 +150,9 @@ export default function CampaignEdit() {
   // Bulk update dialogs state
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
+  const [showBulkNegotiatedRateDialog, setShowBulkNegotiatedRateDialog] = useState(false);
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [showBulkDaysDialog, setShowBulkDaysDialog] = useState(false);
 
   // Resolve route param to actual campaign id
   useEffect(() => {
@@ -948,7 +954,7 @@ export default function CampaignEdit() {
     }));
   };
 
-  // Bulk update handler - applies multiple field updates at once (used by BulkPrintingDialog and BulkMountingDialog)
+  // Bulk update handler - applies multiple field updates at once (used by Bulk dialogs)
   const handleBulkUpdate = useCallback(
     (updates: Array<{ assetId: string; field: string; value: any }>) => {
       setCampaignAssets(prev => {
@@ -970,6 +976,7 @@ export default function CampaignEdit() {
           // Map from dialog field names to campaign asset field names
           const mappedUpdate: Record<string, any> = {};
           
+          // Printing fields
           if ('printing_rate' in assetUpdate) {
             mappedUpdate.printing_rate_per_sqft = assetUpdate.printing_rate;
           }
@@ -988,20 +995,60 @@ export default function CampaignEdit() {
             mappedUpdate.mounting_charges = assetUpdate.mounting_charges;
           }
           
-          return { ...asset, ...mappedUpdate };
+          // Negotiated rate fields (from BulkNegotiatedRateDialog)
+          if ('negotiated_price' in assetUpdate) {
+            mappedUpdate.negotiated_rate = assetUpdate.negotiated_price;
+          }
+          if ('rent_amount' in assetUpdate) {
+            mappedUpdate.rent_amount = assetUpdate.rent_amount;
+          }
+          if ('daily_rate' in assetUpdate) {
+            mappedUpdate.daily_rate = assetUpdate.daily_rate;
+          }
+          
+          // Date fields (from BulkAssetDatesDialog / BulkAssetDaysDialog)
+          if ('start_date' in assetUpdate) {
+            mappedUpdate.start_date = assetUpdate.start_date;
+          }
+          if ('end_date' in assetUpdate) {
+            mappedUpdate.end_date = assetUpdate.end_date;
+          }
+          if ('booked_days' in assetUpdate) {
+            mappedUpdate.booked_days = assetUpdate.booked_days;
+          }
+          
+          const updated = { ...asset, ...mappedUpdate };
+          
+          // Recalculate total_price if negotiated rate changed
+          if ('negotiated_price' in assetUpdate) {
+            updated.total_price = (updated.negotiated_rate || 0) + (updated.printing_charges || 0) + (updated.mounting_charges || 0);
+          }
+          
+          return updated;
         });
       });
     },
     []
   );
 
-  // Build assetPricing map for compatibility with BulkPrintingDialog and BulkMountingDialog
+  // Build assetPricing map for compatibility with Bulk dialogs
   const assetPricing = campaignAssets.reduce((acc, asset) => {
+    const startStr = asset.start_date
+      ? (typeof asset.start_date === 'string' ? asset.start_date : format(asset.start_date as Date, 'yyyy-MM-dd'))
+      : undefined;
+    const endStr = asset.end_date
+      ? (typeof asset.end_date === 'string' ? asset.end_date : format(asset.end_date as Date, 'yyyy-MM-dd'))
+      : undefined;
     acc[asset.id] = {
       printing_rate: asset.printing_rate_per_sqft || 0,
       printing_charges: asset.printing_charges || 0,
       mounting_rate: asset.mounting_rate_per_sqft || 0,
       mounting_charges: asset.mounting_charges || 0,
+      negotiated_price: asset.negotiated_rate || 0,
+      start_date: startStr,
+      end_date: endStr,
+      booked_days: asset.booked_days || 0,
+      billing_mode: asset.billing_mode || 'PRORATA_30',
     };
     return acc;
   }, {} as Record<string, any>);
@@ -1013,6 +1060,7 @@ export default function CampaignEdit() {
     total_sqft: asset.total_sqft,
     dimensions: asset.dimensions,
     areaSqft: asset.total_sqft,
+    card_rate: asset.card_rate,
   }));
 
 
@@ -1689,6 +1737,9 @@ export default function CampaignEdit() {
               onAddAssets={() => setShowAddAssetsDialog(true)}
               onBulkPrinting={() => setShowBulkPrintingDialog(true)}
               onBulkMounting={() => setShowBulkMountingDialog(true)}
+              onBulkNegotiatedRate={() => setShowBulkNegotiatedRateDialog(true)}
+              onBulkDates={() => setShowBulkDatesDialog(true)}
+              onBulkDays={() => setShowBulkDaysDialog(true)}
             />
             
             {/* Totals Row */}
@@ -1779,6 +1830,39 @@ export default function CampaignEdit() {
         assets={assetsForBulkDialog}
         selectedAssetIds={selectedAssetIds}
         assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Negotiated Rate Dialog */}
+      <BulkNegotiatedRateDialog
+        open={showBulkNegotiatedRateDialog}
+        onOpenChange={setShowBulkNegotiatedRateDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={startDate}
+        planEndDate={endDate}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Dates Dialog */}
+      <BulkAssetDatesDialog
+        open={showBulkDatesDialog}
+        onOpenChange={setShowBulkDatesDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Days Dialog */}
+      <BulkAssetDaysDialog
+        open={showBulkDaysDialog}
+        onOpenChange={setShowBulkDaysDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={startDate}
         onBulkUpdate={handleBulkUpdate}
       />
     </div>

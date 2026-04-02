@@ -52,6 +52,9 @@ import {
   ChevronDown,
   Printer,
   Hammer,
+  DollarSign,
+  CalendarDays,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CampaignAssetDurationCell } from "./CampaignAssetDurationCell";
@@ -139,6 +142,9 @@ interface CampaignAssetsTableProps {
   onAddAssets: () => void;
   onBulkPrinting: () => void;
   onBulkMounting: () => void;
+  onBulkNegotiatedRate?: () => void;
+  onBulkDates?: () => void;
+  onBulkDays?: () => void;
 }
 
 export function CampaignAssetsTable({
@@ -157,6 +163,9 @@ export function CampaignAssetsTable({
   onAddAssets,
   onBulkPrinting,
   onBulkMounting,
+  onBulkNegotiatedRate,
+  onBulkDates,
+  onBulkDays,
 }: CampaignAssetsTableProps) {
   // State for filtering, sorting, and column visibility
   const [searchTerm, setSearchTerm] = useState("");
@@ -351,6 +360,19 @@ export function CampaignAssetsTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem onClick={onBulkNegotiatedRate}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Bulk Negotiated Rate
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem onClick={onBulkDates}>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Bulk Asset Dates
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem onClick={onBulkDays}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Bulk Asset Days
+                      </DropdownMenuCheckboxItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuCheckboxItem onClick={onBulkPrinting}>
                         <Printer className="h-4 w-4 mr-2" />

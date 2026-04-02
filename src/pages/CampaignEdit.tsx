@@ -65,6 +65,7 @@ import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 interface CampaignAsset {
   id: string;
   asset_id: string;
+  is_removed?: boolean;
   media_asset_code: string;
   location: string;
   area: string;
@@ -332,9 +333,11 @@ export default function CampaignEdit() {
       console.error('Error fetching campaign assets:', assetsError);
     }
 
-    if (assets && assets.length > 0) {
+    const activeCampaignAssets = (assets || []).filter(asset => !asset.is_removed);
+
+    if (activeCampaignAssets.length > 0) {
       // Fetch media_asset data including total_sqft for proper display and calculations
-      const assetIds = assets.map(a => a.asset_id);
+      const assetIds = activeCampaignAssets.map(a => a.asset_id);
       const { data: mediaAssets } = await supabase
         .from('media_assets')
         .select('id, media_asset_code, total_sqft, dimensions')
@@ -349,7 +352,7 @@ export default function CampaignEdit() {
         });
       });
 
-      setCampaignAssets(assets.map(asset => {
+      setCampaignAssets(activeCampaignAssets.map(asset => {
         const assetStartDate = asset.booking_start_date || campaign.start_date;
         const assetEndDate = asset.booking_end_date || campaign.end_date;
         const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
@@ -372,6 +375,7 @@ export default function CampaignEdit() {
         return {
           id: asset.id,
           asset_id: asset.asset_id,
+          is_removed: asset.is_removed,
           media_asset_code: assetData?.code || asset.asset_id,
           location: asset.location || '',
           area: asset.area || '',
@@ -399,7 +403,7 @@ export default function CampaignEdit() {
           dimensions: assetData?.dimensions || asset.dimensions || '',
         };
       }));
-    } else {
+    } else if (!assets || assets.length === 0) {
       // Fallback: try to fetch from campaign_items for plan-converted campaigns
       const { data: items } = await supabase
         .from('campaign_items')
@@ -470,6 +474,8 @@ export default function CampaignEdit() {
           };
         }));
       }
+    } else {
+      setCampaignAssets([]);
     }
 
     setLoading(false);

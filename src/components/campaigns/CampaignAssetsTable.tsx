@@ -163,6 +163,9 @@ export function CampaignAssetsTable({
   onAddAssets,
   onBulkPrinting,
   onBulkMounting,
+  onBulkNegotiatedRate,
+  onBulkDates,
+  onBulkDays,
 }: CampaignAssetsTableProps) {
   // State for filtering, sorting, and column visibility
   const [searchTerm, setSearchTerm] = useState("");

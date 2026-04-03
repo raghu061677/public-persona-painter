@@ -58,6 +58,7 @@ export default function CampaignDetail() {
   const [loading, setLoading] = useState(true);
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exportingProposalExcel, setExportingProposalExcel] = useState(false);
   const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();

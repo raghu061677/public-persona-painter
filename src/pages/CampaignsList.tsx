@@ -532,11 +532,39 @@ export default function CampaignsList() {
           </Card>
         )}
 
+        {/* Invoice Status Filter Tabs */}
+        <div className="flex items-center gap-1 mb-3 overflow-x-auto">
+          {([
+            { key: "all", label: "All" },
+            { key: "overdue", label: "Overdue" },
+            { key: "not_started", label: "Not Invoiced" },
+            { key: "partially_invoiced", label: "Partially Invoiced" },
+            { key: "fully_invoiced", label: "Fully Invoiced" },
+            { key: "not_billable_yet", label: "Not Billable" },
+          ] as { key: CampaignInvoiceStatus | "all"; label: string }[]).map((tab) => {
+            const count = tab.key === "all"
+              ? campaigns.length
+              : campaigns.filter((c) => campaignInvoiceStatuses.get(c.id)?.status === tab.key).length;
+            return (
+              <Button
+                key={tab.key}
+                variant={invoiceStatusFilter === tab.key ? "default" : "outline"}
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => setInvoiceStatusFilter(tab.key)}
+              >
+                {tab.label}
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{count}</Badge>
+              </Button>
+            );
+          })}
+        </div>
+
         {/* Results count */}
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-muted-foreground">
             {filteredCampaigns.length} campaign{filteredCampaigns.length !== 1 ? "s" : ""}
-            {hasActiveFilters || lv.searchQuery ? " (filtered)" : ""}
+            {hasActiveFilters || lv.searchQuery || invoiceStatusFilter !== "all" ? " (filtered)" : ""}
           </p>
         </div>
 

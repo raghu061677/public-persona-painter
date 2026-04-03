@@ -47,6 +47,8 @@ import { CampaignSignedROUpload } from "@/components/campaigns/CampaignSignedROU
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 import { CampaignRenewalChain } from "@/components/campaigns/CampaignRenewalChain";
+import { CampaignBillingSummaryCard } from "@/components/campaigns/CampaignBillingSummaryCard";
+import { computeCampaignInvoiceStatus, type InvoiceSummaryRow } from "@/utils/campaignInvoiceStatus";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();
@@ -60,6 +62,7 @@ export default function CampaignDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exportingProposalExcel, setExportingProposalExcel] = useState(false);
   const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummaryRow[]>([]);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);
@@ -86,10 +89,29 @@ export default function CampaignDetail() {
     return () => setBreadcrumbs(null);
   }, [campaign]);
 
+  const fetchInvoiceSummaries = async () => {
+    if (!campaign?.company_id) return;
+    const { data } = await supabase
+      .from('invoices')
+      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at')
+      .eq('company_id', campaign.company_id)
+      .eq('campaign_id', campaign.id);
+    setInvoiceSummaries((data || []) as InvoiceSummaryRow[]);
+  };
+
+  const invoiceStatusResult = campaign?.start_date && campaign?.end_date
+    ? computeCampaignInvoiceStatus(campaign, invoiceSummaries)
+    : null;
+
   const refreshData = () => {
     fetchCampaign();
     fetchCampaignAssets();
+    if (campaign) fetchInvoiceSummaries();
   };
+
+  useEffect(() => {
+    if (campaign?.id) fetchInvoiceSummaries();
+  }, [campaign?.id]);
 
   useEffect(() => {
     if (!id || resolving) return;
@@ -675,6 +697,11 @@ export default function CampaignDetail() {
               </TooltipProvider>
             </CardContent>
           </Card>
+          )}
+
+          {/* Billing Summary Card */}
+          {perms.canViewFinancials && invoiceStatusResult && (
+            <CampaignBillingSummaryCard campaignId={campaign.id} result={invoiceStatusResult} />
           )}
         </div>
 

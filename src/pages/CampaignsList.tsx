@@ -18,10 +18,11 @@ import { CampaignQuickChips } from "@/components/campaigns/CampaignQuickChips";
 import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal, AlertTriangle } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
@@ -42,11 +43,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTableHead, SortConfig } from "@/components/common/SortableTableHead";
+import { CampaignInvoiceStatusBadge, CampaignInvoiceProgress } from "@/components/campaigns/CampaignInvoiceStatusBadge";
+import {
+  computeCampaignInvoiceStatus,
+  type InvoiceSummaryRow,
+  type CampaignInvoiceStatus,
+  formatBillingMonth,
+} from "@/utils/campaignInvoiceStatus";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function CampaignsList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummaryRow[]>([]);
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<CampaignInvoiceStatus | "all">("all");
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: campaignScopeFilter } = useScopedQuery('campaigns', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
@@ -132,6 +143,11 @@ export default function CampaignsList() {
     return () => { supabase.removeChannel(channel); };
   }, [company]);
 
+  // Fetch invoice summaries whenever campaigns change
+  useEffect(() => {
+    if (campaigns.length > 0) fetchInvoiceSummaries();
+  }, [campaigns]);
+
   // Auto-create special presets on mount
   useEffect(() => {
     if (lv.loading || !company?.id) return;
@@ -209,6 +225,29 @@ export default function CampaignsList() {
     setLoading(false);
   };
 
+  // Batch fetch all invoices for status computation — efficient, not per-row
+  const fetchInvoiceSummaries = async () => {
+    const selectedCompanyId = localStorage.getItem('selected_company_id') || company?.id;
+    if (!selectedCompanyId) return;
+    const { data } = await supabase
+      .from('invoices')
+      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at')
+      .eq('company_id', selectedCompanyId);
+    setInvoiceSummaries((data || []) as InvoiceSummaryRow[]);
+  };
+
+  // Compute invoice status for each campaign (memoized)
+  const campaignInvoiceStatuses = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeCampaignInvoiceStatus>>();
+    const today = new Date();
+    campaigns.forEach((c) => {
+      if (c.start_date && c.end_date) {
+        map.set(c.id, computeCampaignInvoiceStatus(c, invoiceSummaries, today));
+      }
+    });
+    return map;
+  }, [campaigns, invoiceSummaries]);
+
   // Apply all filters: search + advanced + sort
   const filteredCampaigns = useMemo(() => {
     const searchTerm = lv.searchQuery;
@@ -249,6 +288,12 @@ export default function CampaignsList() {
         if (!city.includes(advancedFilters.city_contains.toLowerCase())) return false;
       }
 
+      // Invoice status filter
+      if (invoiceStatusFilter !== "all") {
+        const invStatus = campaignInvoiceStatuses.get(campaign.id);
+        if (!invStatus || invStatus.status !== invoiceStatusFilter) return false;
+      }
+
       return true;
     });
 
@@ -280,7 +325,7 @@ export default function CampaignsList() {
     }
 
     return result;
-  }, [campaigns, lv.searchQuery, advancedFilters, sortConfig]);
+  }, [campaigns, lv.searchQuery, advancedFilters, sortConfig, invoiceStatusFilter, campaignInvoiceStatuses]);
 
   const handleAdvancedFilterApply = (filters: CampaignFilters) => {
     setAdvancedFilters(filters);
@@ -487,11 +532,39 @@ export default function CampaignsList() {
           </Card>
         )}
 
+        {/* Invoice Status Filter Tabs */}
+        <div className="flex items-center gap-1 mb-3 overflow-x-auto">
+          {([
+            { key: "all", label: "All" },
+            { key: "overdue", label: "Overdue" },
+            { key: "not_started", label: "Not Invoiced" },
+            { key: "partially_invoiced", label: "Partially Invoiced" },
+            { key: "fully_invoiced", label: "Fully Invoiced" },
+            { key: "not_billable_yet", label: "Not Billable" },
+          ] as { key: CampaignInvoiceStatus | "all"; label: string }[]).map((tab) => {
+            const count = tab.key === "all"
+              ? campaigns.length
+              : campaigns.filter((c) => campaignInvoiceStatuses.get(c.id)?.status === tab.key).length;
+            return (
+              <Button
+                key={tab.key}
+                variant={invoiceStatusFilter === tab.key ? "default" : "outline"}
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => setInvoiceStatusFilter(tab.key)}
+              >
+                {tab.label}
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{count}</Badge>
+              </Button>
+            );
+          })}
+        </div>
+
         {/* Results count */}
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-muted-foreground">
             {filteredCampaigns.length} campaign{filteredCampaigns.length !== 1 ? "s" : ""}
-            {hasActiveFilters || lv.searchQuery ? " (filtered)" : ""}
+            {hasActiveFilters || lv.searchQuery || invoiceStatusFilter !== "all" ? " (filtered)" : ""}
           </p>
         </div>
 
@@ -513,16 +586,18 @@ export default function CampaignsList() {
                       <SortableTableHead sortKey="status" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Status</SortableTableHead>
                       <SortableTableHead sortKey="total_assets" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Assets</SortableTableHead>
                       <SortableTableHead sortKey="grand_total" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="right">Total</SortableTableHead>
+                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Invoice Status</TableHead>
+                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Progress</TableHead>
                       <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {!settingsReady ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8">
+                      <TableRow><TableCell colSpan={11} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /><p className="text-muted-foreground">Loading campaigns...</p></div>
                       </TableCell></TableRow>
                     ) : filteredCampaigns.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-12">
+                      <TableRow><TableCell colSpan={11} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <FileText className="h-12 w-12 text-muted-foreground/50" />
                           <p className="text-muted-foreground font-medium">No campaigns found</p>
@@ -563,6 +638,22 @@ export default function CampaignsList() {
                             {canSeeField('grand_total', campaign)
                               ? formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
                               : <span className="text-muted-foreground select-none">••••••</span>}
+                          </TableCell>
+                          {/* Invoice Status */}
+                          <TableCell className={`px-4 py-3 text-center ${getCellClassName()}`}>
+                            {(() => {
+                              const invResult = campaignInvoiceStatuses.get(campaign.id);
+                              if (!invResult) return <span className="text-xs text-muted-foreground">—</span>;
+                              return <CampaignInvoiceStatusBadge result={invResult} />;
+                            })()}
+                          </TableCell>
+                          {/* Invoice Progress */}
+                          <TableCell className={`px-4 py-3 text-center ${getCellClassName()}`}>
+                            {(() => {
+                              const invResult = campaignInvoiceStatuses.get(campaign.id);
+                              if (!invResult) return <span className="text-xs text-muted-foreground">—</span>;
+                              return <CampaignInvoiceProgress result={invResult} />;
+                            })()}
                           </TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">

@@ -45,12 +45,12 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
       if (campaign.client_id) {
         const { data: client } = await supabase
           .from("clients")
-          .select("gstin, billing_address, city, state")
+          .select("gst_number, billing_address_line1, billing_city")
           .eq("id", campaign.client_id)
           .maybeSingle();
         if (client) {
-          clientGstin = client.gstin || "";
-          clientAddress = [client.billing_address, client.city, client.state].filter(Boolean).join(", ");
+          clientGstin = client.gst_number || "";
+          clientAddress = [client.billing_address_line1, client.billing_city].filter(Boolean).join(", ");
         }
       }
 

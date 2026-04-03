@@ -222,6 +222,14 @@ export function MonthlyInvoiceGenerator({
   onOpenChange,
   onSuccess,
 }: MonthlyInvoiceGeneratorProps) {
+  // Defensive filter: never bill removed/dropped assets regardless of parent filtering
+  const activeAssets = useMemo(() => {
+    if (campaignAssets.some(a => a.is_removed)) {
+      console.warn("MonthlyInvoiceGenerator received removed assets — filtered internally");
+    }
+    return campaignAssets.filter(a => !a.is_removed);
+  }, [campaignAssets]);
+
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [includePrinting, setIncludePrinting] = useState(false);
   const [includeMounting, setIncludeMounting] = useState(false);
@@ -238,7 +246,7 @@ export function MonthlyInvoiceGenerator({
   const [isAdmin, setIsAdmin] = useState(false);
   const { company } = useCompany();
   const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
-
+  
   // Profitability check
   const { data: profitability } = useCampaignProfitability(campaign.id, campaign.company_id, 0);
 

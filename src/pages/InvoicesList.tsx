@@ -603,11 +603,11 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={9} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {

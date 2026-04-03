@@ -426,7 +426,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleExportExcel(filteredInvoices)}
+              onClick={() => setShowExportDialog(true)}
               className="gap-1.5"
             >
               Export Excel

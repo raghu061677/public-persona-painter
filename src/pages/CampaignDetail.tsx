@@ -47,6 +47,8 @@ import { CampaignSignedROUpload } from "@/components/campaigns/CampaignSignedROU
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 import { CampaignRenewalChain } from "@/components/campaigns/CampaignRenewalChain";
+import { CampaignBillingSummaryCard } from "@/components/campaigns/CampaignBillingSummaryCard";
+import { computeCampaignInvoiceStatus, type InvoiceSummaryRow } from "@/utils/campaignInvoiceStatus";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { InvoiceExportDialog } from "@/components/invoices/InvoiceExportDialog";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";

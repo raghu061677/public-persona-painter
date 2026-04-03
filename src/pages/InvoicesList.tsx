@@ -710,6 +710,13 @@ export default function InvoicesList() {
         onReset={handleResetFilters}
       />
     </div>
+      {/* Invoice Export Dialog */}
+      <InvoiceExportDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        invoices={filteredInvoices}
+        companyName={company?.name}
+      />
     </ModuleGuard>
   );
 }

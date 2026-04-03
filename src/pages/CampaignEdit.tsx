@@ -95,7 +95,19 @@ interface CampaignAsset {
   printing_cost: number;
   mounting_cost: number;
   dimensions?: string;
+  // Invoice tracking — used for post-invoice locking
+  invoice_generated_months?: string[];
 }
+
+/** Returns true if the asset has at least one finalized invoice month */
+function isAssetInvoiceLocked(asset: CampaignAsset): boolean {
+  return Array.isArray(asset.invoice_generated_months) && asset.invoice_generated_months.length > 0;
+}
+
+/** Financial fields that must not change after invoicing */
+const LOCKED_FINANCIAL_FIELDS: (keyof CampaignAsset)[] = [
+  'negotiated_rate', 'printing_charges', 'mounting_charges',
+];
 
 export default function CampaignEdit() {
   const { id: routeParam } = useParams();

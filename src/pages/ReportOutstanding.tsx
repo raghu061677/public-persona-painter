@@ -45,6 +45,7 @@ interface MonthOutstanding {
 
 export default function ReportOutstanding() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(true);
   const [clientData, setClientData] = useState<ClientOutstanding[]>([]);
   const [campaignData, setCampaignData] = useState<CampaignOutstanding[]>([]);
@@ -59,8 +60,8 @@ export default function ReportOutstanding() {
   });
 
   useEffect(() => {
-    fetchOutstandingData();
-  }, []);
+    if (company?.id) fetchOutstandingData();
+  }, [company?.id]);
 
   const fetchOutstandingData = async () => {
     setLoading(true);

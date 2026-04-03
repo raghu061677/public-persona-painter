@@ -143,6 +143,11 @@ export default function CampaignsList() {
     return () => { supabase.removeChannel(channel); };
   }, [company]);
 
+  // Fetch invoice summaries whenever campaigns change
+  useEffect(() => {
+    if (campaigns.length > 0) fetchInvoiceSummaries();
+  }, [campaigns]);
+
   // Auto-create special presets on mount
   useEffect(() => {
     if (lv.loading || !company?.id) return;

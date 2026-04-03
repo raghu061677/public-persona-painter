@@ -175,7 +175,7 @@ export default function InvoicesList() {
       const statusMap: Record<string, string[]> = {
         pending: ['Draft', 'Sent', 'Partial'],
         overdue: ['Overdue'],
-        outstanding: ['Draft', 'Sent', 'Partial', 'Overdue'],
+        outstanding: ['Sent', 'Partial', 'Overdue'],
       };
       const mapped = statusMap[statusParam.toLowerCase()] || [statusParam];
       lv.setFilters({ ...advancedFilters, status: mapped } as Record<string, any>);
@@ -339,7 +339,7 @@ export default function InvoicesList() {
   const totalInvoices = filteredInvoices.length;
   const paidInvoices = filteredInvoices.filter(inv => inv.status === 'Paid').length;
   const pendingAmount = filteredInvoices
-    .filter(inv => inv.status !== 'Paid' && inv.status !== 'Cancelled')
+    .filter(inv => inv.status !== 'Paid' && inv.status !== 'Cancelled' && inv.status !== 'Draft')
     .reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
   const overdueInvoices = filteredInvoices.filter(inv => {
     if (inv.status !== 'Paid' && inv.due_date) return getDaysOverdue(inv.due_date) > 0;

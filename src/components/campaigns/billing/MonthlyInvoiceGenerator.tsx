@@ -62,6 +62,7 @@ interface CampaignAsset {
   mounting_billed?: boolean;
   media_asset_code?: string;
   total_sqft?: number;
+  is_removed?: boolean;
 }
 
 interface Campaign {

@@ -62,6 +62,7 @@ export default function CampaignDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exportingProposalExcel, setExportingProposalExcel] = useState(false);
   const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummaryRow[]>([]);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);

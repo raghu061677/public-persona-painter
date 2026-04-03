@@ -782,7 +782,7 @@ export function MonthlyInvoiceGenerator({
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  onClick={() => window.open(`/admin/invoices/${existingInvoice.invoice_id}`, '_blank')}
+                  onClick={() => window.open(`/admin/invoices/view/${encodeURIComponent(existingInvoice.invoice_id)}`, '_blank')}
                 >
                   <ExternalLink className="h-4 w-4 mr-1" />
                   View Invoice

@@ -279,7 +279,7 @@ export function buildInvoicePayload(invoice: any, client?: any, company?: any): 
     client_name: client?.name || invoice?.client_name || '',
     client_company: client?.name || invoice?.client_name || '',
     company_name: company?.name || 'Go-Ads 360°',
-    invoice_link: `${window.location.origin}/admin/invoices/${invoice?.id || ''}`,
+    invoice_link: `${window.location.origin}/admin/invoices/view/${encodeURIComponent(invoice?.id || '')}`,
   };
 }
 

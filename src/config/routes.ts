@@ -57,7 +57,7 @@ export const ROUTES = {
   ESTIMATIONS: '/admin/estimations',
   INVOICES: '/admin/invoices',
   INVOICES_NEW: '/admin/invoices/new',
-  INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
+  INVOICES_DETAIL: (id: string) => `/admin/invoices/view/${encodeURIComponent(id)}`,
   INVOICES_IMPORT: '/admin/invoices-import',
   PROFORMAS: '/admin/proformas',
   PROFORMAS_DETAIL: (id: string) => `/admin/proformas/${id}`,

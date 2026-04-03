@@ -64,7 +64,7 @@ export const ROUTES = {
   ESTIMATIONS: "/admin/estimations",
   INVOICES: "/admin/invoices",
   INVOICES_NEW: "/admin/invoices/new",
-  INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
+  INVOICES_DETAIL: (id: string) => `/admin/invoices/view/${encodeURIComponent(id)}`,
   EXPENSES: "/admin/expenses",
   FINANCE_DASHBOARD: "/admin/finance",
   MONTH_CLOSE: "/admin/finance/month-close",

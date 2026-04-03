@@ -325,7 +325,7 @@ export default function CampaignsList() {
     }
 
     return result;
-  }, [campaigns, lv.searchQuery, advancedFilters, sortConfig]);
+  }, [campaigns, lv.searchQuery, advancedFilters, sortConfig, invoiceStatusFilter, campaignInvoiceStatuses]);
 
   const handleAdvancedFilterApply = (filters: CampaignFilters) => {
     setAdvancedFilters(filters);

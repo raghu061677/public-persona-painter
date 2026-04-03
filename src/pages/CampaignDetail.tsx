@@ -698,6 +698,11 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
           )}
+
+          {/* Billing Summary Card */}
+          {perms.canViewFinancials && invoiceStatusResult && (
+            <CampaignBillingSummaryCard campaignId={campaign.id} result={invoiceStatusResult} />
+          )}
         </div>
 
         {/* Profitability Summary - Hidden for non-owners */}

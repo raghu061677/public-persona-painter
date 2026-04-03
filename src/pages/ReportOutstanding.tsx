@@ -92,6 +92,7 @@ export default function ReportOutstanding() {
       const { data: invoices, error: invoicesError } = await supabase
         .from("invoices")
         .select("campaign_id, client_name, total_amount, paid_amount, balance_due")
+        .eq("company_id", company!.id)
         .not("status", "in", '("Draft","Cancelled")')
         .not("campaign_id", "is", null);
 

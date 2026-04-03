@@ -283,6 +283,70 @@ export default function CampaignDetail() {
   const mountingTotal = totals.mountingCost;
   const manualDiscount = totals.manualDiscountAmount;
 
+  const handleExportProposalExcel = async () => {
+    if (!campaign || activeAssets.length === 0) {
+      toast({ title: "No Assets", description: "No active assets to export.", variant: "destructive" });
+      return;
+    }
+    setExportingProposalExcel(true);
+    try {
+      const assetPricing: Record<string, any> = {};
+      const proposalAssets: ProposalAsset[] = activeAssets.map((a: any) => {
+        assetPricing[a.asset_id] = {
+          negotiated_price: a.negotiated_rate || a.card_rate,
+          start_date: a.booking_start_date || a.start_date || campaign.start_date,
+          end_date: a.booking_end_date || a.end_date || campaign.end_date,
+          booked_days: a.booked_days || 30,
+          printing_charges: a.printing_charges || 0,
+          printing_cost: a.printing_charges || 0,
+          mounting_charges: a.mounting_charges || 0,
+          mounting_cost: a.mounting_charges || 0,
+          mounting_mode: 'fixed',
+        };
+        return {
+          id: a.asset_id,
+          location: a.location,
+          direction: a.direction,
+          dimensions: a.dimensions,
+          total_sqft: a.total_sqft,
+          illumination_type: a.illumination_type,
+          card_rate: a.card_rate,
+        };
+      });
+
+      const durationDays = campaign.start_date && campaign.end_date
+        ? Math.ceil((new Date(campaign.end_date).getTime() - new Date(campaign.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1
+        : 30;
+
+      const blob = await generateProposalExcel({
+        planId: campaign.id,
+        planName: campaign.campaign_name || 'Campaign',
+        clientName: campaign.client_name || '',
+        assets: proposalAssets,
+        assetPricing,
+        planStartDate: new Date(campaign.start_date),
+        planEndDate: new Date(campaign.end_date),
+        durationDays,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Campaign_Proposal_${campaign.campaign_name || campaign.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export Successful", description: "Campaign proposal Excel downloaded." });
+    } catch (error: any) {
+      console.error('Campaign Proposal Excel export error:', error);
+      toast({ title: "Export Failed", description: error.message || "Failed to export.", variant: "destructive" });
+    } finally {
+      setExportingProposalExcel(false);
+    }
+  };
+
   return (
     <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">

@@ -288,6 +288,12 @@ export default function CampaignsList() {
         if (!city.includes(advancedFilters.city_contains.toLowerCase())) return false;
       }
 
+      // Invoice status filter
+      if (invoiceStatusFilter !== "all") {
+        const invStatus = campaignInvoiceStatuses.get(campaign.id);
+        if (!invStatus || invStatus.status !== invoiceStatusFilter) return false;
+      }
+
       return true;
     });
 

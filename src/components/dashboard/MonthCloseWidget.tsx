@@ -103,8 +103,8 @@ export function MonthCloseWidget() {
         (i) => i.status === "Draft"
       ).length;
       const outstanding = invoices
-        .filter((i) => i.status !== "Paid")
-        .reduce((s, i) => s + Number(i.total_amount || 0), 0);
+        .filter((i) => i.status !== "Paid" && i.status !== "Cancelled" && i.status !== "Draft")
+        .reduce((s, i) => s + Number(i.balance_due || 0), 0);
 
       // Vendor snapshot from expenses
       const mountingPayable = expenses

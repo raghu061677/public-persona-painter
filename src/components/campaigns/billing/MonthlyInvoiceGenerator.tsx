@@ -657,7 +657,7 @@ export function MonthlyInvoiceGenerator({
       const assetUpdates = filteredPreviews
         .filter(p => !p.alreadyInvoiced)
         .map(async (p) => {
-          const asset = campaignAssets.find(a => a.id === p.campaignAsset.id);
+          const asset = activeAssets.find(a => a.id === p.campaignAsset.id);
           const currentMonths = asset?.invoice_generated_months || [];
           const updatedMonths = [...new Set([...currentMonths, selectedMonth])];
           

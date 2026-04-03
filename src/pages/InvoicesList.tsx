@@ -568,6 +568,11 @@ export default function InvoicesList() {
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_name')}>
+                          Campaign {getSortIcon('campaign_name')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('invoice_date')}>
                           Date {getSortIcon('invoice_date')}
                         </Button>

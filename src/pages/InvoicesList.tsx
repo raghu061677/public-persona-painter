@@ -41,6 +41,7 @@ type SortField = 'id' | 'client_name' | 'campaign_name' | 'invoice_date' | 'due_
 type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();

@@ -62,6 +62,7 @@ interface CampaignAsset {
   mounting_billed?: boolean;
   media_asset_code?: string;
   total_sqft?: number;
+  is_removed?: boolean;
 }
 
 interface Campaign {
@@ -181,8 +182,8 @@ function calculateAssetBilling(
   if (rateType === 'daily') {
     calculatedAmount = billableDays * dailyRate;
   } else {
-    // Monthly pro-rata: (monthly_rate / days_in_month) * billable_days
-    calculatedAmount = (monthlyRate / daysInMonth) * billableDays;
+    // OOH-standard 30-day pro-rata: (monthly_rate / 30) * billable_days
+    calculatedAmount = (monthlyRate / 30) * billableDays;
   }
   
   // Round to 2 decimal places
@@ -221,6 +222,14 @@ export function MonthlyInvoiceGenerator({
   onOpenChange,
   onSuccess,
 }: MonthlyInvoiceGeneratorProps) {
+  // Defensive filter: never bill removed/dropped assets regardless of parent filtering
+  const activeAssets = useMemo(() => {
+    if (campaignAssets.some(a => a.is_removed)) {
+      console.warn("MonthlyInvoiceGenerator received removed assets — filtered internally");
+    }
+    return campaignAssets.filter(a => !a.is_removed);
+  }, [campaignAssets]);
+
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [includePrinting, setIncludePrinting] = useState(false);
   const [includeMounting, setIncludeMounting] = useState(false);
@@ -237,7 +246,7 @@ export function MonthlyInvoiceGenerator({
   const [isAdmin, setIsAdmin] = useState(false);
   const { company } = useCompany();
   const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
-
+  
   // Profitability check
   const { data: profitability } = useCampaignProfitability(campaign.id, campaign.company_id, 0);
 
@@ -345,10 +354,10 @@ export function MonthlyInvoiceGenerator({
   const billingPreviews = useMemo(() => {
     if (!selectedMonth) return [];
     
-    return campaignAssets
+    return activeAssets
       .map(asset => calculateAssetBilling(asset, selectedMonth, assetCodePrefix))
       .filter((preview): preview is AssetBillingPreview => preview !== null);
-  }, [campaignAssets, selectedMonth, assetCodePrefix]);
+  }, [activeAssets, selectedMonth, assetCodePrefix]);
   
   // Filter based on already invoiced toggle
   const filteredPreviews = useMemo(() => {
@@ -648,7 +657,7 @@ export function MonthlyInvoiceGenerator({
       const assetUpdates = filteredPreviews
         .filter(p => !p.alreadyInvoiced)
         .map(async (p) => {
-          const asset = campaignAssets.find(a => a.id === p.campaignAsset.id);
+          const asset = activeAssets.find(a => a.id === p.campaignAsset.id);
           const currentMonths = asset?.invoice_generated_months || [];
           const updatedMonths = [...new Set([...currentMonths, selectedMonth])];
           

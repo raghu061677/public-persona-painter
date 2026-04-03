@@ -2,23 +2,27 @@ import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import {
   normalizeInvoices,
-  aggregateMonthwise,
-  aggregateQuarterwise,
-  aggregateClientwise,
-  aggregateCampaignwise,
   buildTotalsRow,
-  SUMMARY_COLUMNS,
-  CLIENT_SUMMARY_COLUMNS,
-  CAMPAIGN_SUMMARY_COLUMNS,
+  getSummaryColumnsForType,
+  resolveSummaryData,
+  isDetailedExportType,
+  prefilterForExportType,
+  filterByPeriod,
+  getPeriodFileSlug,
+  getPeriodLabel,
+  checkReconciliation,
   EXPORT_TYPE_SHEET_NAMES,
   EXPORT_TYPE_FILE_SLUGS,
+  GST_INVOICEWISE_KEYS,
+  OUTSTANDING_DETAIL_KEYS,
   type ExportType,
   type DateBasis,
+  type PeriodConfig,
   type NormalizedInvoice,
   type SummaryRow,
 } from "@/utils/exports/invoiceExportMapper";
 
-// ─── Detailed Column Definitions (using normalized fields) ─────────────
+// ─── Detailed Column Definitions ───────────────────────────────────────
 export interface InvoiceExcelColumn {
   key: string;
   label: string;
@@ -75,6 +79,9 @@ export function loadSavedColumnKeys(exportType: ExportType = "detailed"): string
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch { /* */ }
+  // Return type-specific defaults
+  if (exportType === "gst_invoicewise") return GST_INVOICEWISE_KEYS;
+  if (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") return OUTSTANDING_DETAIL_KEYS;
   return DEFAULT_INVOICE_EXPORT_KEYS;
 }
 
@@ -128,10 +135,7 @@ function downloadExcel(wb: ExcelJS.Workbook, fileName: string) {
 }
 
 // ─── Detailed Export ───────────────────────────────────────────────────
-async function exportDetailed(
-  normalized: NormalizedInvoice[],
-  selectedKeys: string[],
-) {
+async function exportDetailed(normalized: NormalizedInvoice[], selectedKeys: string[], sheetName: string) {
   const columns = selectedKeys
     .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
     .filter(Boolean) as InvoiceExcelColumn[];
@@ -140,7 +144,7 @@ async function exportDetailed(
   wb.creator = "GO-ADS 360°";
   wb.created = new Date();
 
-  const ws = wb.addWorksheet(EXPORT_TYPE_SHEET_NAMES.detailed, {
+  const ws = wb.addWorksheet(sheetName, {
     properties: { defaultRowHeight: 18 },
     views: [{ state: "frozen", ySplit: 1, xSplit: 0 }],
   });
@@ -155,22 +159,12 @@ async function exportDetailed(
     applyDataRowStyle(excelRow, columns);
   });
 
-  const now = format(new Date(), "yyyyMMdd_HHmm");
-  await downloadExcel(wb, `Invoices_${EXPORT_TYPE_FILE_SLUGS.detailed}_${now}.xlsx`);
+  return wb;
 }
 
 // ─── Summary Export ────────────────────────────────────────────────────
-async function exportSummary(
-  summaryRows: SummaryRow[],
-  exportType: ExportType,
-) {
-  const colDefs = exportType === "campaignwise"
-    ? CAMPAIGN_SUMMARY_COLUMNS
-    : exportType === "clientwise"
-      ? CLIENT_SUMMARY_COLUMNS
-      : SUMMARY_COLUMNS;
-
-  // Filter out subLabel column if all empty
+async function exportSummary(summaryRows: SummaryRow[], exportType: ExportType) {
+  const colDefs = getSummaryColumnsForType(exportType);
   const hasSubLabel = summaryRows.some((r) => r.subLabel);
   const cols = hasSubLabel ? colDefs : colDefs.filter((c) => c.key !== "subLabel");
 
@@ -193,14 +187,12 @@ async function exportSummary(
     applyDataRowStyle(excelRow, cols);
   });
 
-  // Totals row
   const totals = buildTotalsRow(summaryRows);
   const totalsValues = cols.map((c) => (totals as any)[c.key] ?? "");
   const totalsRow = ws.addRow(totalsValues);
   applyTotalsRowStyle(totalsRow);
 
-  const now = format(new Date(), "yyyyMMdd_HHmm");
-  await downloadExcel(wb, `Invoices_${EXPORT_TYPE_FILE_SLUGS[exportType]}_${now}.xlsx`);
+  return wb;
 }
 
 // ─── Main Export Function ──────────────────────────────────────────────
@@ -210,31 +202,29 @@ export async function exportInvoiceExcel(
   companyName?: string,
   exportType: ExportType = "detailed",
   dateBasis: DateBasis = "invoice_date",
+  period?: PeriodConfig,
 ) {
-  const normalized = normalizeInvoices(invoices, companyName);
+  let normalized = normalizeInvoices(invoices, companyName);
+  if (period) normalized = filterByPeriod(normalized, period, dateBasis);
+  normalized = prefilterForExportType(normalized, exportType);
   if (normalized.length === 0) return;
 
-  if (exportType === "detailed") {
-    return exportDetailed(normalized, selectedKeys);
+  // Re-index sno after filtering
+  normalized.forEach((r, i) => { r.sno = i + 1; });
+
+  const periodSlug = period ? getPeriodFileSlug(period) : "";
+  const now = format(new Date(), "yyyyMMdd_HHmm");
+  const periodPart = periodSlug ? `_${periodSlug}` : "";
+
+  if (isDetailedExportType(exportType)) {
+    const keys = exportType === "gst_invoicewise" ? GST_INVOICEWISE_KEYS
+      : (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") ? OUTSTANDING_DETAIL_KEYS
+      : selectedKeys;
+    const wb = await exportDetailed(normalized, keys, EXPORT_TYPE_SHEET_NAMES[exportType]);
+    return downloadExcel(wb, `Invoices_${EXPORT_TYPE_FILE_SLUGS[exportType]}${periodPart}_${now}.xlsx`);
   }
 
-  let summaryRows: SummaryRow[];
-  switch (exportType) {
-    case "monthwise":
-      summaryRows = aggregateMonthwise(normalized, dateBasis);
-      break;
-    case "quarterwise":
-      summaryRows = aggregateQuarterwise(normalized, dateBasis);
-      break;
-    case "clientwise":
-      summaryRows = aggregateClientwise(normalized);
-      break;
-    case "campaignwise":
-      summaryRows = aggregateCampaignwise(normalized);
-      break;
-    default:
-      return;
-  }
-
-  return exportSummary(summaryRows, exportType);
+  const summaryRows = resolveSummaryData(normalized, exportType, dateBasis);
+  const wb = await exportSummary(summaryRows, exportType);
+  return downloadExcel(wb, `Invoices_${EXPORT_TYPE_FILE_SLUGS[exportType]}${periodPart}_${now}.xlsx`);
 }

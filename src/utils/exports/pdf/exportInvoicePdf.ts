@@ -3,18 +3,23 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import {
   normalizeInvoices,
-  aggregateMonthwise,
-  aggregateQuarterwise,
-  aggregateClientwise,
-  aggregateCampaignwise,
   buildTotalsRow,
-  SUMMARY_COLUMNS,
-  CLIENT_SUMMARY_COLUMNS,
-  CAMPAIGN_SUMMARY_COLUMNS,
+  getSummaryColumnsForType,
+  resolveSummaryData,
+  isDetailedExportType,
+  prefilterForExportType,
+  filterByPeriod,
+  getPeriodFileSlug,
+  getPeriodLabel,
+  checkReconciliation,
   EXPORT_TYPE_LABELS,
   EXPORT_TYPE_FILE_SLUGS,
+  EXPORT_TYPE_SHEET_NAMES,
+  GST_INVOICEWISE_KEYS,
+  OUTSTANDING_DETAIL_KEYS,
   type ExportType,
   type DateBasis,
+  type PeriodConfig,
   type NormalizedInvoice,
   type SummaryRow,
 } from "@/utils/exports/invoiceExportMapper";
@@ -66,11 +71,12 @@ async function renderHeader(
   branding: InvoicePdfBranding,
   exportType: ExportType,
   rowCount: number,
+  periodLabel?: string,
+  dateBasis?: string,
 ): Promise<number> {
   const pageW = doc.internal.pageSize.getWidth();
   const themeRgb = hexToRgb(branding.themeColor);
-  const mL = 36;
-  const mR = 36;
+  const mL = 36; const mR = 36;
   let y = 32;
 
   let logoOffset = 0;
@@ -91,7 +97,7 @@ async function renderHeader(
   const contact = [branding.email, branding.phone].filter(Boolean).join(" | ");
   if (contact) { doc.text(contact, mL + logoOffset, dy); dy += 10; }
 
-  // Right: title
+  // Right: title + metadata
   const title = EXPORT_TYPE_LABELS[exportType].replace("Export", "Report");
   doc.setFont("helvetica", "bold"); doc.setFontSize(14);
   doc.setTextColor(themeRgb[0], themeRgb[1], themeRgb[2]);
@@ -99,8 +105,18 @@ async function renderHeader(
 
   doc.setFont("helvetica", "normal"); doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Date: ${format(new Date(), "dd-MMM-yyyy HH:mm")}`, pageW - mR, y + 26, { align: "right" });
-  doc.text(`${rowCount} records`, pageW - mR, y + 38, { align: "right" });
+  let ry = y + 26;
+  doc.text(`Date: ${format(new Date(), "dd-MMM-yyyy HH:mm")}`, pageW - mR, ry, { align: "right" });
+  ry += 12;
+  doc.text(`${rowCount} records`, pageW - mR, ry, { align: "right" });
+  if (periodLabel) {
+    ry += 12;
+    doc.text(`Period: ${periodLabel}`, pageW - mR, ry, { align: "right" });
+  }
+  if (dateBasis) {
+    ry += 12;
+    doc.text(`Date Basis: ${dateBasis}`, pageW - mR, ry, { align: "right" });
+  }
 
   y = Math.max(dy + 4, y + 50);
   doc.setDrawColor(themeRgb[0], themeRgb[1], themeRgb[2]);
@@ -109,62 +125,53 @@ async function renderHeader(
   return y + 12;
 }
 
-// ─── Shared Summary Footer ─────────────────────────────────────────────
-function renderSummaryFooter(
-  doc: jsPDF,
-  data: NormalizedInvoice[],
-  branding: InvoicePdfBranding,
-) {
+// ─── Reconciliation Block ──────────────────────────────────────────────
+function renderReconciliationBlock(doc: jsPDF, data: NormalizedInvoice[], branding: InvoicePdfBranding) {
   const themeRgb = hexToRgb(branding.themeColor);
   const pageW = doc.internal.pageSize.getWidth();
   const mL = 36; const mR = 36;
   let y = (doc as any).lastAutoTable?.finalY ?? 100;
   y += 20;
 
-  if (y + 110 > doc.internal.pageSize.getHeight() - 40) {
+  if (y + 160 > doc.internal.pageSize.getHeight() - 40) {
     doc.addPage();
     y = 40;
   }
 
-  const totals = {
-    taxable: data.reduce((s, r) => s + r.taxable_value, 0),
-    igst: data.reduce((s, r) => s + r.igst, 0),
-    cgst: data.reduce((s, r) => s + r.cgst, 0),
-    sgst: data.reduce((s, r) => s + r.sgst, 0),
-    grand: data.reduce((s, r) => s + r.total_value, 0),
-    paid: data.reduce((s, r) => s + r.paid_amount, 0),
-    credited: data.reduce((s, r) => s + r.credited_amount, 0),
-    balance: data.reduce((s, r) => s + r.balance_due, 0),
-    overdue: data.reduce((s, r) => s + r.overdue_amount, 0),
-  };
-
-  const boxX = pageW - mR - 230;
-  const boxW = 230;
+  const recon = checkReconciliation(data);
+  const boxX = pageW - mR - 250;
+  const boxW = 250;
 
   doc.setFont("helvetica", "bold"); doc.setFontSize(10);
   doc.setTextColor(themeRgb[0], themeRgb[1], themeRgb[2]);
-  doc.text("Financial Summary", boxX, y);
-  y += 14;
+  doc.text("Financial Reconciliation Summary", boxX, y);
+  y += 16;
 
   const items = [
-    ["Total Taxable Value", fmtINR(totals.taxable)],
-    ["Total IGST", fmtINR(totals.igst)],
-    ["Total CGST", fmtINR(totals.cgst)],
-    ["Total SGST", fmtINR(totals.sgst)],
-    ["Grand Total", fmtINR(totals.grand)],
-    ["Total Paid", fmtINR(totals.paid)],
-    ["Total Credited", fmtINR(totals.credited)],
-    ["Total Balance Due", fmtINR(totals.balance)],
-    ["Total Overdue", fmtINR(totals.overdue)],
+    ["Total Records", String(recon.totalRecords)],
+    ["Taxable Total", fmtINR(recon.taxableTotal)],
+    ["Total Tax", fmtINR(recon.totalTax)],
+    ["IGST Total", fmtINR(recon.igstTotal)],
+    ["CGST Total", fmtINR(recon.cgstTotal)],
+    ["SGST Total", fmtINR(recon.sgstTotal)],
+    ["Gross Total", fmtINR(recon.grossTotal)],
+    ["Paid Total", fmtINR(recon.paidTotal)],
+    ["Credited Total", fmtINR(recon.creditedTotal)],
+    ["Balance Due Total", fmtINR(recon.balanceDueTotal)],
+    ["Overdue Total", fmtINR(recon.overdueTotal)],
+    ["Mismatch Count", String(recon.mismatchCount)],
   ];
 
   items.forEach(([label, value], i) => {
-    const isBold = i === 4 || i === items.length - 1;
+    const isBold = i === 6 || i === items.length - 1;
     doc.setFont("helvetica", isBold ? "bold" : "normal");
     doc.setFontSize(9); doc.setTextColor(50, 50, 50);
+    if (i === items.length - 1 && recon.mismatchCount > 0) {
+      doc.setTextColor(200, 50, 50);
+    }
     doc.text(label, boxX, y);
     doc.text(value, boxX + boxW, y, { align: "right" });
-    if (i === 4) {
+    if (i === 6) {
       doc.setDrawColor(themeRgb[0], themeRgb[1], themeRgb[2]);
       doc.setLineWidth(1); doc.line(boxX, y + 4, boxX + boxW, y + 4);
       y += 18;
@@ -193,6 +200,9 @@ async function exportDetailedPdf(
   normalized: NormalizedInvoice[],
   selectedKeys: string[],
   branding: InvoicePdfBranding,
+  exportType: ExportType,
+  periodLabel?: string,
+  dateBasis?: string,
 ) {
   const columns = selectedKeys
     .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
@@ -203,24 +213,22 @@ async function exportDetailedPdf(
   const themeRgb = hexToRgb(branding.themeColor);
   const mL = 36; const mR = 36;
 
-  const startY = await renderHeader(doc, branding, "detailed", normalized.length);
+  const startY = await renderHeader(doc, branding, exportType, normalized.length, periodLabel, dateBasis);
 
   const head = [columns.map((c) => c.label)];
   const body = normalized.map((row) =>
     columns.map((col) => {
       const v = col.getValue(row);
       if (v === null || v === undefined) return "";
-      if (col.type === "currency" && typeof v === "number") {
+      if (col.type === "currency" && typeof v === "number")
         return v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      }
       return String(v);
     })
   );
 
   autoTable(doc, {
     startY,
-    head,
-    body,
+    head, body,
     styles: { font: "helvetica", fontSize: 8, cellPadding: 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
     headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -233,11 +241,9 @@ async function exportDetailedPdf(
     },
   });
 
-  renderSummaryFooter(doc, normalized, branding);
+  renderReconciliationBlock(doc, normalized, branding);
   addPageNumbers(doc, branding);
-
-  const now = format(new Date(), "yyyyMMdd_HHmm");
-  doc.save(`Invoices_${EXPORT_TYPE_FILE_SLUGS.detailed}_${now}.pdf`);
+  return doc;
 }
 
 // ─── Summary PDF ───────────────────────────────────────────────────────
@@ -246,13 +252,10 @@ async function exportSummaryPdf(
   normalized: NormalizedInvoice[],
   exportType: ExportType,
   branding: InvoicePdfBranding,
+  periodLabel?: string,
+  dateBasis?: string,
 ) {
-  const colDefs = exportType === "campaignwise"
-    ? CAMPAIGN_SUMMARY_COLUMNS
-    : exportType === "clientwise"
-      ? CLIENT_SUMMARY_COLUMNS
-      : SUMMARY_COLUMNS;
-
+  const colDefs = getSummaryColumnsForType(exportType);
   const hasSubLabel = summaryRows.some((r) => r.subLabel);
   const cols = hasSubLabel ? colDefs : colDefs.filter((c) => c.key !== "subLabel");
 
@@ -261,27 +264,24 @@ async function exportSummaryPdf(
   const themeRgb = hexToRgb(branding.themeColor);
   const mL = 36; const mR = 36;
 
-  const startY = await renderHeader(doc, branding, exportType, summaryRows.length);
+  const startY = await renderHeader(doc, branding, exportType, summaryRows.length, periodLabel, dateBasis);
 
   const head = [cols.map((c) => c.label)];
   const totals = buildTotalsRow(summaryRows);
-
   const bodyRows = [...summaryRows, totals];
   const body = bodyRows.map((row) =>
     cols.map((c) => {
       const v = (row as any)[c.key];
       if (v === null || v === undefined) return "";
-      if (c.type === "currency" && typeof v === "number") {
+      if (c.type === "currency" && typeof v === "number")
         return v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      }
       return String(v);
     })
   );
 
   autoTable(doc, {
     startY,
-    head,
-    body,
+    head, body,
     styles: { font: "helvetica", fontSize: 8, cellPadding: 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
     headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -290,7 +290,6 @@ async function exportSummaryPdf(
       if (data.section === "body") {
         const col = cols[data.column.index];
         if (col?.type === "currency" || col?.type === "number") data.cell.styles.halign = "right";
-        // Bold totals row
         if (data.row.index === bodyRows.length - 1) {
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fillColor = [243, 244, 246];
@@ -299,11 +298,9 @@ async function exportSummaryPdf(
     },
   });
 
-  renderSummaryFooter(doc, normalized, branding);
+  renderReconciliationBlock(doc, normalized, branding);
   addPageNumbers(doc, branding);
-
-  const now = format(new Date(), "yyyyMMdd_HHmm");
-  doc.save(`Invoices_${EXPORT_TYPE_FILE_SLUGS[exportType]}_${now}.pdf`);
+  return doc;
 }
 
 // ─── Main Export Function ──────────────────────────────────────────────
@@ -313,31 +310,32 @@ export async function exportInvoicePdf(
   branding: InvoicePdfBranding,
   exportType: ExportType = "detailed",
   dateBasis: DateBasis = "invoice_date",
+  period?: PeriodConfig,
 ) {
-  const normalized = normalizeInvoices(invoices, branding.companyName);
+  let normalized = normalizeInvoices(invoices, branding.companyName);
+  if (period) normalized = filterByPeriod(normalized, period, dateBasis);
+  normalized = prefilterForExportType(normalized, exportType);
   if (normalized.length === 0) return;
 
-  if (exportType === "detailed") {
-    return exportDetailedPdf(normalized, selectedKeys, branding);
+  normalized.forEach((r, i) => { r.sno = i + 1; });
+
+  const periodLabel = period ? getPeriodLabel(period) : undefined;
+  const basisLabel = dateBasis === "billing_period" ? "Billing Period" : dateBasis === "due_date" ? "Due Date" : "Invoice Date";
+  const periodSlug = period ? getPeriodFileSlug(period) : "";
+  const now = format(new Date(), "yyyyMMdd_HHmm");
+  const periodPart = periodSlug ? `_${periodSlug}` : "";
+
+  let doc: jsPDF;
+
+  if (isDetailedExportType(exportType)) {
+    const keys = exportType === "gst_invoicewise" ? GST_INVOICEWISE_KEYS
+      : (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") ? OUTSTANDING_DETAIL_KEYS
+      : selectedKeys;
+    doc = await exportDetailedPdf(normalized, keys, branding, exportType, periodLabel, basisLabel);
+  } else {
+    const summaryRows = resolveSummaryData(normalized, exportType, dateBasis);
+    doc = await exportSummaryPdf(summaryRows, normalized, exportType, branding, periodLabel, basisLabel);
   }
 
-  let summaryRows: SummaryRow[];
-  switch (exportType) {
-    case "monthwise":
-      summaryRows = aggregateMonthwise(normalized, dateBasis);
-      break;
-    case "quarterwise":
-      summaryRows = aggregateQuarterwise(normalized, dateBasis);
-      break;
-    case "clientwise":
-      summaryRows = aggregateClientwise(normalized);
-      break;
-    case "campaignwise":
-      summaryRows = aggregateCampaignwise(normalized);
-      break;
-    default:
-      return;
-  }
-
-  return exportSummaryPdf(summaryRows, normalized, exportType, branding);
+  doc.save(`Invoices_${EXPORT_TYPE_FILE_SLUGS[exportType]}${periodPart}_${now}.pdf`);
 }

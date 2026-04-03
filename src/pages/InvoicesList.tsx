@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { InvoiceExportDialog } from "@/components/invoices/InvoiceExportDialog";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
@@ -40,6 +41,7 @@ type SortField = 'id' | 'client_name' | 'campaign_name' | 'invoice_date' | 'due_
 type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();
@@ -424,7 +426,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleExportExcel(filteredInvoices)}
+              onClick={() => setShowExportDialog(true)}
               className="gap-1.5"
             >
               Export Excel
@@ -708,6 +710,13 @@ export default function InvoicesList() {
         onReset={handleResetFilters}
       />
     </div>
+      {/* Invoice Export Dialog */}
+      <InvoiceExportDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        invoices={filteredInvoices}
+        companyName={company?.name}
+      />
     </ModuleGuard>
   );
 }

@@ -220,6 +220,29 @@ export default function CampaignsList() {
     setLoading(false);
   };
 
+  // Batch fetch all invoices for status computation — efficient, not per-row
+  const fetchInvoiceSummaries = async () => {
+    const selectedCompanyId = localStorage.getItem('selected_company_id') || company?.id;
+    if (!selectedCompanyId) return;
+    const { data } = await supabase
+      .from('invoices')
+      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at')
+      .eq('company_id', selectedCompanyId);
+    setInvoiceSummaries((data || []) as InvoiceSummaryRow[]);
+  };
+
+  // Compute invoice status for each campaign (memoized)
+  const campaignInvoiceStatuses = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeCampaignInvoiceStatus>>();
+    const today = new Date();
+    campaigns.forEach((c) => {
+      if (c.start_date && c.end_date) {
+        map.set(c.id, computeCampaignInvoiceStatus(c, invoiceSummaries, today));
+      }
+    });
+    return map;
+  }, [campaigns, invoiceSummaries]);
+
   // Apply all filters: search + advanced + sort
   const filteredCampaigns = useMemo(() => {
     const searchTerm = lv.searchQuery;

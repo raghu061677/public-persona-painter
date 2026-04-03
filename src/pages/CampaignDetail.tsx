@@ -407,6 +407,10 @@ export default function CampaignDetail() {
                   </ActionGuard>
                 )}
                 <CampaignPDFReport campaign={campaign} campaignAssets={activeAssets} />
+                <Button variant="outline" size="sm" onClick={handleExportProposalExcel} disabled={exportingProposalExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {exportingProposalExcel ? "Generating..." : "Proposal Excel"}
+                </Button>
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />
                 <ExportProofDialog
                   campaignId={campaign.id}

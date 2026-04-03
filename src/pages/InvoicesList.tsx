@@ -427,7 +427,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowExportDialog(true)}
+              onClick={() => { setExportMode("excel"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export Excel
@@ -435,7 +435,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleExportPdf(filteredInvoices)}
+              onClick={() => { setExportMode("pdf"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export PDF

@@ -95,7 +95,19 @@ interface CampaignAsset {
   printing_cost: number;
   mounting_cost: number;
   dimensions?: string;
+  // Invoice tracking — used for post-invoice locking
+  invoice_generated_months?: string[];
 }
+
+/** Returns true if the asset has at least one finalized invoice month */
+function isAssetInvoiceLocked(asset: CampaignAsset): boolean {
+  return Array.isArray(asset.invoice_generated_months) && asset.invoice_generated_months.length > 0;
+}
+
+/** Financial fields that must not change after invoicing */
+const LOCKED_FINANCIAL_FIELDS: (keyof CampaignAsset)[] = [
+  'negotiated_rate', 'printing_charges', 'mounting_charges',
+];
 
 export default function CampaignEdit() {
   const { id: routeParam } = useParams();
@@ -405,9 +417,10 @@ export default function CampaignEdit() {
           printing_rate_per_sqft: printingRatePerSqft,
           mounting_rate_per_sqft: mountingRatePerSqft,
           printing_cost: printingCharges,
-          mounting_cost: mountingCharges,
-          dimensions: assetData?.dimensions || asset.dimensions || '',
-        };
+           mounting_cost: mountingCharges,
+           dimensions: assetData?.dimensions || asset.dimensions || '',
+           invoice_generated_months: asset.invoice_generated_months || [],
+         };
       }));
     } else if (!assets || assets.length === 0) {
       // Fallback: try to fetch from campaign_items for plan-converted campaigns
@@ -512,6 +525,15 @@ export default function CampaignEdit() {
     
     // Recalculate total_price when price fields change
     if (field === 'negotiated_rate' || field === 'printing_charges' || field === 'mounting_charges') {
+      // Block financial changes on invoiced assets
+      if (isAssetInvoiceLocked(updated[index]) && LOCKED_FINANCIAL_FIELDS.includes(field)) {
+        toast({
+          title: "Field Locked",
+          description: `Cannot change ${field.replace(/_/g, ' ')} — this asset has already been invoiced for months: ${updated[index].invoice_generated_months?.join(', ')}. Use credit notes to adjust.`,
+          variant: "destructive",
+        });
+        return;
+      }
       // Keep mounting_cost in sync with mounting_charges
       if (field === 'mounting_charges') {
         updated[index].mounting_cost = Number(value) || 0;
@@ -972,6 +994,13 @@ export default function CampaignEdit() {
         return prev.map(asset => {
           const assetUpdate = assetUpdates.get(asset.id);
           if (!assetUpdate) return asset;
+          
+          // Block financial changes on invoiced assets
+          const hasFinancialChange = 'negotiated_price' in assetUpdate || 'printing_charges' in assetUpdate || 'mounting_charges' in assetUpdate;
+          if (hasFinancialChange && isAssetInvoiceLocked(asset)) {
+            console.warn(`Skipping bulk financial update for invoiced asset ${asset.media_asset_code}`);
+            return asset;
+          }
           
           // Map from dialog field names to campaign asset field names
           const mappedUpdate: Record<string, any> = {};

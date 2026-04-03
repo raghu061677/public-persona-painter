@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ interface MonthOutstanding {
 
 export default function ReportOutstanding() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(true);
   const [clientData, setClientData] = useState<ClientOutstanding[]>([]);
   const [campaignData, setCampaignData] = useState<CampaignOutstanding[]>([]);
@@ -58,8 +60,8 @@ export default function ReportOutstanding() {
   });
 
   useEffect(() => {
-    fetchOutstandingData();
-  }, []);
+    if (company?.id) fetchOutstandingData();
+  }, [company?.id]);
 
   const fetchOutstandingData = async () => {
     setLoading(true);
@@ -90,6 +92,7 @@ export default function ReportOutstanding() {
       const { data: invoices, error: invoicesError } = await supabase
         .from("invoices")
         .select("campaign_id, client_name, total_amount, paid_amount, balance_due")
+        .eq("company_id", company!.id)
         .not("status", "in", '("Draft","Cancelled")')
         .not("campaign_id", "is", null);
 
@@ -127,6 +130,7 @@ export default function ReportOutstanding() {
       const { data: monthlyInvoices, error: monthlyError } = await supabase
         .from("invoices")
         .select("billing_month, total_amount, paid_amount, balance_due")
+        .eq("company_id", company!.id)
         .not("status", "in", '("Draft","Cancelled")');
 
       if (monthlyError) throw monthlyError;

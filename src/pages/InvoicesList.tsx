@@ -175,7 +175,7 @@ export default function InvoicesList() {
       const statusMap: Record<string, string[]> = {
         pending: ['Draft', 'Sent', 'Partial'],
         overdue: ['Overdue'],
-        outstanding: ['Draft', 'Sent', 'Partial', 'Overdue'],
+        outstanding: ['Sent', 'Partial', 'Overdue'],
       };
       const mapped = statusMap[statusParam.toLowerCase()] || [statusParam];
       lv.setFilters({ ...advancedFilters, status: mapped } as Record<string, any>);

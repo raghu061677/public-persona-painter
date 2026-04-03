@@ -61,7 +61,8 @@ export default function CampaignBudget() {
               media_asset_code
             )
           `)
-          .eq("campaign_id", id);
+          .eq("campaign_id", id)
+          .eq("is_removed", false);
 
         if (assetsData) {
           // Fetch expenses for this campaign (only needed columns)

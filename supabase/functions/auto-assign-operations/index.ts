@@ -239,11 +239,12 @@ Deno.serve(async (req) => {
       const currentIndex = statusHierarchy.indexOf(currentStatus);
       const shouldUpdateStatus = currentIndex < assignedIndex || currentIndex === -1;
 
-      // Update campaign asset
+      // Update campaign asset with both mounter id and name
       campaignAssetUpdates.push({
         id: campaignAsset.id,
         installation_status: shouldUpdateStatus ? 'Assigned' : currentStatus,
         assigned_mounter_id: bestMounter.id,
+        mounter_name: bestMounter.name,
       });
 
       // Update workload map
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
           .update({
             installation_status: update.installation_status,
             assigned_mounter_id: update.assigned_mounter_id,
+            mounter_name: update.mounter_name,
           })
           .eq('id', update.id);
 

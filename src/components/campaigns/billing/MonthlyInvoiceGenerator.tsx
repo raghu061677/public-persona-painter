@@ -182,8 +182,8 @@ function calculateAssetBilling(
   if (rateType === 'daily') {
     calculatedAmount = billableDays * dailyRate;
   } else {
-    // Monthly pro-rata: (monthly_rate / days_in_month) * billable_days
-    calculatedAmount = (monthlyRate / daysInMonth) * billableDays;
+    // OOH-standard 30-day pro-rata: (monthly_rate / 30) * billable_days
+    calculatedAmount = (monthlyRate / 30) * billableDays;
   }
   
   // Round to 2 decimal places

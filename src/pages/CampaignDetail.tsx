@@ -242,66 +242,7 @@ export default function CampaignDetail() {
     }
   };
 
-  const handleExportProposalExcel = async () => {
-    if (!campaign || activeAssets.length === 0) {
-      toast({ title: "No Assets", description: "No active assets to export.", variant: "destructive" });
-      return;
-    }
-    setExportingProposalExcel(true);
-    try {
-      const assetPricing: Record<string, any> = {};
-      const assets: ProposalAsset[] = activeAssets.map((a: any) => {
-        assetPricing[a.asset_id] = {
-          negotiated_price: a.negotiated_rate || a.card_rate,
-          start_date: a.booking_start_date || a.start_date || campaign.start_date,
-          end_date: a.booking_end_date || a.end_date || campaign.end_date,
-          booked_days: a.booked_days || 30,
-          printing_charges: a.printing_charges || 0,
-          printing_cost: a.printing_charges || 0,
-          mounting_charges: a.mounting_charges || 0,
-          mounting_cost: a.mounting_charges || 0,
-          mounting_mode: 'fixed',
-        };
-        return {
-          id: a.asset_id,
-          location: a.location,
-          direction: a.direction,
-          dimensions: a.dimensions,
-          total_sqft: a.total_sqft,
-          illumination_type: a.illumination_type,
-          card_rate: a.card_rate,
-        };
-      });
-
-      const blob = await generateProposalExcel({
-        planId: campaign.id,
-        planName: campaign.campaign_name || 'Campaign',
-        clientName: campaign.client_name || '',
-        assets,
-        assetPricing,
-        planStartDate: new Date(campaign.start_date),
-        planEndDate: new Date(campaign.end_date),
-        durationDays: campaign.duration_days || 30,
-      });
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Campaign_Proposal_${campaign.campaign_name || campaign.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({ title: "Export Successful", description: "Campaign proposal Excel downloaded." });
-    } catch (error: any) {
-      console.error('Campaign Proposal Excel export error:', error);
-      toast({ title: "Export Failed", description: error.message || "Failed to export.", variant: "destructive" });
-    } finally {
-      setExportingProposalExcel(false);
-    }
-  };
-
+  if (loading || !campaign) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Loading...</p>

@@ -29,13 +29,13 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
       if (campaign.company_id) {
         const { data: company } = await supabase
           .from("companies")
-          .select("name, gstin, address, city, state")
+          .select("name, gstin, city, state")
           .eq("id", campaign.company_id)
           .maybeSingle();
         if (company) {
           companyName = company.name || companyName;
           companyGstin = company.gstin || "";
-          companyAddress = [company.address, company.city, company.state].filter(Boolean).join(", ");
+          companyAddress = [company.city, company.state].filter(Boolean).join(", ");
         }
       }
 

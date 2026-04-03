@@ -205,16 +205,17 @@ export default function InvoicesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
-      .select('*, campaigns:campaign_id(campaign_name)')
+      .select('*, campaigns:campaign_id(campaign_name), clients:client_id(gst_number)')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
     if (error) {
       toast({ title: "Error", description: "Failed to fetch invoices", variant: "destructive" });
     } else {
-      // Flatten campaign_name from joined campaigns
+      // Flatten joined fields for export mapper
       const enriched = (data || []).map((inv: any) => ({
         ...inv,
         campaign_name: inv.campaigns?.campaign_name || inv.campaign_id || null,
+        client_gst_number: inv.client_gstin_snapshot || inv.clients?.gst_number || null,
       }));
       setInvoices(invoiceScopeFilter(enriched));
     }

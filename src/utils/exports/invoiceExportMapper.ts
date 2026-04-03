@@ -62,15 +62,16 @@ const gstPercent = (row: any): number => {
   const taxable = row.sub_total || row.subtotal || row.taxable_amount || 0;
   const gst = row.gst_amount || 0;
   if (taxable > 0 && gst > 0) return Math.round((gst / taxable) * 100);
+  // Check if invoice is zero-rated (INV-Z prefix or no GST)
+  const invId = row.id || "";
+  if (invId.includes("INV-Z") || (gst === 0 && taxable > 0)) return 0;
   return 18;
 };
 
 const deriveTaxable = (row: any): number => {
-  // Direct taxable field
   if (row.sub_total != null && row.sub_total > 0) return Number(row.sub_total);
   if (row.subtotal != null && row.subtotal > 0) return Number(row.subtotal);
   if (row.taxable_amount != null && row.taxable_amount > 0) return Number(row.taxable_amount);
-  // Derive from total minus GST
   const total = row.total_amount || 0;
   const gst = row.gst_amount || 0;
   const roundOff = row.round_off_amount || 0;
@@ -86,15 +87,12 @@ export function normalizeInvoice(row: any, index: number, companyName?: string):
   const cgstAmt = isInterState ? 0 : (row.cgst_amount || 0);
   const sgstAmt = isInterState ? 0 : (row.sgst_amount || 0);
 
-  // Display period from invoice period fields
   const periodStart = fmtDate(row.invoice_period_start || row.billing_from || row.start_date);
   const periodEnd = fmtDate(row.invoice_period_end || row.billing_to || row.end_date);
   const displayPeriod = periodStart && periodEnd ? `${periodStart} to ${periodEnd}` : periodStart || periodEnd || "";
 
-  // GSTIN: snapshot first, then joined client gst_number
   const gstin = row.client_gstin_snapshot || row.client_gst_number || row.client_gstin || row.gstin || "";
 
-  // Overdue calculation
   let overdueDays = 0;
   let overdueAmount = 0;
   if (row.due_date && row.status !== "Paid" && row.status !== "Cancelled") {
@@ -149,6 +147,120 @@ export function normalizeInvoices(rows: any[], companyName?: string): Normalized
   return filtered.map((r, i) => normalizeInvoice(r, i, companyName));
 }
 
+// ─── Period Filtering ──────────────────────────────────────────────────
+export type PeriodType = "current_view" | "custom_range" | "exact_month" | "financial_quarter" | "financial_year";
+
+export interface PeriodConfig {
+  type: PeriodType;
+  dateFrom?: string;
+  dateTo?: string;
+  month?: string; // "2025-04"
+  quarter?: string; // "Q1" | "Q2" | "Q3" | "Q4"
+  fy?: string; // "2025-26"
+}
+
+export function getMonthRange(monthKey: string): { from: string; to: string; label: string } {
+  const [y, m] = monthKey.split("-").map(Number);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0); // last day
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return {
+    from: format(start, "yyyy-MM-dd"),
+    to: format(end, "yyyy-MM-dd"),
+    label: `${months[m - 1]} ${y}`,
+  };
+}
+
+export function getFYQuarterRange(quarter: string, fy: string): { from: string; to: string; label: string } {
+  const [startYear] = fy.split("-").map(Number);
+  const qMap: Record<string, { m1: number; m2: number; y: number }> = {
+    Q1: { m1: 3, m2: 5, y: startYear }, // Apr-Jun
+    Q2: { m1: 6, m2: 8, y: startYear }, // Jul-Sep
+    Q3: { m1: 9, m2: 11, y: startYear }, // Oct-Dec
+    Q4: { m1: 0, m2: 2, y: startYear + 1 }, // Jan-Mar
+  };
+  const q = qMap[quarter] || qMap.Q1;
+  const from = new Date(q.y, q.m1, 1);
+  const to = new Date(q.y, q.m2 + 1, 0);
+  return { from: format(from, "yyyy-MM-dd"), to: format(to, "yyyy-MM-dd"), label: `${quarter} FY${fy}` };
+}
+
+export function getFYRange(fy: string): { from: string; to: string; label: string } {
+  const [startYear] = fy.split("-").map(Number);
+  return {
+    from: `${startYear}-04-01`,
+    to: `${startYear + 1}-03-31`,
+    label: `FY ${fy}`,
+  };
+}
+
+export function filterByPeriod(
+  data: NormalizedInvoice[],
+  period: PeriodConfig,
+  dateBasis: DateBasis,
+): NormalizedInvoice[] {
+  if (period.type === "current_view") return data;
+
+  let from = "", to = "";
+  if (period.type === "custom_range") {
+    from = period.dateFrom || "";
+    to = period.dateTo || "";
+  } else if (period.type === "exact_month" && period.month) {
+    const range = getMonthRange(period.month);
+    from = range.from;
+    to = range.to;
+  } else if (period.type === "financial_quarter" && period.quarter && period.fy) {
+    const range = getFYQuarterRange(period.quarter, period.fy);
+    from = range.from;
+    to = range.to;
+  } else if (period.type === "financial_year" && period.fy) {
+    const range = getFYRange(period.fy);
+    from = range.from;
+    to = range.to;
+  }
+
+  if (!from && !to) return data;
+
+  return data.filter((inv) => {
+    let dateRaw = "";
+    switch (dateBasis) {
+      case "billing_period": dateRaw = inv.raw.billing_month || inv.invoice_date_raw; break;
+      case "due_date": dateRaw = inv.due_date_raw; break;
+      default: dateRaw = inv.invoice_date_raw;
+    }
+    if (!dateRaw) return false;
+    const d = dateRaw.substring(0, 10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+}
+
+export function getPeriodLabel(period: PeriodConfig): string {
+  if (period.type === "current_view") return "Current View";
+  if (period.type === "exact_month" && period.month) return getMonthRange(period.month).label;
+  if (period.type === "financial_quarter" && period.quarter && period.fy)
+    return getFYQuarterRange(period.quarter, period.fy).label;
+  if (period.type === "financial_year" && period.fy) return getFYRange(period.fy).label;
+  if (period.type === "custom_range") {
+    const f = period.dateFrom ? fmtDate(period.dateFrom) : "";
+    const t = period.dateTo ? fmtDate(period.dateTo) : "";
+    return `${f} to ${t}`;
+  }
+  return "";
+}
+
+export function getPeriodFileSlug(period: PeriodConfig): string {
+  if (period.type === "exact_month" && period.month) {
+    const [y, m] = period.month.split("-");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[Number(m) - 1]}${y}`;
+  }
+  if (period.type === "financial_quarter" && period.quarter && period.fy) return `${period.quarter}_FY${period.fy}`;
+  if (period.type === "financial_year" && period.fy) return `FY${period.fy}`;
+  return "";
+}
+
 // ─── Aggregation Types ─────────────────────────────────────────────────
 export interface SummaryRow {
   label: string;
@@ -164,9 +276,11 @@ export interface SummaryRow {
   balanceDue: number;
   overdueAmount: number;
   displayPeriod?: string;
+  oldestDueDate?: string;
 }
 
 function buildSummary(label: string, items: NormalizedInvoice[], subLabel?: string, displayPeriod?: string): SummaryRow {
+  const dueDates = items.map(i => i.due_date_raw).filter(Boolean).sort();
   return {
     label,
     subLabel,
@@ -181,6 +295,7 @@ function buildSummary(label: string, items: NormalizedInvoice[], subLabel?: stri
     balanceDue: items.reduce((s, r) => s + r.balance_due, 0),
     overdueAmount: items.reduce((s, r) => s + r.overdue_amount, 0),
     displayPeriod,
+    oldestDueDate: dueDates[0] ? fmtDate(dueDates[0]) : "",
   };
 }
 
@@ -239,7 +354,6 @@ function getIndianFYQuarter(dateKey: string): string {
   if (month >= 4 && month <= 6) return `Q1 (Apr-Jun ${year})`;
   if (month >= 7 && month <= 9) return `Q2 (Jul-Sep ${year})`;
   if (month >= 10 && month <= 12) return `Q3 (Oct-Dec ${year})`;
-  // Jan-Mar belongs to previous FY
   return `Q4 (Jan-Mar ${year})`;
 }
 
@@ -281,7 +395,6 @@ export function aggregateCampaignwise(data: NormalizedInvoice[]): SummaryRow[] {
   const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   return sorted.map(([campId, items]) => {
     const campName = items[0]?.campaign_display || campId;
-    // Aggregate display period: min start to max end
     const starts = items.map(i => i.raw.invoice_period_start).filter(Boolean).sort();
     const ends = items.map(i => i.raw.invoice_period_end).filter(Boolean).sort();
     const dp = starts[0] && ends[ends.length - 1]
@@ -291,8 +404,124 @@ export function aggregateCampaignwise(data: NormalizedInvoice[]): SummaryRow[] {
   });
 }
 
+// ─── GST Rate-wise Aggregation ─────────────────────────────────────────
+export function aggregateGstRatewise(data: NormalizedInvoice[]): SummaryRow[] {
+  const groups = new Map<number, NormalizedInvoice[]>();
+  for (const inv of data) {
+    const rate = inv.rate_percent;
+    if (!groups.has(rate)) groups.set(rate, []);
+    groups.get(rate)!.push(inv);
+  }
+  const sorted = Array.from(groups.entries()).sort((a, b) => a[0] - b[0]);
+  return sorted.map(([rate, items]) => buildSummary(`${rate}%`, items));
+}
+
+// ─── B2B Summary (has GSTIN) ───────────────────────────────────────────
+export function aggregateB2B(data: NormalizedInvoice[]): SummaryRow[] {
+  const b2b = data.filter(i => i.client_gstin && i.client_gstin.length >= 15);
+  const groups = new Map<string, NormalizedInvoice[]>();
+  for (const inv of b2b) {
+    const key = inv.client_gstin;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(inv);
+  }
+  const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  return sorted.map(([gstin, items]) => {
+    const name = items[0]?.client_name || "";
+    const state = items[0]?.place_of_supply || "";
+    return buildSummary(name, items, gstin, state);
+  });
+}
+
+// ─── B2C Summary (no GSTIN) ────────────────────────────────────────────
+export function aggregateB2C(data: NormalizedInvoice[]): SummaryRow[] {
+  const b2c = data.filter(i => !i.client_gstin || i.client_gstin.length < 15);
+  const groups = new Map<string, NormalizedInvoice[]>();
+  for (const inv of b2c) {
+    const key = inv.place_of_supply || "Unknown State";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(inv);
+  }
+  const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  return sorted.map(([state, items]) => buildSummary(state, items));
+}
+
+// ─── State-wise Tax Summary ────────────────────────────────────────────
+export function aggregateStatewise(data: NormalizedInvoice[]): SummaryRow[] {
+  const groups = new Map<string, NormalizedInvoice[]>();
+  for (const inv of data) {
+    const key = inv.place_of_supply || "Unknown";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(inv);
+  }
+  const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  return sorted.map(([state, items]) => buildSummary(state, items));
+}
+
+// ─── Outstanding Filters ───────────────────────────────────────────────
+export function filterOutstandingOnly(data: NormalizedInvoice[]): NormalizedInvoice[] {
+  return data.filter(i => i.balance_due > 0 && i.status !== "Paid" && i.status !== "Cancelled");
+}
+
+export function filterOverdueOnly(data: NormalizedInvoice[]): NormalizedInvoice[] {
+  return data.filter(i =>
+    i.overdue_days > 0 && i.balance_due > 0 &&
+    (i.status === "Sent" || i.status === "Partial" || i.status === "Overdue")
+  );
+}
+
+// ─── Aging Aggregation ─────────────────────────────────────────────────
+export function aggregateAging(data: NormalizedInvoice[]): SummaryRow[] {
+  const outstanding = filterOutstandingOnly(data);
+  const buckets: Record<string, NormalizedInvoice[]> = {
+    "0-30 days": [],
+    "31-60 days": [],
+    "61-90 days": [],
+    "90+ days": [],
+  };
+  for (const inv of outstanding) {
+    if (inv.overdue_days <= 0) continue; // not yet due
+    if (inv.overdue_days <= 30) buckets["0-30 days"].push(inv);
+    else if (inv.overdue_days <= 60) buckets["31-60 days"].push(inv);
+    else if (inv.overdue_days <= 90) buckets["61-90 days"].push(inv);
+    else buckets["90+ days"].push(inv);
+  }
+  return Object.entries(buckets).map(([bucket, items]) => buildSummary(bucket, items));
+}
+
+// ─── Client-wise Outstanding ───────────────────────────────────────────
+export function aggregateClientOutstanding(data: NormalizedInvoice[]): SummaryRow[] {
+  const outstanding = filterOutstandingOnly(data);
+  return aggregateClientwise(outstanding);
+}
+
+// ─── Campaign-wise Receivables ─────────────────────────────────────────
+export function aggregateCampaignReceivables(data: NormalizedInvoice[]): SummaryRow[] {
+  const outstanding = filterOutstandingOnly(data);
+  return aggregateCampaignwise(outstanding);
+}
+
+// ─── GST Invoice-wise Summary (GSTR-ready) ─────────────────────────────
+// This returns detailed rows, not summary — handled differently in formatters
+
 // ─── Reconciliation Check ──────────────────────────────────────────────
-export function checkReconciliation(data: NormalizedInvoice[]): { hasWarning: boolean; mismatchCount: number } {
+export interface ReconciliationResult {
+  hasWarning: boolean;
+  mismatchCount: number;
+  totalRecords: number;
+  taxableTotal: number;
+  totalTax: number;
+  igstTotal: number;
+  cgstTotal: number;
+  sgstTotal: number;
+  grossTotal: number;
+  paidTotal: number;
+  creditedTotal: number;
+  balanceDueTotal: number;
+  overdueTotal: number;
+}
+
+export function checkReconciliation(data: NormalizedInvoice[]): ReconciliationResult {
   let mismatchCount = 0;
   for (const inv of data) {
     const computed = inv.taxable_value + inv.igst + inv.cgst + inv.sgst + inv.round_off;
@@ -300,11 +529,40 @@ export function checkReconciliation(data: NormalizedInvoice[]): { hasWarning: bo
       mismatchCount++;
     }
   }
-  return { hasWarning: mismatchCount > 0, mismatchCount };
+  return {
+    hasWarning: mismatchCount > 0,
+    mismatchCount,
+    totalRecords: data.length,
+    taxableTotal: data.reduce((s, r) => s + r.taxable_value, 0),
+    totalTax: data.reduce((s, r) => s + r.igst + r.cgst + r.sgst, 0),
+    igstTotal: data.reduce((s, r) => s + r.igst, 0),
+    cgstTotal: data.reduce((s, r) => s + r.cgst, 0),
+    sgstTotal: data.reduce((s, r) => s + r.sgst, 0),
+    grossTotal: data.reduce((s, r) => s + r.total_value, 0),
+    paidTotal: data.reduce((s, r) => s + r.paid_amount, 0),
+    creditedTotal: data.reduce((s, r) => s + r.credited_amount, 0),
+    balanceDueTotal: data.reduce((s, r) => s + r.balance_due, 0),
+    overdueTotal: data.reduce((s, r) => s + r.overdue_amount, 0),
+  };
 }
 
-// ─── Export Types ──────────────────────────────────────────────────────
-export type ExportType = "detailed" | "monthwise" | "quarterwise" | "clientwise" | "campaignwise";
+// ─── Export Types (extended) ───────────────────────────────────────────
+export type ExportType =
+  | "detailed"
+  | "monthwise"
+  | "quarterwise"
+  | "clientwise"
+  | "campaignwise"
+  | "gst_ratewise"
+  | "gst_b2b"
+  | "gst_b2c"
+  | "gst_statewise"
+  | "gst_invoicewise"
+  | "outstanding_detailed"
+  | "outstanding_overdue"
+  | "outstanding_clientwise"
+  | "outstanding_aging"
+  | "outstanding_campaignwise";
 
 export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
   detailed: "Detailed Invoice Export",
@@ -312,6 +570,22 @@ export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
   quarterwise: "Quarter-wise Summary",
   clientwise: "Client-wise Summary",
   campaignwise: "Campaign-wise Summary",
+  gst_ratewise: "GST Rate-wise Summary",
+  gst_b2b: "GST B2B Summary",
+  gst_b2c: "GST B2C Summary",
+  gst_statewise: "State-wise Tax Summary",
+  gst_invoicewise: "Invoice-wise GST Summary",
+  outstanding_detailed: "Outstanding Detailed",
+  outstanding_overdue: "Overdue Only",
+  outstanding_clientwise: "Client-wise Outstanding",
+  outstanding_aging: "Aging Summary",
+  outstanding_campaignwise: "Campaign-wise Receivables",
+};
+
+export const EXPORT_TYPE_GROUPS: Record<string, ExportType[]> = {
+  "Invoice Reports": ["detailed", "monthwise", "quarterwise", "clientwise", "campaignwise"],
+  "GST / GSTR Reports": ["gst_ratewise", "gst_b2b", "gst_b2c", "gst_statewise", "gst_invoicewise"],
+  "Outstanding / Receivables": ["outstanding_detailed", "outstanding_overdue", "outstanding_clientwise", "outstanding_aging", "outstanding_campaignwise"],
 };
 
 export const EXPORT_TYPE_SHEET_NAMES: Record<ExportType, string> = {
@@ -320,6 +594,16 @@ export const EXPORT_TYPE_SHEET_NAMES: Record<ExportType, string> = {
   quarterwise: "Quarter Summary",
   clientwise: "Client Summary",
   campaignwise: "Campaign Summary",
+  gst_ratewise: "GST Rate Summary",
+  gst_b2b: "B2B Summary",
+  gst_b2c: "B2C Summary",
+  gst_statewise: "State Tax Summary",
+  gst_invoicewise: "GST Invoice Detail",
+  outstanding_detailed: "Outstanding Detail",
+  outstanding_overdue: "Overdue Invoices",
+  outstanding_clientwise: "Client Outstanding",
+  outstanding_aging: "Aging Summary",
+  outstanding_campaignwise: "Campaign Receivables",
 };
 
 export const EXPORT_TYPE_FILE_SLUGS: Record<ExportType, string> = {
@@ -328,6 +612,16 @@ export const EXPORT_TYPE_FILE_SLUGS: Record<ExportType, string> = {
   quarterwise: "Quarterwise",
   clientwise: "Clientwise",
   campaignwise: "Campaignwise",
+  gst_ratewise: "GSTRatewise",
+  gst_b2b: "GST_B2B",
+  gst_b2c: "GST_B2C",
+  gst_statewise: "GSTStatewise",
+  gst_invoicewise: "GSTSummary",
+  outstanding_detailed: "Outstanding",
+  outstanding_overdue: "Overdue",
+  outstanding_clientwise: "OutstandingClient",
+  outstanding_aging: "Aging",
+  outstanding_campaignwise: "CampaignReceivables",
 };
 
 // Summary column definitions
@@ -346,7 +640,6 @@ export const SUMMARY_COLUMNS = [
   { key: "overdueAmount", label: "Overdue Amount", width: 14, type: "currency" as const },
 ];
 
-// Campaign summary has extra displayPeriod column
 export const CAMPAIGN_SUMMARY_COLUMNS = [
   { key: "label", label: "Campaign Name", width: 28 },
   { key: "subLabel", label: "Campaign ID", width: 20 },
@@ -362,7 +655,6 @@ export const CAMPAIGN_SUMMARY_COLUMNS = [
   { key: "balanceDue", label: "Balance Due", width: 14, type: "currency" as const },
 ];
 
-// Client summary: first col = Client Name, sub = GST No
 export const CLIENT_SUMMARY_COLUMNS = [
   { key: "label", label: "Client Name", width: 28 },
   { key: "subLabel", label: "GST No", width: 20 },
@@ -377,3 +669,124 @@ export const CLIENT_SUMMARY_COLUMNS = [
   { key: "balanceDue", label: "Balance Due", width: 14, type: "currency" as const },
   { key: "overdueAmount", label: "Overdue Amount", width: 14, type: "currency" as const },
 ];
+
+export const OUTSTANDING_DETAIL_COLUMNS = [
+  { key: "label", label: "Client Name", width: 28 },
+  { key: "subLabel", label: "GST No", width: 20 },
+  { key: "invoiceCount", label: "Invoice Count", width: 12, type: "number" as const },
+  { key: "taxableValue", label: "Total Invoiced", width: 16, type: "currency" as const },
+  { key: "paidAmount", label: "Paid Amount", width: 14, type: "currency" as const },
+  { key: "creditedAmount", label: "Credited Amount", width: 14, type: "currency" as const },
+  { key: "balanceDue", label: "Balance Due", width: 14, type: "currency" as const },
+  { key: "overdueAmount", label: "Overdue Amount", width: 14, type: "currency" as const },
+  { key: "oldestDueDate", label: "Oldest Due Date", width: 14 },
+];
+
+export const AGING_COLUMNS = [
+  { key: "label", label: "Bucket", width: 20 },
+  { key: "invoiceCount", label: "Invoice Count", width: 12, type: "number" as const },
+  { key: "balanceDue", label: "Balance Due", width: 16, type: "currency" as const },
+];
+
+// ─── Get summary columns for export type ───────────────────────────────
+export function getSummaryColumnsForType(exportType: ExportType) {
+  switch (exportType) {
+    case "campaignwise":
+    case "outstanding_campaignwise":
+      return CAMPAIGN_SUMMARY_COLUMNS;
+    case "clientwise":
+    case "outstanding_clientwise":
+    case "gst_b2b":
+      return CLIENT_SUMMARY_COLUMNS;
+    case "outstanding_aging":
+      return AGING_COLUMNS;
+    case "outstanding_detailed":
+    case "outstanding_overdue":
+      return OUTSTANDING_DETAIL_COLUMNS;
+    default:
+      return SUMMARY_COLUMNS;
+  }
+}
+
+// ─── Resolve summary data for any export type ──────────────────────────
+export function resolveSummaryData(
+  data: NormalizedInvoice[],
+  exportType: ExportType,
+  dateBasis: DateBasis = "invoice_date",
+): SummaryRow[] {
+  switch (exportType) {
+    case "monthwise": return aggregateMonthwise(data, dateBasis);
+    case "quarterwise": return aggregateQuarterwise(data, dateBasis);
+    case "clientwise": return aggregateClientwise(data);
+    case "campaignwise": return aggregateCampaignwise(data);
+    case "gst_ratewise": return aggregateGstRatewise(data);
+    case "gst_b2b": return aggregateB2B(data);
+    case "gst_b2c": return aggregateB2C(data);
+    case "gst_statewise": return aggregateStatewise(data);
+    case "outstanding_clientwise": return aggregateClientOutstanding(data);
+    case "outstanding_aging": return aggregateAging(data);
+    case "outstanding_campaignwise": return aggregateCampaignReceivables(data);
+    default: return [];
+  }
+}
+
+// ─── Check if export type is a "detailed" row-per-invoice mode ─────────
+export function isDetailedExportType(et: ExportType): boolean {
+  return et === "detailed" || et === "gst_invoicewise" || et === "outstanding_detailed" || et === "outstanding_overdue";
+}
+
+// ─── Pre-filter data for outstanding export types ──────────────────────
+export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType): NormalizedInvoice[] {
+  if (et.startsWith("outstanding_")) {
+    if (et === "outstanding_overdue") return filterOverdueOnly(data);
+    return filterOutstandingOnly(data);
+  }
+  return data;
+}
+
+// ─── GST invoice-wise default column keys ──────────────────────────────
+export const GST_INVOICEWISE_KEYS = [
+  "sno", "invoice_number", "invoice_date", "client_name", "client_gstin",
+  "place_of_supply", "taxable_value", "rate_percent", "igst", "cgst", "sgst", "total_value",
+];
+
+export const OUTSTANDING_DETAIL_KEYS = [
+  "sno", "invoice_number", "invoice_date", "client_name", "campaign_display",
+  "due_date", "total_value", "paid_amount", "credited_amount", "balance_due", "overdue_days", "status",
+];
+
+// ─── Export Presets ────────────────────────────────────────────────────
+export interface ExportPreset {
+  id: string;
+  name: string;
+  exportType: ExportType;
+  dateBasis: DateBasis;
+  period: PeriodConfig;
+  columns: string[];
+  isDefault?: boolean;
+}
+
+const PRESET_LS_KEY = "invoice_export_presets";
+
+export function loadExportPresets(): ExportPreset[] {
+  try {
+    const raw = localStorage.getItem(PRESET_LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* */ }
+  return getSystemPresets();
+}
+
+export function saveExportPresets(presets: ExportPreset[]) {
+  localStorage.setItem(PRESET_LS_KEY, JSON.stringify(presets));
+}
+
+export function getSystemPresets(): ExportPreset[] {
+  const base: PeriodConfig = { type: "current_view" };
+  return [
+    { id: "sys_ca", name: "CA Format", exportType: "gst_invoicewise", dateBasis: "invoice_date", period: base, columns: GST_INVOICEWISE_KEYS },
+    { id: "sys_mgmt", name: "Management Format", exportType: "monthwise", dateBasis: "invoice_date", period: base, columns: [] },
+    { id: "sys_client_ledger", name: "Client-wise Ledger", exportType: "clientwise", dateBasis: "invoice_date", period: base, columns: [] },
+    { id: "sys_gst_review", name: "GST Review", exportType: "gst_ratewise", dateBasis: "invoice_date", period: base, columns: [] },
+    { id: "sys_outstanding", name: "Outstanding Follow-up", exportType: "outstanding_detailed", dateBasis: "invoice_date", period: base, columns: OUTSTANDING_DETAIL_KEYS },
+  ];
+}

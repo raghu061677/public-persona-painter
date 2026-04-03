@@ -202,13 +202,18 @@ export default function InvoicesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
-      .select('*')
+      .select('*, campaigns:campaign_id(campaign_name)')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
     if (error) {
       toast({ title: "Error", description: "Failed to fetch invoices", variant: "destructive" });
     } else {
-      setInvoices(invoiceScopeFilter(data || []));
+      // Flatten campaign_name from joined campaigns
+      const enriched = (data || []).map((inv: any) => ({
+        ...inv,
+        campaign_name: inv.campaigns?.campaign_name || inv.campaign_id || null,
+      }));
+      setInvoices(invoiceScopeFilter(enriched));
     }
     setLoading(false);
   };

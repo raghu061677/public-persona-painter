@@ -995,6 +995,13 @@ export default function CampaignEdit() {
           const assetUpdate = assetUpdates.get(asset.id);
           if (!assetUpdate) return asset;
           
+          // Block financial changes on invoiced assets
+          const hasFinancialChange = 'negotiated_price' in assetUpdate || 'printing_charges' in assetUpdate || 'mounting_charges' in assetUpdate;
+          if (hasFinancialChange && isAssetInvoiceLocked(asset)) {
+            console.warn(`Skipping bulk financial update for invoiced asset ${asset.media_asset_code}`);
+            return asset;
+          }
+          
           // Map from dialog field names to campaign asset field names
           const mappedUpdate: Record<string, any> = {};
           

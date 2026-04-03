@@ -272,6 +272,7 @@ Deno.serve(async (req) => {
           .update({
             installation_status: update.installation_status,
             assigned_mounter_id: update.assigned_mounter_id,
+            mounter_name: update.mounter_name,
           })
           .eq('id', update.id);
 

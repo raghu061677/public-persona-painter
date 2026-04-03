@@ -26,8 +26,13 @@ import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDia
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {
-  const { id, encodedId } = useParams();
-  const invoiceId = encodedId ? decodeURIComponent(encodedId) : id;
+  const { id, encodedId, '*': wildcardPath } = useParams();
+  const location = useLocation();
+  // Support 3 route patterns:
+  // 1. /invoices/view/:encodedId (encoded, preferred)
+  // 2. /invoices/:id (simple IDs without slashes)
+  // 3. /invoices/* (catch-all for unencoded IDs with slashes like INV/2026-27/0002)
+  const invoiceId = encodedId ? decodeURIComponent(encodedId) : id || wildcardPath || null;
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);

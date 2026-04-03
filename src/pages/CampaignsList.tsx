@@ -18,10 +18,11 @@ import { CampaignQuickChips } from "@/components/campaigns/CampaignQuickChips";
 import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal, AlertTriangle } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
@@ -42,6 +43,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTableHead, SortConfig } from "@/components/common/SortableTableHead";
+import { CampaignInvoiceStatusBadge, CampaignInvoiceProgress } from "@/components/campaigns/CampaignInvoiceStatusBadge";
+import {
+  computeCampaignInvoiceStatus,
+  type InvoiceSummaryRow,
+  type CampaignInvoiceStatus,
+  formatBillingMonth,
+} from "@/utils/campaignInvoiceStatus";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function CampaignsList() {
   const navigate = useNavigate();

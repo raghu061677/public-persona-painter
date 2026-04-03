@@ -42,6 +42,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportMode, setExportMode] = useState<"excel" | "pdf">("excel");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();
@@ -426,7 +427,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowExportDialog(true)}
+              onClick={() => { setExportMode("excel"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export Excel
@@ -434,7 +435,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleExportPdf(filteredInvoices)}
+              onClick={() => { setExportMode("pdf"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export PDF
@@ -716,6 +717,16 @@ export default function InvoicesList() {
         onClose={() => setShowExportDialog(false)}
         invoices={filteredInvoices}
         companyName={company?.name}
+        initialMode={exportMode}
+        branding={{
+          companyName: company?.name || "Company",
+          address: [company?.address_line1, company?.address_line2, company?.city, company?.state, company?.pincode].filter(Boolean).join(", ") || undefined,
+          gstin: company?.gstin || undefined,
+          email: company?.email || undefined,
+          phone: company?.phone || undefined,
+          logoUrl: company?.logo_url || undefined,
+          themeColor: company?.theme_color || undefined,
+        }}
       />
     </ModuleGuard>
   );

@@ -160,7 +160,7 @@ export default function CampaignDetail() {
       const [mediaAssetsResult, photoCountsResult] = await Promise.all([
         supabase
           .from('media_assets')
-          .select('id, total_sqft, media_asset_code')
+          .select('id, total_sqft, media_asset_code, direction, illumination_type, dimensions')
           .in('id', assetIds),
         supabase
           .from('media_photos')

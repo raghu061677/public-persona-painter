@@ -42,6 +42,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportMode, setExportMode] = useState<"excel" | "pdf">("excel");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();

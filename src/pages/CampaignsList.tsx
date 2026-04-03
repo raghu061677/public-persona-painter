@@ -639,6 +639,22 @@ export default function CampaignsList() {
                               ? formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
                               : <span className="text-muted-foreground select-none">••••••</span>}
                           </TableCell>
+                          {/* Invoice Status */}
+                          <TableCell className={`px-4 py-3 text-center ${getCellClassName()}`}>
+                            {(() => {
+                              const invResult = campaignInvoiceStatuses.get(campaign.id);
+                              if (!invResult) return <span className="text-xs text-muted-foreground">—</span>;
+                              return <CampaignInvoiceStatusBadge result={invResult} />;
+                            })()}
+                          </TableCell>
+                          {/* Invoice Progress */}
+                          <TableCell className={`px-4 py-3 text-center ${getCellClassName()}`}>
+                            {(() => {
+                              const invResult = campaignInvoiceStatuses.get(campaign.id);
+                              if (!invResult) return <span className="text-xs text-muted-foreground">—</span>;
+                              return <CampaignInvoiceProgress result={invResult} />;
+                            })()}
+                          </TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/${campaign.id}`)} title="View Campaign"><Eye className="h-4 w-4" /></Button>

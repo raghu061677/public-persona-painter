@@ -14308,7 +14308,7 @@ export type Database = {
         | { Args: { p_draft_id: string; p_gst_rate?: number }; Returns: string }
         | {
             Args: {
-              p_company_id?: string
+              p_company_id: string
               p_draft_id: string
               p_gst_rate: number
             }

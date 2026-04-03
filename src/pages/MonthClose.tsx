@@ -691,7 +691,7 @@ function InvoiceTable({ title, invoices, loading, navigate, statusColor }: {
                     <TableCell className="text-right text-sm">{inr(inv.balance_due)}</TableCell>
                     <TableCell><Badge variant="outline" className={statusColor(inv.status)}>{inv.status}</Badge></TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/invoices/${inv.id}`)}>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(inv.id)}`)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>

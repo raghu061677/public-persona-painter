@@ -871,8 +871,8 @@ export default function ClientDetail() {
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">
                             <a
-                              href={`/admin/invoices/${invoice.id}`}
-                              onClick={(e) => { e.preventDefault(); navigate(`/admin/invoices/${invoice.id}`); }}
+                              href={`/admin/invoices/view/${encodeURIComponent(invoice.id)}`}
+                              onClick={(e) => { e.preventDefault(); navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`); }}
                               className="text-primary hover:underline cursor-pointer"
                             >
                               {invoice.id}

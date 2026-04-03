@@ -89,10 +89,29 @@ export default function CampaignDetail() {
     return () => setBreadcrumbs(null);
   }, [campaign]);
 
+  const fetchInvoiceSummaries = async () => {
+    if (!campaign?.company_id) return;
+    const { data } = await supabase
+      .from('invoices')
+      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at')
+      .eq('company_id', campaign.company_id)
+      .eq('campaign_id', campaign.id);
+    setInvoiceSummaries((data || []) as InvoiceSummaryRow[]);
+  };
+
+  const invoiceStatusResult = campaign?.start_date && campaign?.end_date
+    ? computeCampaignInvoiceStatus(campaign, invoiceSummaries)
+    : null;
+
   const refreshData = () => {
     fetchCampaign();
     fetchCampaignAssets();
+    if (campaign) fetchInvoiceSummaries();
   };
+
+  useEffect(() => {
+    if (campaign?.id) fetchInvoiceSummaries();
+  }, [campaign?.id]);
 
   useEffect(() => {
     if (!id || resolving) return;

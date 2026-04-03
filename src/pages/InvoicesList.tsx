@@ -640,6 +640,18 @@ export default function InvoicesList() {
                                 {invoice.client_name}
                               </button>
                             </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {invoice.campaign_id ? (
+                                <button
+                                  onClick={() => navigate(`/admin/campaigns/${invoice.campaign_id}`)}
+                                  className="text-foreground hover:text-primary hover:underline transition-colors text-sm"
+                                >
+                                  {invoice.campaign_name || invoice.campaign_id}
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              )}
+                            </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
                             <TableCell className="px-4 py-3">

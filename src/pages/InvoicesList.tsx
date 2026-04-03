@@ -720,7 +720,7 @@ export default function InvoicesList() {
         initialMode={exportMode}
         branding={{
           companyName: company?.name || "Company",
-          address: company?.address || undefined,
+          address: [company?.address_line1, company?.address_line2, company?.city, company?.state, company?.pincode].filter(Boolean).join(", ") || undefined,
           gstin: company?.gstin || undefined,
           email: company?.email || undefined,
           phone: company?.phone || undefined,

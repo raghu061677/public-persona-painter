@@ -56,6 +56,8 @@ export default function CampaignsList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummaryRow[]>([]);
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<CampaignInvoiceStatus | "all">("all");
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: campaignScopeFilter } = useScopedQuery('campaigns', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });

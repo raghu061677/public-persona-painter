@@ -593,11 +593,11 @@ export default function CampaignsList() {
                   </TableHeader>
                   <TableBody>
                     {!settingsReady ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8">
+                      <TableRow><TableCell colSpan={11} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /><p className="text-muted-foreground">Loading campaigns...</p></div>
                       </TableCell></TableRow>
                     ) : filteredCampaigns.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-12">
+                      <TableRow><TableCell colSpan={11} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <FileText className="h-12 w-12 text-muted-foreground/50" />
                           <p className="text-muted-foreground font-medium">No campaigns found</p>

@@ -717,6 +717,16 @@ export default function InvoicesList() {
         onClose={() => setShowExportDialog(false)}
         invoices={filteredInvoices}
         companyName={company?.name}
+        initialMode={exportMode}
+        branding={{
+          companyName: company?.name || "Company",
+          address: company?.address || undefined,
+          gstin: company?.gstin || undefined,
+          email: company?.email || undefined,
+          phone: company?.phone || undefined,
+          logoUrl: company?.logo_url || undefined,
+          themeColor: company?.theme_color || undefined,
+        }}
       />
     </ModuleGuard>
   );

@@ -524,6 +524,15 @@ export default function CampaignEdit() {
     
     // Recalculate total_price when price fields change
     if (field === 'negotiated_rate' || field === 'printing_charges' || field === 'mounting_charges') {
+      // Block financial changes on invoiced assets
+      if (isAssetInvoiceLocked(updated[index]) && LOCKED_FINANCIAL_FIELDS.includes(field)) {
+        toast({
+          title: "Field Locked",
+          description: `Cannot change ${field.replace(/_/g, ' ')} — this asset has already been invoiced for months: ${updated[index].invoice_generated_months?.join(', ')}. Use credit notes to adjust.`,
+          variant: "destructive",
+        });
+        return;
+      }
       // Keep mounting_cost in sync with mounting_charges
       if (field === 'mounting_charges') {
         updated[index].mounting_cost = Number(value) || 0;

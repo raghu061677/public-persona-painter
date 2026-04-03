@@ -71,7 +71,7 @@ export function MonthCloseWidget() {
       const [invoicesRes, expensesRes, batchRes] = await Promise.all([
         supabase
           .from("invoices")
-          .select("id, status, total_amount")
+          .select("id, status, total_amount, balance_due")
           .eq("company_id", companyId!)
           .gte("invoice_date", monthStart)
           .lte("invoice_date", monthEnd),

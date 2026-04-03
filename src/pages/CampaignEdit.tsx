@@ -417,9 +417,10 @@ export default function CampaignEdit() {
           printing_rate_per_sqft: printingRatePerSqft,
           mounting_rate_per_sqft: mountingRatePerSqft,
           printing_cost: printingCharges,
-          mounting_cost: mountingCharges,
-          dimensions: assetData?.dimensions || asset.dimensions || '',
-        };
+           mounting_cost: mountingCharges,
+           dimensions: assetData?.dimensions || asset.dimensions || '',
+           invoice_generated_months: asset.invoice_generated_months || [],
+         };
       }));
     } else if (!assets || assets.length === 0) {
       // Fallback: try to fetch from campaign_items for plan-converted campaigns

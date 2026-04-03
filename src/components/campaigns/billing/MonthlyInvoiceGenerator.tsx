@@ -354,10 +354,10 @@ export function MonthlyInvoiceGenerator({
   const billingPreviews = useMemo(() => {
     if (!selectedMonth) return [];
     
-    return campaignAssets
+    return activeAssets
       .map(asset => calculateAssetBilling(asset, selectedMonth, assetCodePrefix))
       .filter((preview): preview is AssetBillingPreview => preview !== null);
-  }, [campaignAssets, selectedMonth, assetCodePrefix]);
+  }, [activeAssets, selectedMonth, assetCodePrefix]);
   
   // Filter based on already invoiced toggle
   const filteredPreviews = useMemo(() => {

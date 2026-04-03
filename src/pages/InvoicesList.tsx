@@ -36,7 +36,7 @@ import { InvoicesSummaryBar } from "@/components/invoices/InvoicesSummaryBar";
 
 const INVOICE_STATUSES = ['Draft', 'Sent', 'Partial', 'Paid', 'Overdue', 'Cancelled'];
 
-type SortField = 'id' | 'client_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
+type SortField = 'id' | 'client_name' | 'campaign_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
@@ -202,13 +202,18 @@ export default function InvoicesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
-      .select('*')
+      .select('*, campaigns:campaign_id(campaign_name)')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
     if (error) {
       toast({ title: "Error", description: "Failed to fetch invoices", variant: "destructive" });
     } else {
-      setInvoices(invoiceScopeFilter(data || []));
+      // Flatten campaign_name from joined campaigns
+      const enriched = (data || []).map((inv: any) => ({
+        ...inv,
+        campaign_name: inv.campaigns?.campaign_name || inv.campaign_id || null,
+      }));
+      setInvoices(invoiceScopeFilter(enriched));
     }
     setLoading(false);
   };
@@ -224,6 +229,7 @@ export default function InvoicesList() {
       result = result.filter(inv =>
         inv.id?.toLowerCase().includes(term) ||
         inv.client_name?.toLowerCase().includes(term) ||
+        inv.campaign_name?.toLowerCase().includes(term) ||
         inv.campaign_id?.toLowerCase().includes(term) ||
         (inv.due_date && String(inv.due_date).toLowerCase().includes(term))
       );
@@ -562,6 +568,11 @@ export default function InvoicesList() {
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_name')}>
+                          Campaign {getSortIcon('campaign_name')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('invoice_date')}>
                           Date {getSortIcon('invoice_date')}
                         </Button>
@@ -592,11 +603,11 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={9} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {
@@ -628,6 +639,18 @@ export default function InvoicesList() {
                               >
                                 {invoice.client_name}
                               </button>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {invoice.campaign_id ? (
+                                <button
+                                  onClick={() => navigate(`/admin/campaigns/${invoice.campaign_id}`)}
+                                  className="text-foreground hover:text-primary hover:underline transition-colors text-sm"
+                                >
+                                  {invoice.campaign_name || invoice.campaign_id}
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>

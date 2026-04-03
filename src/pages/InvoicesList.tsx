@@ -229,6 +229,7 @@ export default function InvoicesList() {
       result = result.filter(inv =>
         inv.id?.toLowerCase().includes(term) ||
         inv.client_name?.toLowerCase().includes(term) ||
+        inv.campaign_name?.toLowerCase().includes(term) ||
         inv.campaign_id?.toLowerCase().includes(term) ||
         (inv.due_date && String(inv.due_date).toLowerCase().includes(term))
       );

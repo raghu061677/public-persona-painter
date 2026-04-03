@@ -130,6 +130,7 @@ export default function ReportOutstanding() {
       const { data: monthlyInvoices, error: monthlyError } = await supabase
         .from("invoices")
         .select("billing_month, total_amount, paid_amount, balance_due")
+        .eq("company_id", company!.id)
         .not("status", "in", '("Draft","Cancelled")');
 
       if (monthlyError) throw monthlyError;

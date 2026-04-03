@@ -160,7 +160,7 @@ export default function CampaignDetail() {
       const [mediaAssetsResult, photoCountsResult] = await Promise.all([
         supabase
           .from('media_assets')
-          .select('id, total_sqft, media_asset_code')
+          .select('id, total_sqft, media_asset_code, direction, illumination_type, dimensions')
           .in('id', assetIds),
         supabase
           .from('media_photos')
@@ -181,12 +181,19 @@ export default function CampaignDetail() {
       });
       
       // Merge media asset data with campaign assets
-      const enrichedAssets = assets.map(a => ({
-        ...a,
-        total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0,
-        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || null,
-        photo_count: photoCountMap[a.asset_id] || 0,
-      }));
+      const enrichedAssets = assets.map(a => {
+        const ma = mediaAssetsMap[a.asset_id];
+        return {
+          ...a,
+          total_sqft: a.total_sqft || ma?.total_sqft || 0,
+          media_asset_code: ma?.media_asset_code || null,
+          photo_count: photoCountMap[a.asset_id] || 0,
+          // Fallback to media_assets for fields that may be empty on post-conversion adds
+          direction: a.direction || ma?.direction || null,
+          illumination_type: a.illumination_type || ma?.illumination_type || null,
+          dimensions: a.dimensions || ma?.dimensions || null,
+        };
+      });
       
       setCampaignAssets(enrichedAssets);
     } else {

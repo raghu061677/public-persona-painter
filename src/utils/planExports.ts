@@ -4,7 +4,7 @@ import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { compressImage } from "@/lib/imageCompression";
-import { getCachedQRData } from "@/lib/qrWatermark";
+// getCachedQRData import removed — QR watermarks disabled to prevent PPT corruption
 import { sanitizePptHyperlink, sanitizePptText, PPT_SAFE_FONTS } from "@/lib/ppt/sanitizers";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import JSZip from "jszip";
@@ -555,13 +555,10 @@ export async function exportPlanToPPT(
         fontFace: "Arial"
       });
 
-      // Get QR code data for this asset
-      const qrData = await getCachedQRData(
-        item.asset_id,
-        assetDetail.qr_code_url || '',
-        assetDetail.latitude,
-        assetDetail.longitude
-      );
+      // QR code with Street View hyperlinks REMOVED — caused PPT corruption
+      // ("PowerPoint found a problem with content" repair dialog)
+      // Long encoded Google Street View URLs produce invalid XML in pptxgenjs
+      const qrData = null;
 
       // Display 2 high-quality images with subtle shadow
       const imagesToShow = allImages.slice(0, 2);

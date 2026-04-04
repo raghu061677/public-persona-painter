@@ -242,13 +242,7 @@ async function fetchAssetPhotos(row: ProposalRow): Promise<string[]> {
   return photos;
 }
 
-/** Fetch QR code as base64 */
-async function fetchQR(qrUrl: string | null | undefined): Promise<string | null> {
-  if (!qrUrl) return null;
-  try {
-    return await fetchImageAsBase64(qrUrl);
-  } catch { return null; }
-}
+// fetchQR removed — QR codes disabled to prevent PPT corruption from encoded URLs
 
 // ─── Main Generator ──────────────────────────────────────────
 

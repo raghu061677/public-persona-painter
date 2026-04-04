@@ -123,6 +123,7 @@ export default function PortalInvoices() {
         .from('invoices')
         .select('*')
         .eq('id', invoiceId)
+        .eq('client_id', portalUser?.client_id)
         .single();
 
       if (error || !invoice) throw new Error('Invoice not found');

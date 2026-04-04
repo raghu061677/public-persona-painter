@@ -10807,6 +10807,7 @@ export type Database = {
         Row: {
           area: string | null
           asset_id: string
+          company_id: string | null
           created_at: string
           dimension_height: number
           dimension_width: number
@@ -10826,6 +10827,7 @@ export type Database = {
         Insert: {
           area?: string | null
           asset_id: string
+          company_id?: string | null
           created_at?: string
           dimension_height?: number
           dimension_width?: number
@@ -10845,6 +10847,7 @@ export type Database = {
         Update: {
           area?: string | null
           asset_id?: string
+          company_id?: string | null
           created_at?: string
           dimension_height?: number
           dimension_width?: number
@@ -10862,6 +10865,13 @@ export type Database = {
           total_sqft?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "proforma_invoice_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proforma_invoice_items_proforma_invoice_id_fkey"
             columns: ["proforma_invoice_id"]
@@ -10881,6 +10891,7 @@ export type Database = {
           client_gstin: string | null
           client_name: string
           client_state: string | null
+          company_id: string | null
           created_at: string
           discount_total: number
           grand_total: number
@@ -10907,6 +10918,7 @@ export type Database = {
           client_gstin?: string | null
           client_name: string
           client_state?: string | null
+          company_id?: string | null
           created_at?: string
           discount_total?: number
           grand_total?: number
@@ -10933,6 +10945,7 @@ export type Database = {
           client_gstin?: string | null
           client_name?: string
           client_state?: string | null
+          company_id?: string | null
           created_at?: string
           discount_total?: number
           grand_total?: number
@@ -10950,7 +10963,15 @@ export type Database = {
           total_tax?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "proforma_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rate_limits: {
         Row: {

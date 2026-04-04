@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const emptyItem = (): LineItem => ({
 
 const ProformaCreate = () => {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
@@ -135,6 +137,7 @@ const ProformaCreate = () => {
           total_tax: Math.round((cgst + sgst) * 100) / 100,
           grand_total: grandTotal,
           status: "draft",
+          company_id: company?.id || null,
         } as any)
         .select("id")
         .single();
@@ -145,6 +148,7 @@ const ProformaCreate = () => {
       // Insert line items
       const lineItems = items.map((it) => ({
         proforma_invoice_id: proformaId,
+        company_id: company?.id || null,
         asset_id: "",
         display_name: it.display_name,
         area: it.area,

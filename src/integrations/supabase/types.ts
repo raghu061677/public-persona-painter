@@ -6315,6 +6315,56 @@ export type Database = {
           },
         ]
       }
+      invoice_followups: {
+        Row: {
+          company_id: string
+          contact_type: string
+          created_at: string
+          created_by: string | null
+          follow_up_date: string
+          id: string
+          invoice_id: string
+          next_follow_up_date: string | null
+          note: string
+          promised_payment_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          follow_up_date?: string
+          id?: string
+          invoice_id: string
+          next_follow_up_date?: string | null
+          note?: string
+          promised_payment_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          follow_up_date?: string
+          id?: string
+          invoice_id?: string
+          next_follow_up_date?: string | null
+          note?: string
+          promised_payment_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_followups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           area: string | null

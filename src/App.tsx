@@ -75,6 +75,7 @@ const CampaignAssetProofs = lazy(() => import("./pages/CampaignAssetProofs"));
 const MobilePowerBills = lazy(() => import("./pages/MobilePowerBills"));
 const MobilePage = lazy(() => import("./pages/mobile/index"));
 const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
+const FinanceCollections = lazy(() => import("./pages/FinanceCollections"));
 const EstimationsList = lazy(() => import("./pages/EstimationsList"));
 const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
@@ -468,6 +469,7 @@ const App = () => (
               <Route path="export-data" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/collections" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceCollections /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/ops-payables" element={<Navigate to="/admin/reports/ops-payables" replace />} />
               <Route path="branding-settings" element={<Navigate to="/admin/company-settings/branding" replace />} />
               <Route path="reports/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />

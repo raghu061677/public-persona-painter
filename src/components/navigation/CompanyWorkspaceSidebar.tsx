@@ -17,7 +17,8 @@ import {
   CreditCard,
   TrendingUp,
   Wallet,
-  Zap
+  Zap,
+  Phone
 } from "lucide-react";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
 import { SidebarItem } from "@/components/sidebar/SidebarItem";
@@ -86,6 +87,7 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
           <SidebarItem icon={Wallet} label="Expenses" href="/admin/expenses" collapsed={collapsed} />
           <SidebarItem icon={CreditCard} label="Payments" href="/admin/payments" collapsed={collapsed} />
           <SidebarItem icon={CalendarCheck} label="Month Close" href="/admin/finance/month-close" collapsed={collapsed} />
+          <SidebarItem icon={Phone} label="Collections" href="/admin/finance/collections" collapsed={collapsed} />
         </SidebarSection>
       )}
 

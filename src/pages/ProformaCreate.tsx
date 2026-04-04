@@ -148,6 +148,7 @@ const ProformaCreate = () => {
       // Insert line items
       const lineItems = items.map((it) => ({
         proforma_invoice_id: proformaId,
+        company_id: company?.id || null,
         asset_id: "",
         display_name: it.display_name,
         area: it.area,

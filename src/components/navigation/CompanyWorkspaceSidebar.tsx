@@ -17,7 +17,8 @@ import {
   CreditCard,
   TrendingUp,
   Wallet,
-  Zap
+  Zap,
+  Phone
 } from "lucide-react";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
 import { SidebarItem } from "@/components/sidebar/SidebarItem";

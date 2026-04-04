@@ -137,6 +137,7 @@ const ProformaCreate = () => {
           total_tax: Math.round((cgst + sgst) * 100) / 100,
           grand_total: grandTotal,
           status: "draft",
+          company_id: company?.id || null,
         } as any)
         .select("id")
         .single();

@@ -4,7 +4,7 @@ import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { compressImage } from "@/lib/imageCompression";
-import { getCachedQRData } from "@/lib/qrWatermark";
+// getCachedQRData import removed — QR watermarks disabled to prevent PPT corruption
 import { sanitizePptHyperlink, sanitizePptText, PPT_SAFE_FONTS } from "@/lib/ppt/sanitizers";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import JSZip from "jszip";

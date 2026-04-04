@@ -469,6 +469,7 @@ const App = () => (
               <Route path="export-data" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/collections" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceCollections /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/ops-payables" element={<Navigate to="/admin/reports/ops-payables" replace />} />
               <Route path="branding-settings" element={<Navigate to="/admin/company-settings/branding" replace />} />
               <Route path="reports/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />

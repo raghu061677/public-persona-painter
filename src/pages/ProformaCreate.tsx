@@ -45,6 +45,7 @@ const emptyItem = (): LineItem => ({
 
 const ProformaCreate = () => {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 

@@ -555,13 +555,10 @@ export async function exportPlanToPPT(
         fontFace: "Arial"
       });
 
-      // Get QR code data for this asset
-      const qrData = await getCachedQRData(
-        item.asset_id,
-        assetDetail.qr_code_url || '',
-        assetDetail.latitude,
-        assetDetail.longitude
-      );
+      // QR code with Street View hyperlinks REMOVED — caused PPT corruption
+      // ("PowerPoint found a problem with content" repair dialog)
+      // Long encoded Google Street View URLs produce invalid XML in pptxgenjs
+      const qrData = null;
 
       // Display 2 high-quality images with subtle shadow
       const imagesToShow = allImages.slice(0, 2);

@@ -96,10 +96,9 @@ export default function MounterTasks() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('campaign-proofs').getPublicUrl(filePath);
+      // campaign-proofs is private — use signed URL for immediate access, store path
+      const { data: signedData } = await supabase.storage.from('campaign-proofs').createSignedUrl(filePath, 3600);
+      const publicUrl = signedData?.signedUrl || filePath;
 
       // Insert photo record
       const { error: insertError } = await supabase.from('operation_photos').insert({

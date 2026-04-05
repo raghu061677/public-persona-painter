@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import {
   getSecureFileUrl,

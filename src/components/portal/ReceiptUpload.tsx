@@ -74,12 +74,8 @@ export function ReceiptUpload({ invoiceId, clientId, onUploadComplete }: Receipt
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('client-documents')
-        .getPublicUrl(filePath);
-
-      const receiptUrl = urlData.publicUrl;
+      // Store the storage path (not a public URL — bucket is private)
+      const receiptUrl = filePath;
 
       // Log the upload activity
       await supabase.from('client_portal_access_logs').insert({

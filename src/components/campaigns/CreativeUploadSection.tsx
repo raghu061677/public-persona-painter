@@ -86,10 +86,8 @@ export function CreativeUploadSection({ campaignId, onUploadComplete }: Creative
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('campaign-creatives')
-        .getPublicUrl(fileName);
+      // campaign-creatives — store path for signed URL access
+      const publicUrl = fileName;
 
       // Save to database
       const { error: dbError } = await supabase

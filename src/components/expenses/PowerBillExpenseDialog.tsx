@@ -152,11 +152,8 @@ export function PowerBillExpenseDialog({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('power-receipts')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
+      // power-receipts — store path for signed URL access
+      return filePath;
     } catch (error: any) {
       toast({
         title: "Upload Error",

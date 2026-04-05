@@ -178,11 +178,8 @@ export default function PowerBillsBulkPayment() {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('client-documents')
-          .getPublicUrl(filePath);
-
-        receiptUrl = publicUrl;
+        // client-documents is private — store path for signed URL access
+        receiptUrl = filePath;
       }
 
       // Update each selected bill

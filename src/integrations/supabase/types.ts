@@ -334,6 +334,7 @@ export type Database = {
       }
       analytics_daily: {
         Row: {
+          company_id: string | null
           created_at: string | null
           date: string
           expenses_by_category: Json | null
@@ -346,6 +347,7 @@ export type Database = {
           vacant_by_city: Json | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           date: string
           expenses_by_category?: Json | null
@@ -358,6 +360,7 @@ export type Database = {
           vacant_by_city?: Json | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           date?: string
           expenses_by_category?: Json | null
@@ -369,7 +372,15 @@ export type Database = {
           updated_at?: string | null
           vacant_by_city?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "analytics_daily_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       approval_delegations: {
         Row: {
@@ -4585,6 +4596,7 @@ export type Database = {
       daily_digest_settings: {
         Row: {
           campaign_end_window_days: number
+          company_id: string
           created_at: string
           daily_digest_enabled: boolean
           daily_time: string
@@ -4604,6 +4616,7 @@ export type Database = {
         }
         Insert: {
           campaign_end_window_days?: number
+          company_id: string
           created_at?: string
           daily_digest_enabled?: boolean
           daily_time?: string
@@ -4623,6 +4636,7 @@ export type Database = {
         }
         Update: {
           campaign_end_window_days?: number
+          company_id?: string
           created_at?: string
           daily_digest_enabled?: boolean
           daily_time?: string
@@ -4640,7 +4654,15 @@ export type Database = {
           whatsapp_recipients?: string[]
           windows_days?: number[]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_digest_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dashboard_configurations: {
         Row: {
@@ -5956,6 +5978,59 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      file_access_logs: {
+        Row: {
+          access_type: string
+          bucket: string | null
+          client_id: string | null
+          company_id: string | null
+          created_at: string
+          file_path: string
+          id: string
+          ip_info: string | null
+          resource_id: string | null
+          resource_type: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          access_type?: string
+          bucket?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          file_path: string
+          id?: string
+          ip_info?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          access_type?: string
+          bucket?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          file_path?: string
+          id?: string
+          ip_info?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_access_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_override_requests: {
         Row: {

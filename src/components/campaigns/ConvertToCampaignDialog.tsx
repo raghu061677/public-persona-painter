@@ -161,9 +161,8 @@ export function ConvertToCampaignDialog({
 
           if (uploadError) throw uploadError;
 
-          const { data: { publicUrl } } = supabase.storage
-            .from("campaign-creatives")
-            .getPublicUrl(filePath);
+          // campaign-creatives — store path for signed URL access
+          const publicUrl = filePath;
 
           // Save creative reference
           await supabase.from("campaign_creatives").insert({

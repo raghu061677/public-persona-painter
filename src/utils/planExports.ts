@@ -320,11 +320,12 @@ async function uploadToStorage(
 
     if (error) throw error;
 
-    const { data: { publicUrl } } = supabase.storage
+    // For private buckets, generate signed URL; for public, use public URL
+    const { data: signedData } = await supabase.storage
       .from(bucket)
-      .getPublicUrl(data.path);
+      .createSignedUrl(data.path, 3600);
 
-    return publicUrl;
+    return signedData?.signedUrl || data.path;
   } catch (error) {
     console.error('Storage upload error:', error);
     return null;

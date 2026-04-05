@@ -82,10 +82,8 @@ export function UploadReceiptDialog({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('power-receipts')
-        .getPublicUrl(fileName);
+      // power-receipts — store path for signed URL access
+      const publicUrl = fileName;
 
       // Update bill record
       const { error: updateError } = await supabase

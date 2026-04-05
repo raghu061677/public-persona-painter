@@ -861,11 +861,8 @@ function MobilePowerBillsView() {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('power-receipts')
-          .getPublicUrl(filePath);
-
-        receiptUrl = publicUrl;
+        // power-receipts is private — store path for signed URL access
+        receiptUrl = filePath;
       }
 
       const { error } = await db

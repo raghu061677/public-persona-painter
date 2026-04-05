@@ -93,7 +93,7 @@ export function OpsProofCapture({ open, onOpenChange, asset, campaignId, onCompl
       const photoRecord: any = {
         campaign_id: campaignId,
         asset_id: asset.asset_id,
-        photo_url: urlData.publicUrl,
+        photo_url: photoUrl,
         photo_type: proofTag,
         uploaded_by: user.id,
         captured_at: new Date().toISOString(),

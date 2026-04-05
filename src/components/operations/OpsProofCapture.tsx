@@ -83,9 +83,11 @@ export function OpsProofCapture({ open, onOpenChange, asset, campaignId, onCompl
 
       if (uploadErr) throw uploadErr;
 
-      const { data: urlData } = supabase.storage
+      // operations-photos is private — generate signed URL
+      const { data: urlData } = await supabase.storage
         .from("operations-photos")
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
+      const photoUrl = urlData?.signedUrl || filePath;
 
       // Insert into media_photos
       const photoRecord: any = {

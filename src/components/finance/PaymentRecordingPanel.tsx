@@ -328,6 +328,49 @@ export function PaymentRecordingPanel({
     }
   };
 
+  const handleEditPayment = (payment: PaymentRecord) => {
+    setEditingPayment(payment);
+    setEditData({
+      payment_date: payment.payment_date,
+      method: payment.method,
+      reference_no: payment.reference_no || "",
+      notes: payment.notes || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPayment) return;
+    if (!editData.payment_date) {
+      toast.error("Please select a payment date");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from("payment_records")
+        .update({
+          payment_date: editData.payment_date,
+          method: editData.method,
+          reference_no: editData.reference_no || null,
+          notes: editData.notes || null,
+        })
+        .eq("id", editingPayment.id);
+
+      if (error) throw error;
+
+      toast.success("Payment updated successfully");
+      setEditDialogOpen(false);
+      setEditingPayment(null);
+      fetchPayments();
+      onPaymentAdded?.();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update payment");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const getMethodIcon = (method: string) => {
     const found = PAYMENT_METHODS.find(m => m.value === method);
     const Icon = found?.icon || DollarSign;

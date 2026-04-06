@@ -94,12 +94,12 @@ export default function ClientLedger() {
             <p className="text-sm text-muted-foreground">Receivable statement with running balance</p>
           </div>
         </div>
-        {selectedClientId && (
+        {selectedClientId && selectedClient && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => exportClientLedgerExcel(filteredEntries, summary, outstanding, selectedClient)}>
+            <Button size="sm" variant="outline" onClick={() => exportClientLedgerExcel(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: selectedClient.gst_number })}>
               <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
             </Button>
-            <Button size="sm" variant="outline" onClick={() => exportClientLedgerPdf(filteredEntries, summary, outstanding, selectedClient, company)}>
+            <Button size="sm" variant="outline" onClick={() => exportClientLedgerPdf(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: selectedClient.gst_number }, company)}>
               <Download className="h-4 w-4 mr-1.5" /> PDF
             </Button>
           </div>

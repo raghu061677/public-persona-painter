@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { exportClientLedgerExcel } from "@/utils/exports/clientLedgerExcel";
 import { exportClientLedgerPdf } from "@/utils/exports/clientLedgerPdf";
+import { useClientRiskScoring } from "@/hooks/useClientRiskScoring";
+import { ClientRiskBadge } from "@/components/collections/ClientRiskPanel";
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof FileText; color: string }> = {
   invoice: { label: "Invoice Raised", icon: ArrowUpRight, color: "text-red-600" },

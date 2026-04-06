@@ -32,6 +32,7 @@ export interface InvoiceSummaryRow {
   status: string;
   invoice_no: string | null;
   created_at: string;
+  items?: any[] | null; // jsonb items with booking_start_date / booking_end_date
 }
 
 /**

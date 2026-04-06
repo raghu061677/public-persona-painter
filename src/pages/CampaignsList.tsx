@@ -607,8 +607,8 @@ export default function CampaignsList() {
                       <SortableTableHead sortKey="status" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Status</SortableTableHead>
                       <SortableTableHead sortKey="total_assets" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Assets</SortableTableHead>
                       <SortableTableHead sortKey="grand_total" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="right">Total</SortableTableHead>
-                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Invoice Status</TableHead>
-                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Progress</TableHead>
+                      <SortableTableHead sortKey="invoice_status" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="center">Invoice Status</SortableTableHead>
+                      <SortableTableHead sortKey="invoice_progress" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="center">Progress</SortableTableHead>
                       <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                     </TableRow>
                   </TableHeader>

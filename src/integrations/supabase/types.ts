@@ -3558,6 +3558,7 @@ export type Database = {
           state_code: string | null
           tan_number: string | null
           tds_applicable: boolean
+          tds_deduction_basis: string | null
           tds_notes: string | null
           tds_section: string | null
           updated_at: string | null
@@ -3603,6 +3604,7 @@ export type Database = {
           state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
+          tds_deduction_basis?: string | null
           tds_notes?: string | null
           tds_section?: string | null
           updated_at?: string | null
@@ -3648,6 +3650,7 @@ export type Database = {
           state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
+          tds_deduction_basis?: string | null
           tds_notes?: string | null
           tds_section?: string | null
           updated_at?: string | null
@@ -9637,7 +9640,10 @@ export type Database = {
           payment_date: string
           reference_no: string | null
           tds_amount: number
+          tds_base_amount: number | null
+          tds_certificate_date: string | null
           tds_certificate_no: string | null
+          tds_rate: number | null
           updated_at: string | null
         }
         Insert: {
@@ -9657,7 +9663,10 @@ export type Database = {
           payment_date?: string
           reference_no?: string | null
           tds_amount?: number
+          tds_base_amount?: number | null
+          tds_certificate_date?: string | null
           tds_certificate_no?: string | null
+          tds_rate?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -9677,7 +9686,10 @@ export type Database = {
           payment_date?: string
           reference_no?: string | null
           tds_amount?: number
+          tds_base_amount?: number | null
+          tds_certificate_date?: string | null
           tds_certificate_no?: string | null
+          tds_rate?: number | null
           updated_at?: string | null
         }
         Relationships: [

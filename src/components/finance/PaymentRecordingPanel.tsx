@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, Info } from "lucide-react";
+import { Plus, Trash2, Pencil, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, Info } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";

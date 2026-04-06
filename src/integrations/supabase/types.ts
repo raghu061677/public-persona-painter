@@ -3558,6 +3558,7 @@ export type Database = {
           state_code: string | null
           tan_number: string | null
           tds_applicable: boolean
+          tds_deduction_basis: string | null
           tds_notes: string | null
           tds_section: string | null
           updated_at: string | null
@@ -3603,6 +3604,7 @@ export type Database = {
           state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
+          tds_deduction_basis?: string | null
           tds_notes?: string | null
           tds_section?: string | null
           updated_at?: string | null
@@ -3648,6 +3650,7 @@ export type Database = {
           state_code?: string | null
           tan_number?: string | null
           tds_applicable?: boolean
+          tds_deduction_basis?: string | null
           tds_notes?: string | null
           tds_section?: string | null
           updated_at?: string | null
@@ -9637,7 +9640,10 @@ export type Database = {
           payment_date: string
           reference_no: string | null
           tds_amount: number
+          tds_base_amount: number | null
+          tds_certificate_date: string | null
           tds_certificate_no: string | null
+          tds_rate: number | null
           updated_at: string | null
         }
         Insert: {
@@ -9657,7 +9663,10 @@ export type Database = {
           payment_date?: string
           reference_no?: string | null
           tds_amount?: number
+          tds_base_amount?: number | null
+          tds_certificate_date?: string | null
           tds_certificate_no?: string | null
+          tds_rate?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -9677,7 +9686,10 @@ export type Database = {
           payment_date?: string
           reference_no?: string | null
           tds_amount?: number
+          tds_base_amount?: number | null
+          tds_certificate_date?: string | null
           tds_certificate_no?: string | null
+          tds_rate?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -14097,13 +14109,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_public_share_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_public_share_safe"
@@ -14113,7 +14118,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -14127,7 +14132,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns_summary_secure"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -14141,7 +14146,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns_summary_secure"
             referencedColumns: ["id"]
           },
           {
@@ -14154,13 +14159,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]

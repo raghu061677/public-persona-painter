@@ -349,6 +349,7 @@ export default function InvoiceDetail() {
             <PaymentRecordingPanel 
               invoiceId={invoice.id} 
               totalAmount={invoice.total_amount}
+              subTotal={invoice.sub_total || undefined}
               balanceDue={invoice.balance_due}
               paidAmount={invoice.paid_amount}
               status={invoice.status}

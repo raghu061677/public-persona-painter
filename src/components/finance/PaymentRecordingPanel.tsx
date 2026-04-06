@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, ChevronDown } from "lucide-react";
+import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, Info } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
@@ -26,7 +27,10 @@ interface PaymentRecord {
   payment_date: string;
   amount: number;
   tds_amount: number;
+  tds_rate: number;
+  tds_base_amount: number;
   tds_certificate_no: string | null;
+  tds_certificate_date: string | null;
   method: string;
   reference_no: string | null;
   notes: string | null;
@@ -37,6 +41,7 @@ interface PaymentRecord {
 interface PaymentRecordingPanelProps {
   invoiceId: string;
   totalAmount: number;
+  subTotal?: number;
   balanceDue?: number;
   paidAmount?: number;
   status?: string;
@@ -54,9 +59,17 @@ const PAYMENT_METHODS = [
   { value: "Other", label: "Other", icon: DollarSign },
 ];
 
+interface ClientTdsDefaults {
+  tds_applicable: boolean;
+  default_tds_rate: number;
+  tds_deduction_basis: string;
+  tan_number: string;
+}
+
 export function PaymentRecordingPanel({
   invoiceId,
   totalAmount,
+  subTotal,
   balanceDue: initialBalanceDue,
   paidAmount: initialPaidAmount,
   status,
@@ -68,14 +81,22 @@ export function PaymentRecordingPanel({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [clientTds, setClientTds] = useState<{ tds_applicable: boolean; default_tds_rate: number | null }>({ tds_applicable: false, default_tds_rate: null });
-  const [tdsOpen, setTdsOpen] = useState(false);
+  const [clientTds, setClientTds] = useState<ClientTdsDefaults>({
+    tds_applicable: false,
+    default_tds_rate: 0,
+    tds_deduction_basis: "taxable_value",
+    tan_number: "",
+  });
+  const [tdsEnabled, setTdsEnabled] = useState(false);
   const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
   
   const [newPayment, setNewPayment] = useState({
     amount: "",
+    tds_rate: "",
+    tds_base_amount: "",
     tds_amount: "",
     tds_certificate_no: "",
+    tds_certificate_date: "",
     payment_date: new Date().toISOString().split('T')[0],
     method: "Bank Transfer",
     reference_no: "",
@@ -92,17 +113,16 @@ export function PaymentRecordingPanel({
     try {
       const { data } = await supabase
         .from("clients")
-        .select("tds_applicable, default_tds_rate")
+        .select("tds_applicable, default_tds_rate, tds_deduction_basis, tan_number")
         .eq("id", clientId)
         .maybeSingle();
       if (data) {
         setClientTds({
           tds_applicable: (data as any).tds_applicable || false,
-          default_tds_rate: (data as any).default_tds_rate || null,
+          default_tds_rate: (data as any).default_tds_rate || 0,
+          tds_deduction_basis: (data as any).tds_deduction_basis || "taxable_value",
+          tan_number: (data as any).tan_number || "",
         });
-        if ((data as any).tds_applicable) {
-          setTdsOpen(true);
-        }
       }
     } catch (e) {
       // silently ignore
@@ -122,7 +142,10 @@ export function PaymentRecordingPanel({
       setPayments((data || []).map((p: any) => ({
         ...p,
         tds_amount: p.tds_amount || 0,
+        tds_rate: p.tds_rate || 0,
+        tds_base_amount: p.tds_base_amount || 0,
         tds_certificate_no: p.tds_certificate_no || null,
+        tds_certificate_date: p.tds_certificate_date || null,
       })));
     } catch (error) {
       console.error("Error fetching payments:", error);
@@ -137,9 +160,51 @@ export function PaymentRecordingPanel({
   const balance = Math.max(totalAmount - totalSettled, 0);
   const paymentProgress = totalAmount > 0 ? (totalSettled / totalAmount) * 100 : 0;
 
+  // TDS base amount: taxable value (sub_total) before GST
+  const effectiveTdsBase = useMemo(() => {
+    if (subTotal && subTotal > 0) return subTotal;
+    // Fallback: estimate taxable value from total (assume 18% GST)
+    return totalAmount / 1.18;
+  }, [subTotal, totalAmount]);
+
+  // Auto-calc TDS when rate changes
+  const handleTdsRateChange = (rateStr: string) => {
+    const rate = parseFloat(rateStr) || 0;
+    const base = parseFloat(newPayment.tds_base_amount) || effectiveTdsBase;
+    const tdsAmt = rate > 0 ? (base * rate / 100) : 0;
+    setNewPayment(prev => ({
+      ...prev,
+      tds_rate: rateStr,
+      tds_amount: tdsAmt > 0 ? tdsAmt.toFixed(2) : "",
+    }));
+  };
+
+  // Auto-calc TDS when base changes
+  const handleTdsBaseChange = (baseStr: string) => {
+    const base = parseFloat(baseStr) || 0;
+    const rate = parseFloat(newPayment.tds_rate) || 0;
+    const tdsAmt = rate > 0 && base > 0 ? (base * rate / 100) : parseFloat(newPayment.tds_amount) || 0;
+    setNewPayment(prev => ({
+      ...prev,
+      tds_base_amount: baseStr,
+      tds_amount: rate > 0 ? tdsAmt.toFixed(2) : prev.tds_amount,
+    }));
+  };
+
+  // Settlement summary for modal
+  const modalSettlement = useMemo(() => {
+    const cashReceived = parseFloat(newPayment.amount) || 0;
+    const tdsDeducted = parseFloat(newPayment.tds_amount) || 0;
+    const totalSettleThis = cashReceived + tdsDeducted;
+    const remainingBalance = Math.max(balance - totalSettleThis, 0);
+    return { cashReceived, tdsDeducted, totalSettleThis, remainingBalance };
+  }, [newPayment.amount, newPayment.tds_amount, balance]);
+
   const handleAddPayment = async () => {
     const amount = parseFloat(newPayment.amount);
     const tdsAmount = parseFloat(newPayment.tds_amount) || 0;
+    const tdsRate = parseFloat(newPayment.tds_rate) || 0;
+    const tdsBase = parseFloat(newPayment.tds_base_amount) || (tdsAmount > 0 ? effectiveTdsBase : 0);
     const totalSettleThis = amount + tdsAmount;
     
     if (!amount || amount <= 0) {
@@ -188,7 +253,10 @@ export function PaymentRecordingPanel({
         company_id: invoiceData.company_id,
         amount: amount,
         tds_amount: tdsAmount,
+        tds_rate: tdsRate,
+        tds_base_amount: tdsBase,
         tds_certificate_no: newPayment.tds_certificate_no?.trim() || null,
+        tds_certificate_date: newPayment.tds_certificate_date || null,
         payment_date: newPayment.payment_date,
         method: newPayment.method,
         reference_no: newPayment.reference_no || null,
@@ -210,13 +278,17 @@ export function PaymentRecordingPanel({
 
       setNewPayment({
         amount: "",
+        tds_rate: "",
+        tds_base_amount: "",
         tds_amount: "",
         tds_certificate_no: "",
+        tds_certificate_date: "",
         payment_date: new Date().toISOString().split('T')[0],
         method: "Bank Transfer",
         reference_no: "",
         notes: "",
       });
+      setTdsEnabled(false);
       
       setDialogOpen(false);
       fetchPayments();
@@ -264,11 +336,17 @@ export function PaymentRecordingPanel({
   // Pre-fill TDS when dialog opens
   const handleDialogOpen = (open: boolean) => {
     setDialogOpen(open);
-    if (open && clientTds.tds_applicable && clientTds.default_tds_rate && !newPayment.tds_amount) {
-      // Suggest TDS based on remaining balance
-      const suggestedTds = (balance * (clientTds.default_tds_rate / 100));
-      setNewPayment(prev => ({ ...prev, tds_amount: suggestedTds.toFixed(2) }));
-      setTdsOpen(true);
+    if (open && clientTds.tds_applicable) {
+      setTdsEnabled(true);
+      const rate = clientTds.default_tds_rate || 2;
+      const base = effectiveTdsBase;
+      const tdsAmt = (base * rate / 100);
+      setNewPayment(prev => ({
+        ...prev,
+        tds_rate: rate.toString(),
+        tds_base_amount: base.toFixed(2),
+        tds_amount: tdsAmt.toFixed(2),
+      }));
     }
   };
 
@@ -293,14 +371,15 @@ export function PaymentRecordingPanel({
                 Add Payment
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Record Payment</DialogTitle>
                 <DialogDescription>
-                  Add a new payment entry. Balance due: {formatINR(balance)}
+                  Balance due: {formatINR(balance)}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                {/* Amount Received */}
                 <div>
                   <Label htmlFor="amount">Amount Received *</Label>
                   <div className="relative">
@@ -315,55 +394,171 @@ export function PaymentRecordingPanel({
                       onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Max: {formatINR(balance)}
-                  </p>
                 </div>
 
                 {/* TDS Section */}
-                <Collapsible open={tdsOpen || clientTds.tds_applicable} onOpenChange={setTdsOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground hover:text-foreground">
-                      <span className="flex items-center gap-1">
-                        TDS Deduction
-                        {clientTds.tds_applicable && (
-                          <Badge variant="outline" className="text-xs ml-1">Client TDS: {clientTds.default_tds_rate}%</Badge>
-                        )}
-                      </span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${tdsOpen ? 'rotate-180' : ''}`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-3 pt-2">
-                    <div>
-                      <Label htmlFor="tdsAmount">TDS Deducted</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                        <Input
-                          id="tdsAmount"
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          className="pl-8"
-                          value={newPayment.tds_amount}
-                          onChange={(e) => setNewPayment({ ...newPayment, tds_amount: e.target.value })}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Amount deducted as TDS by the client
-                      </p>
-                    </div>
-                    <div>
-                      <Label htmlFor="tdsCertNo">TDS Certificate No.</Label>
-                      <Input
-                        id="tdsCertNo"
-                        placeholder="Optional certificate number"
-                        value={newPayment.tds_certificate_no}
-                        onChange={(e) => setNewPayment({ ...newPayment, tds_certificate_no: e.target.value })}
-                      />
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="tdsApplicable"
+                      checked={tdsEnabled}
+                      onCheckedChange={(checked) => {
+                        setTdsEnabled(!!checked);
+                        if (!checked) {
+                          setNewPayment(prev => ({
+                            ...prev,
+                            tds_rate: "",
+                            tds_base_amount: "",
+                            tds_amount: "",
+                            tds_certificate_no: "",
+                            tds_certificate_date: "",
+                          }));
+                        } else if (clientTds.tds_applicable) {
+                          const rate = clientTds.default_tds_rate || 2;
+                          const base = effectiveTdsBase;
+                          setNewPayment(prev => ({
+                            ...prev,
+                            tds_rate: rate.toString(),
+                            tds_base_amount: base.toFixed(2),
+                            tds_amount: (base * rate / 100).toFixed(2),
+                          }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="tdsApplicable" className="font-medium cursor-pointer">
+                      Client deducted TDS
+                    </Label>
+                    {clientTds.tds_applicable && (
+                      <Badge variant="outline" className="text-xs">
+                        Client default: {clientTds.default_tds_rate}%
+                      </Badge>
+                    )}
+                  </div>
 
+                  {tdsEnabled && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Info className="h-3 w-3" />
+                        TDS is calculated on taxable value before GST
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="tdsRate">TDS Rate (%)</Label>
+                          <Input
+                            id="tdsRate"
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            placeholder="2"
+                            value={newPayment.tds_rate}
+                            onChange={(e) => handleTdsRateChange(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="tdsBase">TDS Base (Taxable Value)</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                            <Input
+                              id="tdsBase"
+                              type="number"
+                              step="0.01"
+                              className="pl-8"
+                              placeholder={effectiveTdsBase.toFixed(2)}
+                              value={newPayment.tds_base_amount}
+                              onChange={(e) => handleTdsBaseChange(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="tdsAmount">TDS Amount (auto-calculated)</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                          <Input
+                            id="tdsAmount"
+                            type="number"
+                            step="0.01"
+                            className="pl-8"
+                            value={newPayment.tds_amount}
+                            onChange={(e) => setNewPayment({ ...newPayment, tds_amount: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="tdsCertNo">Certificate No.</Label>
+                          <Input
+                            id="tdsCertNo"
+                            placeholder="Form 16A number"
+                            value={newPayment.tds_certificate_no}
+                            onChange={(e) => setNewPayment({ ...newPayment, tds_certificate_no: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="tdsCertDate">Certificate Date</Label>
+                          <Input
+                            id="tdsCertDate"
+                            type="date"
+                            value={newPayment.tds_certificate_date}
+                            onChange={(e) => setNewPayment({ ...newPayment, tds_certificate_date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Settlement Summary */}
+                {(parseFloat(newPayment.amount) > 0 || parseFloat(newPayment.tds_amount) > 0) && (
+                  <div className="border rounded-lg p-4 bg-accent/30 space-y-2">
+                    <p className="font-medium text-sm mb-2">Settlement Summary</p>
+                    <div className="grid grid-cols-2 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Invoice Total</span>
+                      <span className="text-right font-medium">{formatINR(totalAmount)}</span>
+                      
+                      {subTotal && subTotal > 0 && (
+                        <>
+                          <span className="text-muted-foreground">Taxable Value</span>
+                          <span className="text-right">{formatINR(subTotal)}</span>
+                        </>
+                      )}
+                      
+                      <span className="text-muted-foreground">Already Settled</span>
+                      <span className="text-right">{formatINR(totalSettled)}</span>
+
+                      <Separator className="col-span-2 my-1" />
+                      
+                      <span className="text-muted-foreground">Cash Received</span>
+                      <span className="text-right text-green-600 font-medium">{formatINR(modalSettlement.cashReceived)}</span>
+                      
+                      {tdsEnabled && modalSettlement.tdsDeducted > 0 && (
+                        <>
+                          <span className="text-muted-foreground">TDS Deducted</span>
+                          <span className="text-right text-blue-600 font-medium">{formatINR(modalSettlement.tdsDeducted)}</span>
+                        </>
+                      )}
+                      
+                      <span className="text-muted-foreground font-medium">This Settlement</span>
+                      <span className="text-right font-bold">{formatINR(modalSettlement.totalSettleThis)}</span>
+
+                      <Separator className="col-span-2 my-1" />
+                      
+                      <span className="text-muted-foreground font-medium">Remaining Balance</span>
+                      <span className={`text-right font-bold ${modalSettlement.remainingBalance > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {formatINR(modalSettlement.remainingBalance)}
+                      </span>
+                    </div>
+                    {modalSettlement.remainingBalance <= 0.01 && (
+                      <p className="text-xs text-green-600 font-medium mt-2">✓ Invoice will be marked as Paid</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Payment Details */}
                 <div>
                   <Label htmlFor="paymentDate">Payment Date *</Label>
                   <Input
@@ -418,7 +613,7 @@ export function PaymentRecordingPanel({
                   Cancel
                 </Button>
                 <Button onClick={handleAddPayment} disabled={saving}>
-                  {saving ? "Saving..." : "Add Payment"}
+                  {saving ? "Saving..." : "Record Payment"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -490,7 +685,24 @@ export function PaymentRecordingPanel({
                     </TableCell>
                     {totalTds > 0 && (
                       <TableCell className="font-medium text-blue-600">
-                        {payment.tds_amount > 0 ? formatINR(payment.tds_amount) : "-"}
+                        {payment.tds_amount > 0 ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                {formatINR(payment.tds_amount)}
+                                {payment.tds_rate > 0 && <span className="text-xs ml-1">({payment.tds_rate}%)</span>}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-xs space-y-1">
+                                  {payment.tds_base_amount > 0 && <p>Base: {formatINR(payment.tds_base_amount)}</p>}
+                                  {payment.tds_rate > 0 && <p>Rate: {payment.tds_rate}%</p>}
+                                  {payment.tds_certificate_no && <p>Cert: {payment.tds_certificate_no}</p>}
+                                  {payment.tds_certificate_date && <p>Cert Date: {formatDate(payment.tds_certificate_date)}</p>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : "-"}
                       </TableCell>
                     )}
                     {totalTds > 0 && (

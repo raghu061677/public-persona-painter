@@ -79,6 +79,7 @@ export default function FinanceCollections() {
   const [followupTarget, setFollowupTarget] = useState<string[] | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ invoiceId: string; invoiceNo: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [reminderTarget, setReminderTarget] = useState<string[] | null>(null);
 
   // Intelligence hooks
   const autoReminders = useAutoReminders();

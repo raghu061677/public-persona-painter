@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { exportClientLedgerExcel } from "@/utils/exports/clientLedgerExcel";
 import { exportClientLedgerPdf } from "@/utils/exports/clientLedgerPdf";
+import { useClientRiskScoring } from "@/hooks/useClientRiskScoring";
+import { ClientRiskBadge } from "@/components/collections/ClientRiskPanel";
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof FileText; color: string }> = {
   invoice: { label: "Invoice Raised", icon: ArrowUpRight, color: "text-red-600" },
@@ -51,10 +53,16 @@ export default function ClientLedger() {
   });
 
   const { ledgerEntries, summary, outstanding, isLoading } = useClientLedger(selectedClientId);
+  const riskScoring = useClientRiskScoring();
 
   const selectedClient = useMemo(
     () => (clientsQuery.data || []).find(c => c.id === selectedClientId),
     [clientsQuery.data, selectedClientId]
+  );
+
+  const selectedClientRisk = useMemo(
+    () => selectedClientId ? riskScoring.getRiskForClient(selectedClientId) : undefined,
+    [selectedClientId, riskScoring.scores]
   );
 
   // Apply filters
@@ -90,7 +98,10 @@ export default function ClientLedger() {
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Client Ledger</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">Client Ledger</h1>
+              {selectedClientRisk && <ClientRiskBadge riskLevel={selectedClientRisk.riskLevel} />}
+            </div>
             <p className="text-sm text-muted-foreground">Receivable statement with running balance</p>
           </div>
         </div>

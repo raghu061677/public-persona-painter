@@ -3468,6 +3468,56 @@ export type Database = {
           },
         ]
       }
+      client_risk_scores: {
+        Row: {
+          avg_delay_days: number
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          last_computed_at: string
+          overdue_frequency: number
+          payment_consistency_score: number
+          risk_level: string
+          total_outstanding: number
+          updated_at: string
+        }
+        Insert: {
+          avg_delay_days?: number
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          last_computed_at?: string
+          overdue_frequency?: number
+          payment_consistency_score?: number
+          risk_level?: string
+          total_outstanding?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_delay_days?: number
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          last_computed_at?: string
+          overdue_frequency?: number
+          payment_consistency_score?: number
+          risk_level?: string
+          total_outstanding?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_risk_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tags: {
         Row: {
           client_id: string
@@ -3695,6 +3745,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      collection_auto_reminders: {
+        Row: {
+          balance_at_trigger: number
+          company_id: string
+          created_at: string
+          id: string
+          invoice_id: string
+          note: string | null
+          overdue_days: number
+          reminder_type: string
+          triggered_at: string
+        }
+        Insert: {
+          balance_at_trigger?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          note?: string | null
+          overdue_days?: number
+          reminder_type: string
+          triggered_at?: string
+        }
+        Update: {
+          balance_at_trigger?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          note?: string | null
+          overdue_days?: number
+          reminder_type?: string
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_auto_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commission_rules: {
         Row: {

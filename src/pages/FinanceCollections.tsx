@@ -11,12 +11,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollectionKPICards } from "@/components/collections/CollectionKPICards";
 import { AddFollowupModal } from "@/components/collections/AddFollowupModal";
 import { FollowupHistoryModal } from "@/components/collections/FollowupHistoryModal";
+import { AutoReminderPanel } from "@/components/collections/AutoReminderPanel";
+import { ClientRiskPanel, ClientRiskBadge } from "@/components/collections/ClientRiskPanel";
+import { CashflowForecastPanel } from "@/components/collections/CashflowForecastPanel";
+import { CollectionPerformanceCards } from "@/components/collections/CollectionPerformanceCards";
+import { useAutoReminders } from "@/hooks/useAutoReminders";
+import { useClientRiskScoring } from "@/hooks/useClientRiskScoring";
+import { useCashflowForecast } from "@/hooks/useCashflowForecast";
+import { useCollectionMetrics } from "@/hooks/useCollectionMetrics";
 import { formatINR, getDaysOverdue } from "@/utils/finance";
 import { format } from "date-fns";
-import { Plus, History, Eye, AlertTriangle, Phone, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, History, Eye, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, BellRing, ShieldAlert, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -62,11 +71,18 @@ export default function FinanceCollections() {
   const [agingFilter, setAgingFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
+  const [activeTab, setActiveTab] = useState("worklist");
 
   // Modals
   const [followupTarget, setFollowupTarget] = useState<string[] | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ invoiceId: string; invoiceNo: string } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Intelligence hooks
+  const autoReminders = useAutoReminders();
+  const riskScoring = useClientRiskScoring();
+  const { forecast, isLoading: forecastLoading } = useCashflowForecast();
+  const { metrics, isLoading: metricsLoading } = useCollectionMetrics();
 
   const fetchData = useCallback(async () => {
     if (!company?.id) return;
@@ -88,7 +104,6 @@ export default function FinanceCollections() {
 
     setInvoices(invRes.data || []);
 
-    // Group followups by invoice_id
     const map: Record<string, any[]> = {};
     (fupRes.data || []).forEach((f: any) => {
       if (!map[f.invoice_id]) map[f.invoice_id] = [];
@@ -220,124 +235,189 @@ export default function FinanceCollections() {
     <div className="p-4 md:p-6 space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-xl font-bold">Collections</h1>
-          <p className="text-sm text-muted-foreground">Follow-up & payment tracking for unpaid invoices</p>
+          <h1 className="text-xl font-bold">Collections & Intelligence</h1>
+          <p className="text-sm text-muted-foreground">Smart follow-ups, risk scoring & cashflow forecast</p>
         </div>
         <Button variant="outline" onClick={() => navigate("/admin/finance/dashboard")}>← Finance Dashboard</Button>
       </div>
 
       <CollectionKPICards kpis={kpis} />
 
-      {/* Toolbar */}
-      <Card>
-        <CardContent className="p-4 flex flex-wrap items-center gap-3">
-          <Input placeholder="Search client, invoice, campaign..." className="max-w-xs" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
-          <Select value={agingFilter} onValueChange={(v) => { setAgingFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Pending</SelectItem>
-              <SelectItem value="not_due">Not Yet Due</SelectItem>
-              <SelectItem value="0-30">0–30 Days</SelectItem>
-              <SelectItem value="31-60">31–60 Days</SelectItem>
-              <SelectItem value="61-90">61–90 Days</SelectItem>
-              <SelectItem value="90+">90+ Days</SelectItem>
-              <SelectItem value="high">High Priority</SelectItem>
-            </SelectContent>
-          </Select>
-          {selected.size > 0 && (
-            <div className="flex gap-2 ml-auto">
-              <Button size="sm" variant="outline" onClick={() => setFollowupTarget(Array.from(selected))}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Follow-up ({selected.size})
-              </Button>
-            </div>
-          )}
-          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} invoices</span>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+          <TabsTrigger value="worklist" className="gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" /> Worklist
+          </TabsTrigger>
+          <TabsTrigger value="reminders" className="gap-1.5 text-xs">
+            <BellRing className="h-3.5 w-3.5" /> Auto Reminders
+            {autoReminders.candidates.length > 0 && (
+              <Badge variant="destructive" className="text-[9px] h-4 px-1 ml-1">{autoReminders.candidates.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="risk" className="gap-1.5 text-xs">
+            <ShieldAlert className="h-3.5 w-3.5" /> Risk & Forecast
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-1.5 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" /> Performance
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10"><Checkbox checked={selected.size === paged.length && paged.length > 0} onCheckedChange={toggleAll} /></TableHead>
-                <TableHead className="w-20">Priority</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead className="text-right">Overdue</TableHead>
-                <TableHead className="text-right">Balance Due</TableHead>
-                <TableHead>Last Follow-up</TableHead>
-                <TableHead>Promised Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-28">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paged.length === 0 && (
-                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No invoices match the current filters.</TableCell></TableRow>
+        {/* WORKLIST TAB */}
+        <TabsContent value="worklist" className="space-y-4 mt-4">
+          {/* Toolbar */}
+          <Card>
+            <CardContent className="p-4 flex flex-wrap items-center gap-3">
+              <Input placeholder="Search client, invoice, campaign..." className="max-w-xs" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+              <Select value={agingFilter} onValueChange={(v) => { setAgingFilter(v); setPage(0); }}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pending</SelectItem>
+                  <SelectItem value="not_due">Not Yet Due</SelectItem>
+                  <SelectItem value="0-30">0–30 Days</SelectItem>
+                  <SelectItem value="31-60">31–60 Days</SelectItem>
+                  <SelectItem value="61-90">61–90 Days</SelectItem>
+                  <SelectItem value="90+">90+ Days</SelectItem>
+                  <SelectItem value="high">High Priority</SelectItem>
+                </SelectContent>
+              </Select>
+              {selected.size > 0 && (
+                <div className="flex gap-2 ml-auto">
+                  <Button size="sm" variant="outline" onClick={() => setFollowupTarget(Array.from(selected))}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Follow-up ({selected.size})
+                  </Button>
+                </div>
               )}
-              {paged.map((r) => (
-                <TableRow key={r.id} className={`${priorityColor[r.priority]} ${promiseBroken(r) ? "border-l-4 border-l-amber-500" : ""}`}>
-                  <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSelect(r.id)} /></TableCell>
-                  <TableCell><Badge variant={priorityBadge[r.priority]}>{r.priority}</Badge></TableCell>
-                  <TableCell className="font-medium max-w-[160px] truncate">{r.client_name}</TableCell>
-                  <TableCell className="text-xs">{r.invoice_no}</TableCell>
-                  <TableCell className="text-xs max-w-[120px] truncate">{r.campaign_name || "—"}</TableCell>
-                  <TableCell className="text-xs">{r.due_date ? format(new Date(r.due_date), "dd MMM yy") : "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {r.overdue_days > 0 ? <span className="text-red-600 font-medium">{r.overdue_days}d</span> : <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{formatINR(r.balance_due)}</TableCell>
-                  <TableCell className="text-xs">
-                    {r.last_followup_date ? format(new Date(r.last_followup_date), "dd MMM yy") : "—"}
-                    {r.followup_count > 0 && <span className="text-muted-foreground ml-1">({r.followup_count})</span>}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {r.promised_payment_date ? (
-                      <span className={promiseBroken(r) ? "text-amber-600 font-medium" : ""}>
-                        {promiseBroken(r) && <AlertTriangle className="h-3 w-3 inline mr-0.5" />}
-                        {format(new Date(r.promised_payment_date), "dd MMM yy")}
-                      </span>
-                    ) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {r.next_followup_date === todayStr ? (
-                      <Badge className="bg-amber-100 text-amber-800 text-[10px]">Due Today</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Add Follow-up" onClick={() => setFollowupTarget([r.id])}>
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="History" onClick={() => setHistoryTarget({ invoiceId: r.id, invoiceNo: r.invoice_no })}>
-                        <History className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="View Invoice" onClick={() => navigate(`/admin/invoices?search=${encodeURIComponent(r.invoice_no)}`)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between p-3 border-t">
-            <span className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>
+              <span className="text-xs text-muted-foreground ml-auto">{filtered.length} invoices</span>
+            </CardContent>
+          </Card>
+
+          {/* Table */}
+          <Card>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10"><Checkbox checked={selected.size === paged.length && paged.length > 0} onCheckedChange={toggleAll} /></TableHead>
+                    <TableHead className="w-20">Priority</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead className="text-right">Overdue</TableHead>
+                    <TableHead className="text-right">Balance Due</TableHead>
+                    <TableHead>Last Follow-up</TableHead>
+                    <TableHead>Promised Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-28">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paged.length === 0 && (
+                    <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No invoices match the current filters.</TableCell></TableRow>
+                  )}
+                  {paged.map((r) => {
+                    const clientRisk = riskScoring.getRiskForClient(r.client_id);
+                    return (
+                      <TableRow key={r.id} className={`${priorityColor[r.priority]} ${promiseBroken(r) ? "border-l-4 border-l-amber-500" : ""}`}>
+                        <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSelect(r.id)} /></TableCell>
+                        <TableCell><Badge variant={priorityBadge[r.priority]}>{r.priority}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium max-w-[140px] truncate">{r.client_name}</span>
+                            <ClientRiskBadge riskLevel={clientRisk?.riskLevel} />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs">{r.invoice_no}</TableCell>
+                        <TableCell className="text-xs max-w-[120px] truncate">{r.campaign_name || "—"}</TableCell>
+                        <TableCell className="text-xs">{r.due_date ? format(new Date(r.due_date), "dd MMM yy") : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          {r.overdue_days > 0 ? <span className="text-red-600 font-medium">{r.overdue_days}d</span> : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{formatINR(r.balance_due)}</TableCell>
+                        <TableCell className="text-xs">
+                          {r.last_followup_date ? format(new Date(r.last_followup_date), "dd MMM yy") : "—"}
+                          {r.followup_count > 0 && <span className="text-muted-foreground ml-1">({r.followup_count})</span>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {r.promised_payment_date ? (
+                            <span className={promiseBroken(r) ? "text-amber-600 font-medium" : ""}>
+                              {promiseBroken(r) && <AlertTriangle className="h-3 w-3 inline mr-0.5" />}
+                              {format(new Date(r.promised_payment_date), "dd MMM yy")}
+                            </span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {r.next_followup_date === todayStr ? (
+                            <Badge className="bg-amber-100 text-amber-800 text-[10px]">Due Today</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Add Follow-up" onClick={() => setFollowupTarget([r.id])}>
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="History" onClick={() => setHistoryTarget({ invoiceId: r.id, invoiceNo: r.invoice_no })}>
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="View Invoice" onClick={() => navigate(`/admin/invoices?search=${encodeURIComponent(r.invoice_no)}`)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-3 border-t">
+                <span className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* AUTO REMINDERS TAB */}
+        <TabsContent value="reminders" className="space-y-4 mt-4">
+          <AutoReminderPanel
+            candidates={autoReminders.candidates}
+            isLoading={autoReminders.isLoading}
+            onExecuteAll={autoReminders.executeAll}
+            onExecuteSelected={autoReminders.executeReminders}
+            isExecuting={autoReminders.isExecuting}
+          />
+        </TabsContent>
+
+        {/* RISK & FORECAST TAB */}
+        <TabsContent value="risk" className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ClientRiskPanel
+              scores={riskScoring.scores}
+              isLoading={riskScoring.isLoading}
+              onRefresh={riskScoring.persistScores}
+              isRefreshing={riskScoring.isPersisting}
+            />
+            <CashflowForecastPanel
+              buckets={forecast.buckets}
+              totalExpected={forecast.totalExpected}
+              riskAdjusted={forecast.riskAdjusted}
+              isLoading={forecastLoading}
+            />
           </div>
-        )}
-      </Card>
+        </TabsContent>
+
+        {/* PERFORMANCE TAB */}
+        <TabsContent value="performance" className="space-y-4 mt-4">
+          <CollectionPerformanceCards metrics={metrics} isLoading={metricsLoading} />
+        </TabsContent>
+      </Tabs>
 
       {/* Modals */}
       {followupTarget && (

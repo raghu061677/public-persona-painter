@@ -364,6 +364,9 @@ export default function FinanceCollections() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Send Reminder" onClick={() => setReminderTarget([r.id])}>
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Add Follow-up" onClick={() => setFollowupTarget([r.id])}>
                               <Plus className="h-3.5 w-3.5" />
                             </Button>

@@ -58,7 +58,7 @@ export const invoiceSchema = z.object({
 
 // ── Campaign Create/Edit ──
 export const campaignEntitySchema = z.object({
-  name: z.string().trim().min(3, "Campaign name must be at least 3 characters").max(200),
+  name: z.string().trim().min(1, "Campaign name is required").max(200),
   client_id: z.string().min(1, "Client is required"),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().min(1, "End date is required"),

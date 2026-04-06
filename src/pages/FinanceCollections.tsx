@@ -19,6 +19,8 @@ import { AutoReminderPanel } from "@/components/collections/AutoReminderPanel";
 import { ClientRiskPanel, ClientRiskBadge } from "@/components/collections/ClientRiskPanel";
 import { CashflowForecastPanel } from "@/components/collections/CashflowForecastPanel";
 import { CollectionPerformanceCards } from "@/components/collections/CollectionPerformanceCards";
+import { CollectionCommunicationsTab } from "@/components/collections/CollectionCommunicationsTab";
+import { SendReminderModal } from "@/components/collections/SendReminderModal";
 import { useAutoReminders } from "@/hooks/useAutoReminders";
 import { useClientRiskScoring } from "@/hooks/useClientRiskScoring";
 import { useCashflowForecast } from "@/hooks/useCashflowForecast";

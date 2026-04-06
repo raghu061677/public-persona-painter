@@ -3790,6 +3790,59 @@ export type Database = {
           },
         ]
       }
+      collection_communications: {
+        Row: {
+          campaign_id: string | null
+          channel: string
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          invoice_id: string
+          message: string
+          sent_at: string
+          sent_by: string
+          status: string
+          template_type: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          channel: string
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          message: string
+          sent_at?: string
+          sent_by: string
+          status?: string
+          template_type: string
+        }
+        Update: {
+          campaign_id?: string | null
+          channel?: string
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          message?: string
+          sent_at?: string
+          sent_by?: string
+          status?: string
+          template_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_communications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           applies_to_company_type: string | null

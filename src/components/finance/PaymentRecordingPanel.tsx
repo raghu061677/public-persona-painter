@@ -81,6 +81,15 @@ export function PaymentRecordingPanel({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editData, setEditData] = useState({
+    payment_date: "",
+    method: "Bank Transfer",
+    reference_no: "",
+    notes: "",
+  });
   const [clientTds, setClientTds] = useState<ClientTdsDefaults>({
     tds_applicable: false,
     default_tds_rate: 0,

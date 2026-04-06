@@ -19,13 +19,15 @@ import { AutoReminderPanel } from "@/components/collections/AutoReminderPanel";
 import { ClientRiskPanel, ClientRiskBadge } from "@/components/collections/ClientRiskPanel";
 import { CashflowForecastPanel } from "@/components/collections/CashflowForecastPanel";
 import { CollectionPerformanceCards } from "@/components/collections/CollectionPerformanceCards";
+import { CollectionCommunicationsTab } from "@/components/collections/CollectionCommunicationsTab";
+import { SendReminderModal } from "@/components/collections/SendReminderModal";
 import { useAutoReminders } from "@/hooks/useAutoReminders";
 import { useClientRiskScoring } from "@/hooks/useClientRiskScoring";
 import { useCashflowForecast } from "@/hooks/useCashflowForecast";
 import { useCollectionMetrics } from "@/hooks/useCollectionMetrics";
 import { formatINR, getDaysOverdue } from "@/utils/finance";
 import { format } from "date-fns";
-import { Plus, History, Eye, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, BellRing, ShieldAlert, TrendingUp } from "lucide-react";
+import { Plus, History, Eye, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, BellRing, ShieldAlert, TrendingUp, Send, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -77,6 +79,7 @@ export default function FinanceCollections() {
   const [followupTarget, setFollowupTarget] = useState<string[] | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ invoiceId: string; invoiceNo: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [reminderTarget, setReminderTarget] = useState<string[] | null>(null);
 
   // Intelligence hooks
   const autoReminders = useAutoReminders();
@@ -244,7 +247,7 @@ export default function FinanceCollections() {
       <CollectionKPICards kpis={kpis} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="worklist" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" /> Worklist
           </TabsTrigger>
@@ -253,6 +256,9 @@ export default function FinanceCollections() {
             {autoReminders.candidates.length > 0 && (
               <Badge variant="destructive" className="text-[9px] h-4 px-1 ml-1">{autoReminders.candidates.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="comms" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" /> Comms
           </TabsTrigger>
           <TabsTrigger value="risk" className="gap-1.5 text-xs">
             <ShieldAlert className="h-3.5 w-3.5" /> Risk & Forecast
@@ -284,6 +290,9 @@ export default function FinanceCollections() {
                 <div className="flex gap-2 ml-auto">
                   <Button size="sm" variant="outline" onClick={() => setFollowupTarget(Array.from(selected))}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Add Follow-up ({selected.size})
+                  </Button>
+                  <Button size="sm" onClick={() => setReminderTarget(Array.from(selected))}>
+                    <Send className="h-3.5 w-3.5 mr-1" /> Send Reminders ({selected.size})
                   </Button>
                 </div>
               )}
@@ -355,6 +364,9 @@ export default function FinanceCollections() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Send Reminder" onClick={() => setReminderTarget([r.id])}>
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Add Follow-up" onClick={() => setFollowupTarget([r.id])}>
                               <Plus className="h-3.5 w-3.5" />
                             </Button>
@@ -393,6 +405,11 @@ export default function FinanceCollections() {
             onExecuteSelected={autoReminders.executeReminders}
             isExecuting={autoReminders.isExecuting}
           />
+        </TabsContent>
+
+        {/* COMMS TAB */}
+        <TabsContent value="comms" className="space-y-4 mt-4">
+          <CollectionCommunicationsTab />
         </TabsContent>
 
         {/* RISK & FORECAST TAB */}
@@ -435,6 +452,28 @@ export default function FinanceCollections() {
           onClose={() => setHistoryTarget(null)}
           invoiceNo={historyTarget.invoiceNo}
           followups={followupsMap[historyTarget.invoiceId] || []}
+        />
+      )}
+      {reminderTarget && (
+        <SendReminderModal
+          open
+          onClose={() => { setReminderTarget(null); setSelected(new Set()); }}
+          invoices={reminderTarget.map(id => {
+            const r = rows.find(row => row.id === id);
+            return r ? {
+              id: r.id,
+              invoice_no: r.invoice_no,
+              client_id: r.client_id,
+              client_name: r.client_name,
+              campaign_name: r.campaign_name,
+              campaign_id: r.campaign_id,
+              due_date: r.due_date,
+              balance_due: r.balance_due,
+              overdue_days: r.overdue_days,
+              promised_payment_date: r.promised_payment_date,
+            } : { id, invoice_no: id, client_id: "", client_name: "", campaign_name: null, campaign_id: null, due_date: null, balance_due: 0, overdue_days: 0 };
+          })}
+          onSent={fetchData}
         />
       )}
     </div>

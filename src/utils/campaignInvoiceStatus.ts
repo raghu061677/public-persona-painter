@@ -32,6 +32,7 @@ export interface InvoiceSummaryRow {
   status: string;
   invoice_no: string | null;
   created_at: string;
+  items?: any[] | null; // jsonb items with booking_start_date / booking_end_date
 }
 
 /**
@@ -53,6 +54,7 @@ export function generateBillableMonths(startDate: string, endDate: string): stri
 
 /**
  * Extract invoiced months from finalized (non-draft, non-cancelled) invoices.
+ * For multi-month invoices, derives covered months from item date ranges.
  */
 export function extractInvoicedMonths(invoices: InvoiceSummaryRow[], campaignId: string): string[] {
   const months = new Set<string>();
@@ -60,13 +62,41 @@ export function extractInvoicedMonths(invoices: InvoiceSummaryRow[], campaignId:
     if (
       inv.campaign_id === campaignId &&
       !inv.is_draft &&
-      inv.status !== "Cancelled" &&
-      inv.billing_month
+      inv.status !== "Cancelled"
     ) {
-      months.add(inv.billing_month);
+      // Try to derive all covered months from items' date ranges
+      const coveredMonths = deriveMonthsFromItems(inv.items);
+      if (coveredMonths.length > 0) {
+        coveredMonths.forEach((m) => months.add(m));
+      } else if (inv.billing_month) {
+        // Fallback: single billing_month
+        months.add(inv.billing_month);
+      }
     }
   });
   return Array.from(months).sort();
+}
+
+/**
+ * Derive all YYYY-MM months covered by invoice items' booking date ranges.
+ */
+function deriveMonthsFromItems(items: any[] | null | undefined): string[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const months = new Set<string>();
+  items.forEach((item) => {
+    const startStr = item.booking_start_date || item.bill_start_date;
+    const endStr = item.booking_end_date || item.bill_end_date;
+    if (startStr && endStr) {
+      const start = startOfMonth(new Date(startStr));
+      const end = startOfMonth(new Date(endStr));
+      let current = start;
+      while (!isAfter(current, end)) {
+        months.add(format(current, "yyyy-MM"));
+        current = addMonths(current, 1);
+      }
+    }
+  });
+  return Array.from(months);
 }
 
 /**

@@ -84,9 +84,10 @@ export default function InvoiceDetail() {
 
   const fetchPreviewNumber = async (companyId: string, gstPercent: number, invoiceDate?: string) => {
     try {
+      // Use ?? instead of || so that 0% GST is preserved (0 is falsy with ||)
       const rpcParams = {
         p_company_id: companyId,
-        p_gst_rate: gstPercent || 18,
+        p_gst_rate: gstPercent ?? 18,
         ...(invoiceDate ? { p_invoice_date: invoiceDate.split('T')[0] } : {}),
       };
       const { data, error } = await supabase.rpc('preview_next_invoice_number', rpcParams as any);

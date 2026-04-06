@@ -881,11 +881,15 @@ export default function PlanDetail() {
 
       if (error) throw error;
       
-      // Create approval workflow if the function exists
-      try {
-        await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
-      } catch (workflowError) {
-        console.log("Approval workflow creation skipped:", workflowError);
+      // Create approval workflow
+      const { error: workflowError } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+      if (workflowError) {
+        console.error("Approval workflow creation failed:", workflowError);
+        toast({
+          title: "Warning",
+          description: "Plan status updated but approval workflow could not be created. Please contact admin.",
+          variant: "destructive",
+        });
       }
 
       toast({

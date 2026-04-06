@@ -299,6 +299,13 @@ export default function CampaignsList() {
 
     // Sorting
     if (sortConfig?.direction) {
+      const invoiceStatusPriority: Record<string, number> = {
+        overdue: 0,
+        not_started: 1,
+        partially_invoiced: 2,
+        not_billable_yet: 3,
+        fully_invoiced: 4,
+      };
       result = [...result].sort((a, b) => {
         let aVal: any, bVal: any;
         switch (sortConfig.key) {
@@ -310,6 +317,20 @@ export default function CampaignsList() {
             aVal = a[sortConfig.key] || 0;
             bVal = b[sortConfig.key] || 0;
             break;
+          case 'invoice_status': {
+            const aStatus = campaignInvoiceStatuses.get(a.id);
+            const bStatus = campaignInvoiceStatuses.get(b.id);
+            aVal = aStatus ? (invoiceStatusPriority[aStatus.status] ?? 99) : 99;
+            bVal = bStatus ? (invoiceStatusPriority[bStatus.status] ?? 99) : 99;
+            break;
+          }
+          case 'invoice_progress': {
+            const aStatus = campaignInvoiceStatuses.get(a.id);
+            const bStatus = campaignInvoiceStatuses.get(b.id);
+            aVal = aStatus?.completionPercent ?? -1;
+            bVal = bStatus?.completionPercent ?? -1;
+            break;
+          }
           default:
             aVal = a[sortConfig.key];
             bVal = b[sortConfig.key];
@@ -586,8 +607,8 @@ export default function CampaignsList() {
                       <SortableTableHead sortKey="status" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Status</SortableTableHead>
                       <SortableTableHead sortKey="total_assets" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()}>Assets</SortableTableHead>
                       <SortableTableHead sortKey="grand_total" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="right">Total</SortableTableHead>
-                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Invoice Status</TableHead>
-                      <TableHead className={`px-4 py-3 text-center font-semibold ${getCellClassName()}`}>Progress</TableHead>
+                      <SortableTableHead sortKey="invoice_status" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="center">Invoice Status</SortableTableHead>
+                      <SortableTableHead sortKey="invoice_progress" currentSort={sortConfig} onSort={handleSort} className={getCellClassName()} align="center">Progress</SortableTableHead>
                       <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                     </TableRow>
                   </TableHeader>

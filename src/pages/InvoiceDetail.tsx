@@ -82,12 +82,16 @@ export default function InvoiceDetail() {
     setLoading(false);
   };
 
-  const fetchPreviewNumber = async (companyId: string, gstPercent: number) => {
+  const fetchPreviewNumber = async (companyId: string, gstPercent: number, invoiceDate?: string) => {
     try {
-      const { data, error } = await supabase.rpc('preview_next_invoice_number', {
+      const params: Record<string, unknown> = {
         p_company_id: companyId,
         p_gst_rate: gstPercent || 18,
-      });
+      };
+      if (invoiceDate) {
+        params.p_invoice_date = invoiceDate.split('T')[0];
+      }
+      const { data, error } = await supabase.rpc('preview_next_invoice_number', params);
       if (!error && data) {
         setPreviewNumber(data);
       }

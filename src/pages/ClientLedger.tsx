@@ -42,7 +42,7 @@ export default function ClientLedger() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, gstin")
+        .select("id, name, gst_number")
         .eq("company_id", company!.id)
         .order("name");
       if (error) throw error;

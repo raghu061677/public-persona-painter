@@ -27,7 +27,7 @@ import { useCashflowForecast } from "@/hooks/useCashflowForecast";
 import { useCollectionMetrics } from "@/hooks/useCollectionMetrics";
 import { formatINR, getDaysOverdue } from "@/utils/finance";
 import { format } from "date-fns";
-import { Plus, History, Eye, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, BellRing, ShieldAlert, TrendingUp } from "lucide-react";
+import { Plus, History, Eye, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, BellRing, ShieldAlert, TrendingUp, Send, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;

@@ -833,6 +833,70 @@ export function PaymentRecordingPanel({
           )}
         </div>
       </CardContent>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment</DialogTitle>
+            <DialogDescription>
+              Update payment details. Amount and TDS cannot be changed — delete and re-add if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Amount (read-only)</Label>
+              <Input value={editingPayment ? formatINR(editingPayment.amount) : ""} disabled />
+            </div>
+            <div>
+              <Label htmlFor="editDate">Payment Date *</Label>
+              <Input
+                id="editDate"
+                type="date"
+                value={editData.payment_date}
+                onChange={(e) => setEditData({ ...editData, payment_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editMethod">Payment Method</Label>
+              <Select value={editData.method} onValueChange={(v) => setEditData({ ...editData, method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <div className="flex items-center gap-2"><m.icon className="h-4 w-4" />{m.label}</div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="editRef">Reference Number</Label>
+              <Input
+                id="editRef"
+                value={editData.reference_no}
+                onChange={(e) => setEditData({ ...editData, reference_no: e.target.value })}
+                placeholder="UTR/Cheque number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editNotes">Notes</Label>
+              <Textarea
+                id="editNotes"
+                value={editData.notes}
+                onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                placeholder="Optional notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={editSaving}>
+              {editSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

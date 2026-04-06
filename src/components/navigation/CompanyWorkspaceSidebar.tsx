@@ -88,6 +88,7 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
           <SidebarItem icon={CreditCard} label="Payments" href="/admin/payments" collapsed={collapsed} />
           <SidebarItem icon={CalendarCheck} label="Month Close" href="/admin/finance/month-close" collapsed={collapsed} />
           <SidebarItem icon={Phone} label="Collections" href="/admin/finance/collections" collapsed={collapsed} />
+          <SidebarItem icon={BookOpen} label="Client Ledger" href="/admin/finance/client-ledger" collapsed={collapsed} />
         </SidebarSection>
       )}
 

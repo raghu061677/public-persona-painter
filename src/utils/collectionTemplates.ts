@@ -215,8 +215,8 @@ export function renderTemplate(type: TemplateType, vars: TemplateVars): { subjec
   let subject = tmpl.subject;
   let body = tmpl.body;
   for (const [k, v] of Object.entries(replacements)) {
-    subject = subject.replaceAll(k, v);
-    body = body.replaceAll(k, v);
+    subject = subject.split(k).join(v);
+    body = body.split(k).join(v);
   }
 
   return { subject, body };

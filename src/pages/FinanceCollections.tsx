@@ -291,6 +291,9 @@ export default function FinanceCollections() {
                   <Button size="sm" variant="outline" onClick={() => setFollowupTarget(Array.from(selected))}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Add Follow-up ({selected.size})
                   </Button>
+                  <Button size="sm" onClick={() => setReminderTarget(Array.from(selected))}>
+                    <Send className="h-3.5 w-3.5 mr-1" /> Send Reminders ({selected.size})
+                  </Button>
                 </div>
               )}
               <span className="text-xs text-muted-foreground ml-auto">{filtered.length} invoices</span>

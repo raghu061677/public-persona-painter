@@ -3797,9 +3797,15 @@ export type Database = {
           client_id: string
           company_id: string
           created_at: string
+          delivered_at: string | null
+          external_message_id: string | null
+          failure_reason: string | null
           id: string
           invoice_id: string
           message: string
+          opened_at: string | null
+          parent_comm_id: string | null
+          retry_count: number | null
           sent_at: string
           sent_by: string
           status: string
@@ -3811,9 +3817,15 @@ export type Database = {
           client_id: string
           company_id: string
           created_at?: string
+          delivered_at?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
           id?: string
           invoice_id: string
           message: string
+          opened_at?: string | null
+          parent_comm_id?: string | null
+          retry_count?: number | null
           sent_at?: string
           sent_by: string
           status?: string
@@ -3825,9 +3837,15 @@ export type Database = {
           client_id?: string
           company_id?: string
           created_at?: string
+          delivered_at?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
           id?: string
           invoice_id?: string
           message?: string
+          opened_at?: string | null
+          parent_comm_id?: string | null
+          retry_count?: number | null
           sent_at?: string
           sent_by?: string
           status?: string
@@ -3839,6 +3857,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_communications_parent_comm_id_fkey"
+            columns: ["parent_comm_id"]
+            isOneToOne: false
+            referencedRelation: "collection_communications"
             referencedColumns: ["id"]
           },
         ]

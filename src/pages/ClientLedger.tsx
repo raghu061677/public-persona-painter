@@ -53,10 +53,16 @@ export default function ClientLedger() {
   });
 
   const { ledgerEntries, summary, outstanding, isLoading } = useClientLedger(selectedClientId);
+  const riskScoring = useClientRiskScoring();
 
   const selectedClient = useMemo(
     () => (clientsQuery.data || []).find(c => c.id === selectedClientId),
     [clientsQuery.data, selectedClientId]
+  );
+
+  const selectedClientRisk = useMemo(
+    () => selectedClientId ? riskScoring.getRiskForClient(selectedClientId) : undefined,
+    [selectedClientId, riskScoring.scores]
   );
 
   // Apply filters

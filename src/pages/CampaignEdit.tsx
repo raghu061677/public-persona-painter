@@ -123,7 +123,7 @@ export default function CampaignEdit() {
   
   // Enterprise RBAC access mode
   const perms = useRecordPermissions(campaignRecord, 'campaigns');
-  const { validate: validateCampaign } = useFormValidation(campaignEntitySchema);
+  const { fieldErrors: campaignErrors, validate: validateCampaign } = useFormValidation(campaignEntitySchema);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);
@@ -1104,7 +1104,8 @@ export default function CampaignEdit() {
       notes,
     });
     if (!parsed) {
-      toast({ title: "Validation Error", description: "Please fix the highlighted fields", variant: "destructive" });
+      const errorMessages = Object.values(campaignErrors).filter(Boolean).join(', ');
+      toast({ title: "Validation Error", description: errorMessages || "Please fix the highlighted fields", variant: "destructive" });
       return;
     }
     if (campaignAssets.length === 0) {

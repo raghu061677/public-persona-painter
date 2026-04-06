@@ -76,6 +76,7 @@ const MobilePowerBills = lazy(() => import("./pages/MobilePowerBills"));
 const MobilePage = lazy(() => import("./pages/mobile/index"));
 const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
 const FinanceCollections = lazy(() => import("./pages/FinanceCollections"));
+const ClientLedger = lazy(() => import("./pages/ClientLedger"));
 const EstimationsList = lazy(() => import("./pages/EstimationsList"));
 const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));

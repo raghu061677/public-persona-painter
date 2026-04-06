@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, Info } from "lucide-react";
+import { Plus, Trash2, Pencil, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, Info } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
@@ -81,6 +81,15 @@ export function PaymentRecordingPanel({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editData, setEditData] = useState({
+    payment_date: "",
+    method: "Bank Transfer",
+    reference_no: "",
+    notes: "",
+  });
   const [clientTds, setClientTds] = useState<ClientTdsDefaults>({
     tds_applicable: false,
     default_tds_rate: 0,
@@ -316,6 +325,49 @@ export function PaymentRecordingPanel({
       onPaymentAdded?.();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete payment");
+    }
+  };
+
+  const handleEditPayment = (payment: PaymentRecord) => {
+    setEditingPayment(payment);
+    setEditData({
+      payment_date: payment.payment_date,
+      method: payment.method,
+      reference_no: payment.reference_no || "",
+      notes: payment.notes || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPayment) return;
+    if (!editData.payment_date) {
+      toast.error("Please select a payment date");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from("payment_records")
+        .update({
+          payment_date: editData.payment_date,
+          method: editData.method,
+          reference_no: editData.reference_no || null,
+          notes: editData.notes || null,
+        })
+        .eq("id", editingPayment.id);
+
+      if (error) throw error;
+
+      toast.success("Payment updated successfully");
+      setEditDialogOpen(false);
+      setEditingPayment(null);
+      fetchPayments();
+      onPaymentAdded?.();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update payment");
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -747,6 +799,20 @@ export function PaymentRecordingPanel({
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditPayment(payment)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Edit Payment</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -767,6 +833,70 @@ export function PaymentRecordingPanel({
           )}
         </div>
       </CardContent>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment</DialogTitle>
+            <DialogDescription>
+              Update payment details. Amount and TDS cannot be changed — delete and re-add if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Amount (read-only)</Label>
+              <Input value={editingPayment ? formatINR(editingPayment.amount) : ""} disabled />
+            </div>
+            <div>
+              <Label htmlFor="editDate">Payment Date *</Label>
+              <Input
+                id="editDate"
+                type="date"
+                value={editData.payment_date}
+                onChange={(e) => setEditData({ ...editData, payment_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editMethod">Payment Method</Label>
+              <Select value={editData.method} onValueChange={(v) => setEditData({ ...editData, method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <div className="flex items-center gap-2"><m.icon className="h-4 w-4" />{m.label}</div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="editRef">Reference Number</Label>
+              <Input
+                id="editRef"
+                value={editData.reference_no}
+                onChange={(e) => setEditData({ ...editData, reference_no: e.target.value })}
+                placeholder="UTR/Cheque number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editNotes">Notes</Label>
+              <Textarea
+                id="editNotes"
+                value={editData.notes}
+                onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                placeholder="Optional notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={editSaving}>
+              {editSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

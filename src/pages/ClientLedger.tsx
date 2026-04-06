@@ -98,7 +98,10 @@ export default function ClientLedger() {
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Client Ledger</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">Client Ledger</h1>
+              {selectedClientRisk && <ClientRiskBadge riskLevel={selectedClientRisk.riskLevel} />}
+            </div>
             <p className="text-sm text-muted-foreground">Receivable statement with running balance</p>
           </div>
         </div>

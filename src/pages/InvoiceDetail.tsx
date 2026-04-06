@@ -76,7 +76,7 @@ export default function InvoiceDetail() {
       setInvoice(data);
       // Fetch preview number for draft invoices
       if (data && isDraftInvoiceId(data.id)) {
-        fetchPreviewNumber(data.company_id, data.gst_percent);
+        fetchPreviewNumber(data.company_id, data.gst_percent, data.invoice_date);
       }
     }
     setLoading(false);

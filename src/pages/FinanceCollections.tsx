@@ -407,6 +407,11 @@ export default function FinanceCollections() {
           />
         </TabsContent>
 
+        {/* COMMS TAB */}
+        <TabsContent value="comms" className="space-y-4 mt-4">
+          <CollectionCommunicationsTab />
+        </TabsContent>
+
         {/* RISK & FORECAST TAB */}
         <TabsContent value="risk" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -447,6 +452,28 @@ export default function FinanceCollections() {
           onClose={() => setHistoryTarget(null)}
           invoiceNo={historyTarget.invoiceNo}
           followups={followupsMap[historyTarget.invoiceId] || []}
+        />
+      )}
+      {reminderTarget && (
+        <SendReminderModal
+          open
+          onClose={() => { setReminderTarget(null); setSelected(new Set()); }}
+          invoices={reminderTarget.map(id => {
+            const r = rows.find(row => row.id === id);
+            return r ? {
+              id: r.id,
+              invoice_no: r.invoice_no,
+              client_id: r.client_id,
+              client_name: r.client_name,
+              campaign_name: r.campaign_name,
+              campaign_id: r.campaign_id,
+              due_date: r.due_date,
+              balance_due: r.balance_due,
+              overdue_days: r.overdue_days,
+              promised_payment_date: r.promised_payment_date,
+            } : { id, invoice_no: id, client_id: "", client_name: "", campaign_name: null, campaign_id: null, due_date: null, balance_due: 0, overdue_days: 0 };
+          })}
+          onSent={fetchData}
         />
       )}
     </div>

@@ -247,7 +247,7 @@ export default function FinanceCollections() {
       <CollectionKPICards kpis={kpis} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="worklist" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" /> Worklist
           </TabsTrigger>
@@ -256,6 +256,9 @@ export default function FinanceCollections() {
             {autoReminders.candidates.length > 0 && (
               <Badge variant="destructive" className="text-[9px] h-4 px-1 ml-1">{autoReminders.candidates.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="comms" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" /> Comms
           </TabsTrigger>
           <TabsTrigger value="risk" className="gap-1.5 text-xs">
             <ShieldAlert className="h-3.5 w-3.5" /> Risk & Forecast

@@ -14281,13 +14281,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_public_share_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_public_share_safe"
@@ -14297,7 +14290,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -14311,7 +14304,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns_summary_secure"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -14325,7 +14318,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns_summary_secure"
             referencedColumns: ["id"]
           },
           {
@@ -14338,13 +14331,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
@@ -14638,9 +14638,9 @@ export type Database = {
         | { Args: { p_draft_id: string; p_gst_rate?: number }; Returns: string }
         | {
             Args: {
-              p_company_id: string
+              p_company_id?: string
               p_draft_id: string
-              p_gst_rate: number
+              p_gst_rate?: number
             }
             Returns: string
           }
@@ -15244,10 +15244,19 @@ export type Database = {
       }
       match_campaign_token: { Args: { p_token: string }; Returns: string }
       normalize_role: { Args: { raw_role: string }; Returns: string }
-      preview_next_invoice_number: {
-        Args: { p_company_id: string; p_gst_rate?: number }
-        Returns: string
-      }
+      preview_next_invoice_number:
+        | {
+            Args: { p_company_id: string; p_gst_rate?: number }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_company_id: string
+              p_gst_rate?: number
+              p_invoice_date?: string
+            }
+            Returns: string
+          }
       process_plan_approval: {
         Args: {
           p_approval_id: string

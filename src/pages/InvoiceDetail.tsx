@@ -76,18 +76,20 @@ export default function InvoiceDetail() {
       setInvoice(data);
       // Fetch preview number for draft invoices
       if (data && isDraftInvoiceId(data.id)) {
-        fetchPreviewNumber(data.company_id, data.gst_percent);
+        fetchPreviewNumber(data.company_id, data.gst_percent, data.invoice_date);
       }
     }
     setLoading(false);
   };
 
-  const fetchPreviewNumber = async (companyId: string, gstPercent: number) => {
+  const fetchPreviewNumber = async (companyId: string, gstPercent: number, invoiceDate?: string) => {
     try {
-      const { data, error } = await supabase.rpc('preview_next_invoice_number', {
+      const rpcParams = {
         p_company_id: companyId,
         p_gst_rate: gstPercent || 18,
-      });
+        ...(invoiceDate ? { p_invoice_date: invoiceDate.split('T')[0] } : {}),
+      };
+      const { data, error } = await supabase.rpc('preview_next_invoice_number', rpcParams as any);
       if (!error && data) {
         setPreviewNumber(data);
       }

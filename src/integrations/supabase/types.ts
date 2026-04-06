@@ -14638,9 +14638,9 @@ export type Database = {
         | { Args: { p_draft_id: string; p_gst_rate?: number }; Returns: string }
         | {
             Args: {
-              p_company_id: string
+              p_company_id?: string
               p_draft_id: string
-              p_gst_rate: number
+              p_gst_rate?: number
             }
             Returns: string
           }
@@ -15244,10 +15244,19 @@ export type Database = {
       }
       match_campaign_token: { Args: { p_token: string }; Returns: string }
       normalize_role: { Args: { raw_role: string }; Returns: string }
-      preview_next_invoice_number: {
-        Args: { p_company_id: string; p_gst_rate?: number }
-        Returns: string
-      }
+      preview_next_invoice_number:
+        | {
+            Args: { p_company_id: string; p_gst_rate?: number }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_company_id: string
+              p_gst_rate?: number
+              p_invoice_date?: string
+            }
+            Returns: string
+          }
       process_plan_approval: {
         Args: {
           p_approval_id: string

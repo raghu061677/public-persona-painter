@@ -3,7 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,9 +19,15 @@ import {
   formatTopItems,
   formatCampaignDuration,
 } from "@/utils/collectionTemplates";
+import {
+  sendWhatsAppMessage,
+  sendEmailMessage,
+  logCommunication,
+  updateCommStatus,
+} from "@/services/communications/commProvider";
 import { formatINR } from "@/utils/finance";
 import { format } from "date-fns";
-import { MessageSquare, Mail, Copy, StickyNote, Send, Loader2 } from "lucide-react";
+import { MessageSquare, Mail, Copy, StickyNote, Send, Loader2, Phone, Globe, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface InvoiceData {
@@ -41,6 +50,13 @@ interface Props {
   onSent?: () => void;
 }
 
+interface BulkResult {
+  total: number;
+  sent: number;
+  failed: number;
+  manual: number;
+}
+
 export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
   const { company } = useCompany();
   const { user } = useAuth();
@@ -48,24 +64,44 @@ export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
 
   const [templateType, setTemplateType] = useState<TemplateType>("due_reminder");
   const [message, setMessage] = useState("");
+  const [subject, setSubject] = useState("");
   const [sending, setSending] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [bulkChannel, setBulkChannel] = useState<"whatsapp" | "email">("whatsapp");
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
 
   const invoice = invoices[0];
   const isBulk = invoices.length > 1;
 
-  // Fetch context on open
+  // Fetch context & client contact on open
   useEffect(() => {
     if (open && invoices.length > 0) {
       const ids = invoices.map((i) => i.id);
       const cIds = invoices.map((i) => i.campaign_id);
       fetchContext(ids, cIds);
+      setBulkResult(null);
 
-      // Auto-select template
       const promiseBroken =
         invoice?.promised_payment_date &&
         invoice.promised_payment_date < new Date().toISOString().split("T")[0] &&
         invoice.balance_due > 0;
       setTemplateType(autoSelectTemplate(invoice?.overdue_days || 0, !!promiseBroken));
+
+      // Fetch client contact info
+      if (invoice?.client_id) {
+        supabase
+          .from("clients")
+          .select("phone, email")
+          .eq("id", invoice.client_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) {
+              setWhatsappNumber((data as any).phone || "");
+              setEmailAddress((data as any).email || "");
+            }
+          });
+      }
     }
   }, [open, invoices]);
 
@@ -90,8 +126,9 @@ export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
       top_items: formatTopItems(items, 3),
     };
 
-    const { body } = renderTemplate(templateType, vars);
-    setMessage(body);
+    const rendered = renderTemplate(templateType, vars);
+    setMessage(rendered.body);
+    setSubject(rendered.subject);
   }, [templateType, context, contextLoading, invoice, company]);
 
   const items = useMemo(() => (invoice ? context.items[invoice.id] || [] : []), [context, invoice]);
@@ -100,71 +137,182 @@ export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
     [context, invoice]
   );
 
-  const logCommunication = async (channel: string) => {
+  const doSend = async (channel: string, sendFn?: () => Promise<{ success: boolean; mode: string; externalMessageId?: string; error?: string }>) => {
     if (!company?.id || !user?.id || !message.trim()) {
       toast.error("Message cannot be empty");
-      return false;
+      return;
     }
     setSending(true);
 
-    const inserts = invoices.map((inv) => ({
+    // Log as draft first
+    const { id: commId, error: logErr } = await logCommunication({
       company_id: company.id,
-      client_id: inv.client_id,
-      invoice_id: inv.id,
-      campaign_id: inv.campaign_id || null,
+      client_id: invoice.client_id,
+      invoice_id: invoice.id,
+      campaign_id: invoice.campaign_id,
       message: isBulk ? `[Bulk] ${message}` : message,
       channel,
       template_type: templateType,
       sent_by: user.id,
-      status: "sent",
-    }));
+      status: "queued",
+    });
 
-    const { error } = await supabase.from("collection_communications" as any).insert(inserts as any);
-    setSending(false);
-
-    if (error) {
+    if (logErr) {
       toast.error("Failed to log communication");
-      console.error(error);
-      return false;
+      setSending(false);
+      return;
     }
-    return true;
-  };
 
-  const handleWhatsApp = async () => {
-    const ok = await logCommunication("whatsapp");
-    if (!ok) return;
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encoded}`, "_blank");
-    toast.success("WhatsApp opened & communication logged");
+    if (sendFn) {
+      const result = await sendFn();
+      if (commId) {
+        await updateCommStatus(commId, {
+          status: result.success ? (result.mode === "manual" ? "manual" : "sent") : "failed",
+          external_message_id: result.externalMessageId || undefined,
+          failure_reason: result.error || undefined,
+        });
+      }
+
+      if (result.success) {
+        toast.success(
+          result.mode === "manual"
+            ? `${channel === "whatsapp" ? "WhatsApp" : "Email"} opened & logged`
+            : `${channel === "whatsapp" ? "WhatsApp" : "Email"} sent successfully`
+        );
+      } else {
+        toast.error(`Send failed: ${result.error}`);
+      }
+    }
+
+    setSending(false);
     onSent?.();
     onClose();
   };
 
-  const handleEmail = async () => {
-    const ok = await logCommunication("email");
-    if (!ok) return;
-    const subject = encodeURIComponent(`Payment Reminder – ${invoice?.invoice_no || ""}`);
-    const body = encodeURIComponent(message);
-    window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
-    toast.success("Email draft opened & communication logged");
-    onSent?.();
-    onClose();
-  };
+  const handleWhatsApp = () =>
+    doSend("whatsapp", () =>
+      sendWhatsAppMessage({ phoneNumber: whatsappNumber, message })
+    );
+
+  const handleEmail = () =>
+    doSend("email", () =>
+      sendEmailMessage({ to: emailAddress, subject, body: message })
+    );
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
-    await logCommunication("note");
+    if (company?.id && user?.id) {
+      await logCommunication({
+        company_id: company.id,
+        client_id: invoice.client_id,
+        invoice_id: invoice.id,
+        campaign_id: invoice.campaign_id,
+        message,
+        channel: "note",
+        template_type: templateType,
+        sent_by: user.id,
+        status: "manual",
+      });
+    }
     toast.success("Message copied & logged");
     onSent?.();
     onClose();
   };
 
   const handleInternalNote = async () => {
-    const ok = await logCommunication("note");
-    if (!ok) return;
+    if (!company?.id || !user?.id) return;
+    await logCommunication({
+      company_id: company.id,
+      client_id: invoice.client_id,
+      invoice_id: invoice.id,
+      campaign_id: invoice.campaign_id,
+      message,
+      channel: "note",
+      template_type: templateType,
+      sent_by: user.id,
+      status: "sent",
+    });
     toast.success("Internal note saved");
     onSent?.();
     onClose();
+  };
+
+  // Bulk send
+  const handleBulkSend = async () => {
+    if (!company?.id || !user?.id) return;
+    setSending(true);
+    const result: BulkResult = { total: invoices.length, sent: 0, failed: 0, manual: 0 };
+
+    for (const inv of invoices) {
+      const cam = inv.campaign_id ? context.campaigns[inv.campaign_id] : null;
+      const itms = context.items[inv.id] || [];
+      const vars = {
+        client_name: inv.client_name,
+        invoice_no: inv.invoice_no,
+        due_date: inv.due_date || undefined,
+        balance_due: inv.balance_due,
+        overdue_days: inv.overdue_days,
+        company_name: company?.name || "Go-Ads",
+        campaign_name: cam?.campaign_name || inv.campaign_name || undefined,
+        campaign_duration: cam ? formatCampaignDuration(cam.start_date, cam.end_date) : undefined,
+        top_items: formatTopItems(itms, 3),
+      };
+      const rendered = renderTemplate(templateType, vars);
+
+      // Get client contact
+      const { data: client } = await supabase
+        .from("clients")
+        .select("phone, email")
+        .eq("id", inv.client_id)
+        .maybeSingle();
+
+      const { id: commId } = await logCommunication({
+        company_id: company.id,
+        client_id: inv.client_id,
+        invoice_id: inv.id,
+        campaign_id: inv.campaign_id,
+        message: rendered.body,
+        channel: bulkChannel,
+        template_type: templateType,
+        sent_by: user.id,
+        status: "queued",
+      });
+
+      let sendResult;
+      if (bulkChannel === "whatsapp") {
+        // Bulk WhatsApp always logs as manual (can't open multiple deep links)
+        sendResult = { success: true, mode: "manual" as const };
+      } else {
+        const email = (client as any)?.email;
+        if (email) {
+          sendResult = await sendEmailMessage({
+            to: email,
+            subject: rendered.subject,
+            body: rendered.body,
+          });
+        } else {
+          sendResult = { success: false, mode: "fallback" as const, error: "No email" };
+        }
+      }
+
+      if (commId) {
+        await updateCommStatus(commId, {
+          status: sendResult.success ? (sendResult.mode === "manual" ? "manual" : "sent") : "failed",
+          failure_reason: sendResult.success ? undefined : sendResult.error,
+        });
+      }
+
+      if (sendResult.success) {
+        if (sendResult.mode === "manual") result.manual++;
+        else result.sent++;
+      } else {
+        result.failed++;
+      }
+    }
+
+    setBulkResult(result);
+    setSending(false);
+    onSent?.();
   };
 
   return (
@@ -211,7 +359,6 @@ export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
               )}
             </div>
 
-            {/* Line items preview */}
             {items.length > 0 && (
               <div className="mt-2 pt-2 border-t">
                 <p className="text-xs text-muted-foreground mb-1">Media Details:</p>
@@ -242,65 +389,160 @@ export function SendReminderModal({ open, onClose, invoices, onSent }: Props) {
           </div>
         )}
 
-        {isBulk && (
-          <div className="border rounded-lg p-3 bg-muted/30">
+        {isBulk && !bulkResult && (
+          <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
             <p className="text-sm font-medium">Sending to {invoices.length} invoices:</p>
-            <div className="text-xs mt-1 max-h-20 overflow-y-auto space-y-0.5">
+            <div className="text-xs max-h-20 overflow-y-auto space-y-0.5">
               {invoices.map((inv) => (
                 <div key={inv.id}>
                   {inv.client_name} – {inv.invoice_no} – {formatINR(inv.balance_due)}
                 </div>
               ))}
             </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs">Channel:</Label>
+              <Select value={bulkChannel} onValueChange={(v) => setBulkChannel(v as any)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
-        {/* Template selector */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium whitespace-nowrap">Template:</span>
-          <Select
-            value={templateType}
-            onValueChange={(v) => setTemplateType(v as TemplateType)}
-          >
-            <SelectTrigger className="flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {getTemplateList().map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Bulk result summary */}
+        {bulkResult && (
+          <div className="border rounded-lg p-4 space-y-2">
+            <p className="font-medium text-sm">Bulk Send Complete</p>
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+              <div className="p-2 rounded bg-muted">
+                <div className="text-lg font-bold">{bulkResult.total}</div>
+                <div className="text-muted-foreground">Total</div>
+              </div>
+              <div className="p-2 rounded bg-green-50 dark:bg-green-950/30">
+                <div className="text-lg font-bold text-green-600">{bulkResult.sent}</div>
+                <div className="text-muted-foreground">Sent</div>
+              </div>
+              <div className="p-2 rounded bg-amber-50 dark:bg-amber-950/30">
+                <div className="text-lg font-bold text-amber-600">{bulkResult.manual}</div>
+                <div className="text-muted-foreground">Manual</div>
+              </div>
+              <div className="p-2 rounded bg-red-50 dark:bg-red-950/30">
+                <div className="text-lg font-bold text-red-600">{bulkResult.failed}</div>
+                <div className="text-muted-foreground">Failed</div>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full mt-2" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        )}
 
-        {/* Message editor */}
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={12}
-          className="font-mono text-xs"
-          placeholder={contextLoading ? "Loading context..." : "Message preview..."}
-        />
+        {!bulkResult && (
+          <>
+            {/* Template selector */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium whitespace-nowrap">Template:</span>
+              <Select
+                value={templateType}
+                onValueChange={(v) => setTemplateType(v as TemplateType)}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getTemplateList().map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Channel buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={handleWhatsApp} disabled={sending} className="gap-1.5 bg-green-600 hover:bg-green-700">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-            WhatsApp
-          </Button>
-          <Button onClick={handleEmail} disabled={sending} variant="outline" className="gap-1.5">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-            Email
-          </Button>
-          <Button onClick={handleCopy} disabled={sending} variant="outline" className="gap-1.5">
-            <Copy className="h-4 w-4" /> Copy
-          </Button>
-          <Button onClick={handleInternalNote} disabled={sending} variant="secondary" className="gap-1.5 ml-auto">
-            <StickyNote className="h-4 w-4" /> Save as Note
-          </Button>
-        </div>
+            {/* Contact info for single invoice */}
+            {!isBulk && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> WhatsApp Number
+                  </Label>
+                  <Input
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="+91XXXXXXXXXX"
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Email Address
+                  </Label>
+                  <Input
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="client@example.com"
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Subject line (for email) */}
+            {!isBulk && (
+              <div className="space-y-1">
+                <Label className="text-xs">Email Subject</Label>
+                <Input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+            )}
+
+            {/* Message editor */}
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={10}
+              className="font-mono text-xs"
+              placeholder={contextLoading ? "Loading context..." : "Message preview..."}
+            />
+
+            {/* Channel buttons */}
+            <div className="flex flex-wrap gap-2">
+              {isBulk ? (
+                <Button onClick={handleBulkSend} disabled={sending} className="gap-1.5">
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send All ({invoices.length})
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={handleWhatsApp} disabled={sending} className="gap-1.5 bg-green-600 hover:bg-green-700">
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                    WhatsApp
+                    {!whatsappNumber && <span className="text-[10px] opacity-70">(link)</span>}
+                  </Button>
+                  <Button onClick={handleEmail} disabled={sending} variant="outline" className="gap-1.5">
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                    Email
+                    {!emailAddress && <span className="text-[10px] opacity-70">(draft)</span>}
+                  </Button>
+                  <Button onClick={handleCopy} disabled={sending} variant="outline" className="gap-1.5">
+                    <Copy className="h-4 w-4" /> Copy
+                  </Button>
+                  <Button onClick={handleInternalNote} disabled={sending} variant="secondary" className="gap-1.5 ml-auto">
+                    <StickyNote className="h-4 w-4" /> Save as Note
+                  </Button>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

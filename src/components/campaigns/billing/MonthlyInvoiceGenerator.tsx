@@ -35,7 +35,23 @@ import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGat
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
-import { format, getDaysInMonth, startOfMonth, endOfMonth, max, min, differenceInDays, parseISO } from "date-fns";
+import { format, getDaysInMonth, startOfMonth, endOfMonth, max, min, differenceInDays, parseISO, addDays } from "date-fns";
+
+/** If billing month falls in FY 2025-26 (before April 2026), backdate invoice to March 31, 2026 */
+function getSmartInvoiceDate(billingMonth: string): Date {
+  const [y, m] = billingMonth.split('-').map(Number);
+  const billingDate = new Date(y, m - 1, 1);
+  const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
+  if (billingDate < fy2627Start) {
+    return new Date(2026, 2, 31); // March 31, 2026
+  }
+  return new Date();
+}
+
+function isBillingMonthOldFY(billingMonth: string): boolean {
+  const [y, m] = billingMonth.split('-').map(Number);
+  return new Date(y, m - 1, 1) < new Date(2026, 3, 1);
+}
 
 interface CampaignAsset {
   id: string;

@@ -496,6 +496,8 @@ const App = () => (
               <Route path="invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices/*" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices-import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportInvoices /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="invoices/number-review" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceNumberReview /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/legacy-campaign-close" element={<ProtectedRoute requireAuth><ModernAppLayout><LegacyCampaignCloseReview /></ModernAppLayout></ProtectedRoute>} />
               <Route path="payment-reminders" element={<Navigate to="/admin/invoices" replace />} />
               <Route path="payment-confirmations" element={<Navigate to="/admin/payments?tab=confirmations" replace />} />
               <Route path="expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />

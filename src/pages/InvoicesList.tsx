@@ -205,7 +205,7 @@ export default function InvoicesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
-      .select('*, campaigns:campaign_id(campaign_name), clients:client_id(gst_number)')
+      .select('*, campaigns:campaign_id(campaign_name, start_date, end_date), clients:client_id(gst_number)')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
     if (error) {

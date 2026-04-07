@@ -336,7 +336,9 @@
                 const assetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
                  const startDt = item.start_date || item.booking_start_date;
                  const endDt = item.end_date || item.booking_end_date;
-                 const billableDays = item.billable_days || item.booked_days || (startDt && endDt ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0);
+                 // Always calculate days from dates when available to avoid stale booked_days from parent campaigns
+                 const calcDaysFromDates = (startDt && endDt) ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
+                 const billableDays = item.billable_days || (calcDaysFromDates > 0 ? calcDaysFromDates : item.booked_days) || 0;
                 return (
                   <tr key={index} className="border-t border-border">
                     <td className="p-2 align-top">{index + 1}</td>

@@ -20,8 +20,11 @@ const DURATION_QUICK = [
   { label: "90 days", value: 90 },
 ];
 
+export type InvoiceTypeFilter = 'all' | 'gst_18' | 'zero_gst';
+
 export interface InvoiceFilters {
   status?: string[];
+  invoice_type?: InvoiceTypeFilter;
   total_min?: number;
   balance_min?: number;
   due_between?: { from: string; to: string };

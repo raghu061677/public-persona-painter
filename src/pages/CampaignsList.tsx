@@ -80,6 +80,22 @@ export default function CampaignsList() {
       campaign_id: (row: any) => row.id || "",
       asset_count: (row: any) => row.total_assets || 0,
       total_amount: (row: any) => row.grand_total || 0,
+      invoice_status: (row: any) => {
+        const invStatus = campaignInvoiceStatuses.get(row.id);
+        if (!invStatus) return "";
+        const labels: Record<string, string> = {
+          overdue: "Overdue",
+          not_started: "Not Started",
+          partially_invoiced: "Partial",
+          fully_invoiced: "Fully Invoiced",
+          not_billable_yet: "Not Billable",
+        };
+        return labels[invStatus.status] || invStatus.status;
+      },
+      invoice_progress: (row: any) => {
+        const invStatus = campaignInvoiceStatuses.get(row.id);
+        return invStatus ? `${invStatus.completionPercent}%` : "0%";
+      },
     },
   });
 
@@ -155,10 +171,19 @@ export default function CampaignsList() {
   }, [lv.loading, company?.id]);
 
   const ensureSpecialPresets = async () => {
+    // Query DB directly to avoid race conditions with stale lv.presets
+    const { data: dbPresets } = await supabase
+      .from("list_view_presets")
+      .select("preset_name")
+      .eq("company_id", company!.id)
+      .eq("page_key", "campaigns.list");
+
+    const existing = (dbPresets || []).map((p) => p.preset_name);
+
     const SPECIAL = [
       {
         preset_name: "Finance View",
-        selected_fields: ["sno", "campaign_id", "campaign_name", "client_name", "start_date", "end_date", "status", "total_amount"],
+        selected_fields: ["sno", "campaign_id", "campaign_name", "client_name", "start_date", "end_date", "status", "total_amount", "invoice_status", "invoice_progress"],
         sort: { field: "end_date", direction: "desc" as const },
         filters: {},
       },
@@ -176,7 +201,6 @@ export default function CampaignsList() {
       },
     ];
 
-    const existing = lv.presets.map((p) => p.preset_name);
     for (const sp of SPECIAL) {
       if (!existing.includes(sp.preset_name)) {
         await lv.saveCurrentAsView(sp.preset_name, false, true);

@@ -18,7 +18,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
+import { Plus, Eye, Pencil, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
 import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
@@ -37,7 +37,7 @@ import { InvoicesSummaryBar } from "@/components/invoices/InvoicesSummaryBar";
 
 const INVOICE_STATUSES = ['Draft', 'Sent', 'Partial', 'Paid', 'Overdue', 'Cancelled'];
 
-type SortField = 'id' | 'client_name' | 'campaign_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
+type SortField = 'id' | 'client_name' | 'campaign_name' | 'campaign_start_date' | 'campaign_end_date' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
@@ -205,7 +205,7 @@ export default function InvoicesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
-      .select('*, campaigns:campaign_id(campaign_name), clients:client_id(gst_number)')
+      .select('*, campaigns:campaign_id(campaign_name, start_date, end_date), clients:client_id(gst_number)')
       .eq('company_id', company.id)
       .order('created_at', { ascending: false });
     if (error) {
@@ -215,6 +215,8 @@ export default function InvoicesList() {
       const enriched = (data || []).map((inv: any) => ({
         ...inv,
         campaign_name: inv.campaigns?.campaign_name || inv.campaign_id || null,
+        campaign_start_date: inv.campaign_start_date || inv.campaigns?.start_date || null,
+        campaign_end_date: inv.campaign_end_date || inv.campaigns?.end_date || null,
         client_gst_number: inv.client_gstin_snapshot || inv.clients?.gst_number || null,
       }));
       setInvoices(invoiceScopeFilter(enriched));
@@ -297,6 +299,8 @@ export default function InvoicesList() {
       switch (sortField) {
         case 'invoice_date':
         case 'due_date':
+        case 'campaign_start_date':
+        case 'campaign_end_date':
           aVal = a[sortField] ? new Date(a[sortField]).getTime() : 0;
           bVal = b[sortField] ? new Date(b[sortField]).getTime() : 0;
           break;
@@ -331,16 +335,7 @@ export default function InvoicesList() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) {
-      toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Invoice deleted successfully" });
-      fetchInvoices();
-    }
-  };
+  // Remove delete handler - not needed for finance invoices
 
   const handleStatusChange = async (invoiceId: string, newStatus: string) => {
     const updateData: any = { status: newStatus };
@@ -608,17 +603,27 @@ export default function InvoicesList() {
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_start_date')}>
+                          Start Date {getSortIcon('campaign_start_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_end_date')}>
+                          End Date {getSortIcon('campaign_end_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-center font-semibold">
+                        Duration
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('invoice_date')}>
-                          Date {getSortIcon('invoice_date')}
+                          Invoice Date {getSortIcon('invoice_date')}
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('due_date')}>
                           Due Date {getSortIcon('due_date')}
                         </Button>
-                      </TableHead>
-                      <TableHead className="px-4 py-3 text-center font-semibold">
-                        Duration
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
@@ -641,11 +646,11 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                       <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={12} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                       <TableCell colSpan={10} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={12} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {
@@ -697,14 +702,25 @@ export default function InvoicesList() {
                                 <span className="text-muted-foreground text-sm">—</span>
                               )}
                             </TableCell>
+                            <TableCell className="px-4 py-3 text-sm">
+                              {invoice.campaign_start_date ? formatDate(invoice.campaign_start_date) : '—'}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm">
+                              {invoice.campaign_end_date ? formatDate(invoice.campaign_end_date) : '—'}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
+                              {(() => {
+                                const start = invoice.campaign_start_date || invoice.invoice_period_start;
+                                const end = invoice.campaign_end_date || invoice.invoice_period_end;
+                                if (start && end) {
+                                  const days = Math.max(1, Math.floor((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                                  return <span className="font-medium text-foreground">{days}d</span>;
+                                }
+                                return '—';
+                              })()}
+                            </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
-                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
-                              {invoice.invoice_period_start && invoice.invoice_period_end ? (() => {
-                                const days = Math.max(1, Math.floor((new Date(invoice.invoice_period_end).getTime() - new Date(invoice.invoice_period_start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                                return <span className="font-medium text-foreground">{days}d</span>;
-                              })() : '—'}
-                            </TableCell>
                             <TableCell className="px-4 py-3">
                               <Select
                                 value={invoice.status}
@@ -727,15 +743,13 @@ export default function InvoicesList() {
                               {canSeeInvField('balance_due', invoice) ? formatINR(invoice.balance_due) : <span className="text-muted-foreground select-none">••••••</span>}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="icon" title="View" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {isAdmin && (
-                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <Button variant="ghost" size="icon" title="Edit" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>

@@ -80,6 +80,22 @@ export default function CampaignsList() {
       campaign_id: (row: any) => row.id || "",
       asset_count: (row: any) => row.total_assets || 0,
       total_amount: (row: any) => row.grand_total || 0,
+      invoice_status: (row: any) => {
+        const invStatus = campaignInvoiceStatuses.get(row.id);
+        if (!invStatus) return "";
+        const labels: Record<string, string> = {
+          overdue: "Overdue",
+          not_started: "Not Started",
+          partially_invoiced: "Partial",
+          fully_invoiced: "Fully Invoiced",
+          not_billable_yet: "Not Billable",
+        };
+        return labels[invStatus.status] || invStatus.status;
+      },
+      invoice_progress: (row: any) => {
+        const invStatus = campaignInvoiceStatuses.get(row.id);
+        return invStatus ? `${invStatus.completionPercent}%` : "0%";
+      },
     },
   });
 

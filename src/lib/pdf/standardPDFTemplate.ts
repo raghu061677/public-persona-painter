@@ -453,13 +453,15 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setFont('NotoSans', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(17, 24, 39);
-  doc.text(BANK_DETAILS.bankName, bankBoxX + bankPad, bankY);
+  doc.text(`Bank: ${BANK_DETAILS.bankName}`, bankBoxX + bankPad, bankY);
   bankY += 4.5;
 
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, bankBoxX + bankPad, bankY);
   bankY += 4.5;
-  doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
+  doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, bankBoxX + bankPad, bankY);
+  bankY += 4.5;
+  doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
   bankY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
 
@@ -720,12 +722,14 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
   doc.setFont('NotoSans', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(17, 24, 39);
-  doc.text(BANK_DETAILS.bankName, leftMargin + 4, bkY);
+  doc.text(`Bank: ${BANK_DETAILS.bankName}`, leftMargin + 4, bkY);
   bkY += 4.5;
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin + 4, bkY);
   bkY += 4.5;
-  doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bkY);
+  doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, leftMargin + 4, bkY);
+  bkY += 4.5;
+  doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bkY);
   bkY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bkY);
   doc.setTextColor(0, 0, 0);

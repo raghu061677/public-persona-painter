@@ -435,6 +435,8 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   bankY += 5;
   doc.text(`Branch: ${bankDetails.branch}`, leftMargin + 4, bankY);
   bankY += 5;
+  doc.text(`A/C Name: ${bankDetails.accountName}`, leftMargin + 4, bankY);
+  bankY += 5;
   doc.text(`A/C No: ${bankDetails.accountNo}`, leftMargin + 4, bankY);
   bankY += 5;
   doc.text(`IFSC: ${bankDetails.ifsc}`, leftMargin + 4, bankY);

@@ -73,6 +73,7 @@ export function PaymentRecordingPanel({
   subTotal,
   balanceDue: initialBalanceDue,
   paidAmount: initialPaidAmount,
+  creditedAmount,
   status,
   clientId,
   campaignId,

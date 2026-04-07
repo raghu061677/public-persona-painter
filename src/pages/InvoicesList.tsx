@@ -641,7 +641,7 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                       <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>

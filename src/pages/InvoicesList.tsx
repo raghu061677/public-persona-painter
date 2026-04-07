@@ -601,17 +601,27 @@ export default function InvoicesList() {
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_start_date')}>
+                          Start Date {getSortIcon('campaign_start_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('campaign_end_date')}>
+                          End Date {getSortIcon('campaign_end_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-center font-semibold">
+                        Duration
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('invoice_date')}>
-                          Date {getSortIcon('invoice_date')}
+                          Invoice Date {getSortIcon('invoice_date')}
                         </Button>
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('due_date')}>
                           Due Date {getSortIcon('due_date')}
                         </Button>
-                      </TableHead>
-                      <TableHead className="px-4 py-3 text-center font-semibold">
-                        Duration
                       </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
@@ -634,11 +644,11 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                       <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={12} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                       <TableCell colSpan={10} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={12} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {
@@ -690,14 +700,25 @@ export default function InvoicesList() {
                                 <span className="text-muted-foreground text-sm">—</span>
                               )}
                             </TableCell>
+                            <TableCell className="px-4 py-3 text-sm">
+                              {invoice.campaign_start_date ? formatDate(invoice.campaign_start_date) : '—'}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm">
+                              {invoice.campaign_end_date ? formatDate(invoice.campaign_end_date) : '—'}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
+                              {(() => {
+                                const start = invoice.campaign_start_date || invoice.invoice_period_start;
+                                const end = invoice.campaign_end_date || invoice.invoice_period_end;
+                                if (start && end) {
+                                  const days = Math.max(1, Math.floor((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                                  return <span className="font-medium text-foreground">{days}d</span>;
+                                }
+                                return '—';
+                              })()}
+                            </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
-                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
-                              {invoice.invoice_period_start && invoice.invoice_period_end ? (() => {
-                                const days = Math.max(1, Math.floor((new Date(invoice.invoice_period_end).getTime() - new Date(invoice.invoice_period_start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                                return <span className="font-medium text-foreground">{days}d</span>;
-                              })() : '—'}
-                            </TableCell>
                             <TableCell className="px-4 py-3">
                               <Select
                                 value={invoice.status}
@@ -720,15 +741,13 @@ export default function InvoicesList() {
                               {canSeeInvField('balance_due', invoice) ? formatINR(invoice.balance_due) : <span className="text-muted-foreground select-none">••••••</span>}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="icon" title="View" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {isAdmin && (
-                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <Button variant="ghost" size="icon" title="Edit" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>

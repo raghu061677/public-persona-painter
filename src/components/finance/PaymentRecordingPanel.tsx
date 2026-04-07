@@ -44,6 +44,7 @@ interface PaymentRecordingPanelProps {
   subTotal?: number;
   balanceDue?: number;
   paidAmount?: number;
+  creditedAmount?: number;
   status?: string;
   clientId?: string;
   campaignId?: string;
@@ -72,6 +73,7 @@ export function PaymentRecordingPanel({
   subTotal,
   balanceDue: initialBalanceDue,
   paidAmount: initialPaidAmount,
+  creditedAmount,
   status,
   clientId,
   campaignId,
@@ -165,7 +167,8 @@ export function PaymentRecordingPanel({
 
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
   const totalTds = payments.reduce((sum, p) => sum + Number(p.tds_amount || 0), 0);
-  const totalSettled = totalPaid + totalTds;
+  const totalCredited = creditedAmount || 0;
+  const totalSettled = totalPaid + totalTds + totalCredited;
   const balance = Math.max(totalAmount - totalSettled, 0);
   const paymentProgress = totalAmount > 0 ? (totalSettled / totalAmount) * 100 : 0;
   const exactCashRequired = Math.max(balance - (parseFloat(newPayment.tds_amount) || 0), 0);
@@ -724,6 +727,12 @@ export function PaymentRecordingPanel({
                 <div>
                   <p className="text-sm text-muted-foreground">TDS Deducted</p>
                   <p className="text-lg font-bold text-blue-600">{formatINR(totalTds)}</p>
+                </div>
+              )}
+              {totalCredited > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Credits Applied</p>
+                  <p className="text-lg font-bold text-purple-600">{formatINR(totalCredited)}</p>
                 </div>
               )}
               <div>

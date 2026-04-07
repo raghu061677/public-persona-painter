@@ -1,40 +1,52 @@
 
 
-## Fix: Invoice Date for Old FY 2025-26 Campaigns
+## Fix: Credit Note Dialog Showing Wrong Item Amounts
 
 ### Problem
-32 completed campaigns from FY 2025-26 have no invoices. When generating invoices now (April 2026), the system always sets `invoice_date = today`, which would:
-- Place the invoice in FY 2026-27 series (INV/2026-27/xxxx)
-- Create a date mismatch with the actual campaign period
+The Create Credit Note dialog for `INV/2025-26/0057` shows incorrect item amounts. The JSONB `items` array stores **full campaign-period amounts** (e.g., ₹39,000 per item, sum = ₹4,28,570), but the invoice's actual `sub_total` is ₹1,48,499.67 (prorated for the billing month). The dialog picks up the raw `amount` field from each item and adds 18% GST on top, producing a credit note total of ~₹3,31,674 — nearly double the actual invoice total of ₹1,75,229.61.
 
-### Solution
-Add smart invoice date logic to the Monthly Invoice Generator. When the billing period falls within FY 2025-26 (before April 1, 2026), the invoice date defaults to **March 31, 2026** instead of today. This keeps the invoice in the correct FY series.
+### Root Cause
+In `CreateCreditNoteDialog.tsx`, `getItemAmount()` (line 105-107) returns `item.amount` directly from the JSONB. These amounts represent the full rent + mounting + printing for the entire campaign period, not the prorated amount that was actually billed.
 
-### Changes
+### Fix (1 file)
 
-**File: `src/components/campaigns/billing/MonthlyInvoiceGenerator.tsx`**
+**File: `src/components/finance/CreateCreditNoteDialog.tsx`**
 
-1. Add a helper function to determine the correct invoice date based on billing period:
-   - If the billing month (e.g., `2025-12`, `2026-03`) is before April 2026, use `2026-03-31`
-   - If the billing month is April 2026 or later, use today's date
-   - This ensures the `finalize_invoice_number` RPC assigns the correct FY prefix
+1. When building credit note items from invoice JSONB (lines 129-136), calculate each item's **proportional share** of the actual invoice `sub_total` instead of using the raw `amount`:
 
-2. Update line 579 to use this smart date instead of `new Date()`
+```typescript
+// Calculate proportional amounts
+const rawTotal = invoiceItems.reduce((s, item) => s + getItemAmount(item), 0);
+const invoiceSubtotal = invoice.sub_total ?? (invoice.total_amount / (1 + (invoice.gst_percent ?? 18) / 100));
 
-3. Update the due date calculation accordingly (30 days from invoice date)
+setItems(invoiceItems.map((item) => {
+  const rawAmt = getItemAmount(item);
+  // Scale each item proportionally to match invoice sub_total
+  const proportionalAmt = rawTotal > 0 
+    ? Math.round((rawAmt / rawTotal) * invoiceSubtotal * 100) / 100 
+    : 0;
+  return {
+    id: crypto.randomUUID(),
+    description: buildDescription(item),
+    amount: proportionalAmt,
+    selected: true,
+  };
+}));
+```
 
-4. Add a visible info banner in the dialog when backdating is applied, so the admin knows the invoice date will be March 31, 2026 instead of today
+2. Add `sub_total` to the `CreateCreditNoteDialogProps` invoice interface and pass it from InvoiceDetail.tsx
 
-**File: `supabase/functions/auto-generate-invoice/index.ts`**
+3. Update the max credit validation: `maxCredit` should use `invoice.total_amount` (already correct)
 
-5. Apply the same FY-aware date logic (line 157) for the edge function path, in case it's used
+**File: `src/pages/InvoiceDetail.tsx`**
 
-### No database changes needed
-The existing `finalize_invoice_number` RPC already handles FY detection from the invoice date. Setting invoice_date to March 31 will automatically assign it to the INV/2025-26/ series.
+4. Pass `sub_total` to the dialog props:
+```typescript
+sub_total: invoice.sub_total,
+```
 
-### How to use after implementation
-1. Go to each old campaign's Billing tab
-2. Select the billing period and generate the invoice as usual
-3. The system will automatically set the invoice date to March 31, 2026
-4. Finalize the invoice — it will get an INV/2025-26/ number
+### Result
+- Each item in the credit note will show its correct prorated amount matching the actual invoice billing
+- The total (subtotal + GST) will correctly match the invoice total when all items are selected
+- Existing validation (total cannot exceed invoice total_amount) continues to work
 

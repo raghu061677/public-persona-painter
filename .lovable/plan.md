@@ -1,94 +1,68 @@
 
 
-# Collections Communication Hub — Implementation Plan
+## Fix: Invoices Incorrectly Showing "Overdue" Despite Future Due Dates
 
-## Overview
-Add a communication layer to the Collections module that lets the finance team send professional, context-rich payment reminders (with campaign details and media line items) via WhatsApp/Email/Copy, with full logging and history.
+### Problem
+Two invoices (`INV/2025-26/0068` with due date April 15, and `INV-Z/2026-27/0001` with due date April 14) are marked as "Overdue" in the database even though their due dates haven't passed yet. Today is April 7, 2026.
 
-## Architecture
+### Root Cause
+There is a database trigger (`check_invoice_overdue_on_update`) that automatically marks invoices as "Overdue" when `due_date < CURRENT_DATE`. However, this trigger has two problems:
 
-The feature adds a 5th tab ("Communications") to the existing Collections page, a "Send Reminder" action button per invoice row, and a communication modal that auto-generates structured messages with campaign + line item context.
+1. **No reverse logic**: If an invoice's due date is later updated to a future date, the trigger never reverts the status back to "Sent"
+2. **Bulk function ran prematurely**: The `update_overdue_invoices()` function may have been called when these invoices had different due dates, or there was a timezone/date issue
 
-```text
-FinanceCollections.tsx
-  ├── [existing 4 tabs]
-  ├── NEW: "Communications" tab
-  │     └── CollectionCommunicationsTab.tsx (history + bulk)
-  ├── NEW: "Send Reminder" button per row (actions column)
-  │     └── SendReminderModal.tsx (message preview + channel selection)
-  └── NEW: hook useInvoiceContext.ts (batch-fetch campaign + items)
+### Plan
+
+**Step 1: Fix the database trigger to handle both directions**
+
+Update `auto_mark_invoice_overdue()` to:
+- Mark as "Overdue" when `status = 'Sent'` AND `due_date < CURRENT_DATE` AND balance > 0
+- **Revert to "Sent"** when `status = 'Overdue'` AND `due_date >= CURRENT_DATE` (due date was pushed forward)
+
+```sql
+CREATE OR REPLACE FUNCTION public.auto_mark_invoice_overdue()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF NEW.status = 'Sent' THEN
+    IF NEW.due_date < CURRENT_DATE AND COALESCE(NEW.balance_due, NEW.total_amount, 0) > 0 THEN
+      NEW.status := 'Overdue';
+    END IF;
+  ELSIF NEW.status = 'Overdue' THEN
+    IF NEW.due_date >= CURRENT_DATE THEN
+      NEW.status := 'Sent';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
 ```
 
-## Database
+**Step 2: Fix the two currently incorrect invoices**
 
-**New table: `collection_communications`**
-- `id` (uuid PK), `company_id` (uuid FK), `client_id` (text), `invoice_id` (text), `campaign_id` (text nullable)
-- `message` (text), `channel` (text: whatsapp/email/call/note), `template_type` (text)
-- `sent_by` (uuid), `sent_at` (timestamptz), `status` (text: sent/draft/failed)
-- RLS: company_id scoped (select/insert for authenticated users matching company)
+Run a corrective update to revert the 2 invoices with future due dates back to "Sent":
 
-No changes to invoices, payments, or any existing table.
+```sql
+UPDATE invoices 
+SET status = 'Sent', updated_at = now()
+WHERE status = 'Overdue' AND due_date >= CURRENT_DATE;
+```
 
-## Implementation Phases
+**Step 3: Update `update_overdue_invoices()` bulk function**
 
-### 1. Database Migration
-Create `collection_communications` table with company-scoped RLS policies.
+Add a reverse clause so the bulk function also fixes incorrectly-overdue invoices:
 
-### 2. Template Engine (`src/utils/collectionTemplates.ts`)
-- Define 6 template types: `due_reminder`, `overdue_reminder`, `final_reminder`, `promise_broken`, `tds_certificate`, `ledger_share`
-- Auto-selection logic based on overdue days / promise status
-- Variable replacement: `{{client_name}}`, `{{invoice_no}}`, `{{due_date}}`, `{{balance_due}}`, `{{overdue_days}}`, `{{campaign_name}}`, `{{campaign_duration}}`, `{{top_items}}`, `{{company_name}}`
-- `{{top_items}}` renders top 3 line items from `invoice_items` as bullet points with location, dimension, days, rate, total
-- Fallbacks: no campaign → skip section; no items → show summary only
+```sql
+-- Also revert incorrectly overdue invoices
+UPDATE invoices SET status = 'Sent', updated_at = now()
+WHERE status = 'Overdue' AND due_date >= CURRENT_DATE;
+```
 
-### 3. Invoice Context Hook (`src/hooks/useInvoiceContext.ts`)
-- Batch-fetch `invoice_items` and `campaigns` for a set of invoice IDs
-- Single query each (avoid N+1): `.in('invoice_id', ids)` for items, `.in('id', campaignIds)` for campaigns
-- Returns `{ items: Record<invoiceId, Item[]>, campaigns: Record<campaignId, Campaign> }`
-- Memoized and cached per render cycle
+### Files Changed
+- **1 database migration** (trigger fix + data correction)
+- No frontend code changes needed -- the view page correctly displays whatever status is in the DB
 
-### 4. Send Reminder Modal (`src/components/collections/SendReminderModal.tsx`)
-- Triggered from worklist row action button or bulk selection
-- Shows: client name, campaign name + duration, invoice no, amount due, overdue status
-- Preview of top 2-3 line items (location, dimension, days @ rate = total)
-- Template auto-selected, editable message textarea
-- Channel buttons: WhatsApp (opens `wa.me` deep link), Email (draft preview), Copy to Clipboard, Internal Note
-- On send: inserts into `collection_communications`, optionally creates `invoice_followups` entry
-- Validation: message required, channel required
-
-### 5. Communications History Tab
-- New 5th tab in FinanceCollections: "Comms" with count badge
-- Table: Date, Client, Invoice, Channel, Template Type, Message preview (truncated), Sent By
-- Filters: channel, date range, client
-- Also accessible from FollowupHistoryModal (show last 2 inline)
-
-### 6. Bulk Reminders
-- Multi-select in worklist → "Send Reminders" button
-- Generates personalized message per invoice (resolves campaign + items per invoice)
-- Logs each communication individually
-- Progress indicator during batch send
-
-### 7. Integration Points
-- Worklist table: add "Send Reminder" icon button in actions column
-- FollowupHistoryModal: show last 1-2 communications inline at top
-- Client Ledger: show communication count badge (future hook)
-
-## Files to Create
-1. `supabase/migrations/..._collection_communications.sql` — table + RLS
-2. `src/utils/collectionTemplates.ts` — templates + variable replacement + auto-selection
-3. `src/hooks/useInvoiceContext.ts` — batch context fetcher
-4. `src/components/collections/SendReminderModal.tsx` — main communication modal
-5. `src/components/collections/CollectionCommunicationsTab.tsx` — history tab
-
-## Files to Edit
-1. `src/pages/FinanceCollections.tsx` — add 5th tab, "Send Reminder" action button, bulk reminder button, wire modal
-2. `src/components/collections/FollowupHistoryModal.tsx` — show recent communications inline
-
-## Key Technical Decisions
-- Line items limited to top 3 with "(and more locations...)" suffix
-- Currency formatted as ₹ with INR formatting
-- Campaign duration formatted as "01 Apr – 30 Jun 2026"
-- WhatsApp uses `https://wa.me/?text=` with URL-encoded message
-- No external email sending — just draft preview and copy; actual sending deferred to existing email infrastructure
-- Template auto-selection: not due → due_reminder, 1-7d → overdue, 8-15d → overdue, 15+ → final, promise broken → promise_broken
+### Impact
+- Non-breaking, additive change to existing trigger
+- Fixes 2 currently affected invoices
+- Prevents future occurrences when due dates are edited
 

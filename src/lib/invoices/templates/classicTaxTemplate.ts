@@ -539,6 +539,8 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   bankY += 5;
   doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin + 4, bankY);
   bankY += 5;
+  doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, leftMargin + 4, bankY);
+  bankY += 5;
   doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bankY);
   bankY += 5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bankY);

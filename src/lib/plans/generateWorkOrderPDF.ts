@@ -342,10 +342,11 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('NotoSans', 'bold');
-  doc.text(BANK_DETAILS.bankName, lm, bkY); bkY += 4;
+  doc.text(`Bank: ${BANK_DETAILS.bankName}`, lm, bkY); bkY += 4;
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, lm, bkY); bkY += 4;
-  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, lm, bkY); bkY += 4;
+  doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, lm, bkY); bkY += 4;
+  doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, lm, bkY); bkY += 4;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, lm, bkY);
 
   // --- RIGHT: Campaign Cost Summary ---

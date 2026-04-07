@@ -131,7 +131,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
           printing_cost: printAmt,
           mounting_cost: mountAmt,
           hsn_sac: '998361',
-          booked_days: ca.booked_days,
+          booked_days: (ca.booking_start_date && ca.booking_end_date) ? Math.max(1, Math.floor((new Date(ca.booking_end_date).getTime() - new Date(ca.booking_start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1) : (ca.booked_days || 0),
           daily_rate: ca.daily_rate,
         };
       });

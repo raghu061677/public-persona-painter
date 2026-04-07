@@ -297,6 +297,8 @@ export default function InvoicesList() {
       switch (sortField) {
         case 'invoice_date':
         case 'due_date':
+        case 'campaign_start_date':
+        case 'campaign_end_date':
           aVal = a[sortField] ? new Date(a[sortField]).getTime() : 0;
           bVal = b[sortField] ? new Date(b[sortField]).getTime() : 0;
           break;

@@ -135,7 +135,7 @@ export default function InvoiceNumberReview() {
         if (expectedFY && parsed.fy !== expectedFY) {
           anomaly = `FY mismatch: ID says ${parsed.fy}, date suggests ${expectedFY}`;
         }
-        const effectiveGst = inv.gst_rate ?? inv.gst_percent ?? 0;
+        const effectiveGst = inv.gst_percent ?? 0;
         if (effectiveGst === 0 && parsed.series === "INV") {
           anomaly = (anomaly ? anomaly + "; " : "") + "0% GST but uses INV/ prefix (should be INV-Z/)";
         } else if (effectiveGst > 0 && parsed.series === "INV-Z") {

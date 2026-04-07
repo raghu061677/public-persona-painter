@@ -525,24 +525,24 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
   const bankBoxWidth = totalsBoxX - leftMargin - 4;
 
-  // Bank Details content (draw box border after we know summary height)
-  doc.setFontSize(10);
+  // Bank Details content (draw box border after we know both heights)
+  doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(30, 64, 175);
   doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
 
   let bankY = bankStartY + 12;
   doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(17, 24, 39);
   doc.text(`Bank: ${BANK_DETAILS.bankName}`, leftMargin + 4, bankY);
-  bankY += 5;
+  bankY += 4.5;
   doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin + 4, bankY);
-  bankY += 5;
+  bankY += 4.5;
   doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, leftMargin + 4, bankY);
-  bankY += 5;
+  bankY += 4.5;
   doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bankY);
-  bankY += 5;
+  bankY += 4.5;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bankY);
 
   // RIGHT: Boxed Summary Table
@@ -562,8 +562,9 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     isInterState,
   });
 
-  // Draw bank box to match the Total (blue) row bottom
-  const bankBoxHeight = summaryResult.totalRowBottomY - bankStartY;
+  // Draw bank box using max of bank content and summary height
+  const bankContentBottom = bankY + 4;
+  const bankBoxHeight = Math.max(summaryResult.totalRowBottomY - bankStartY, bankContentBottom - bankStartY);
   doc.setDrawColor(209, 213, 219);
   doc.setLineWidth(0.3);
   doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');

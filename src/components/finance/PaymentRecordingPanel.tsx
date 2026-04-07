@@ -44,6 +44,7 @@ interface PaymentRecordingPanelProps {
   subTotal?: number;
   balanceDue?: number;
   paidAmount?: number;
+  creditedAmount?: number;
   status?: string;
   clientId?: string;
   campaignId?: string;

@@ -757,6 +757,15 @@ export function MonthlyInvoiceGenerator({
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* FY backdate info banner */}
+          {selectedMonth && isBillingMonthOldFY(selectedMonth) && (
+            <Alert className="border-amber-300 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <strong>FY 2025-26 period detected.</strong> Invoice date will be set to <strong>March 31, 2026</strong> to keep it in the correct INV/2025-26/ sequence. Due date will be April 30, 2026.
+              </AlertDescription>
+            </Alert>
+          )}
           {/* Step 1: Select Month */}
           <div className="space-y-2">
             <Label>Select Billing Month</Label>

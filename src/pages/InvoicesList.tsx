@@ -227,6 +227,15 @@ export default function InvoicesList() {
     let result = [...invoices];
     const f = advancedFilters;
 
+    // Invoice type filter (by prefix)
+    if (f.invoice_type && f.invoice_type !== 'all') {
+      if (f.invoice_type === 'gst_18') {
+        result = result.filter(inv => inv.id?.startsWith('INV/') && !inv.id?.startsWith('INV-Z/'));
+      } else if (f.invoice_type === 'zero_gst') {
+        result = result.filter(inv => inv.id?.startsWith('INV-Z/'));
+      }
+    }
+
     // Global search
     const term = lv.searchQuery?.toLowerCase();
     if (term) {

@@ -245,7 +245,7 @@ export default function InvoiceNumberReview() {
       const { data: { user } } = await supabase.auth.getUser();
 
       let updateFields: Record<string, any> = {};
-      let auditActionType = action;
+      let auditActionType: string = action;
 
       switch (action) {
         case "mark_finance_mistake":

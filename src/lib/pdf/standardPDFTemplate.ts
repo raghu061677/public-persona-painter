@@ -431,16 +431,10 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     totalRowBottomY = summaryY;
   });
 
-  // ----- LEFT SIDE: Bank Details (bordered box matching summary height) -----
+  // ----- LEFT SIDE: Bank Details (bordered box) -----
   const bankBoxX = leftMargin;
   const bankBoxWidth = leftColWidth;
-  const bankBoxHeight = totalRowBottomY - yPos;
   const bankPad = 4;
-
-  // Draw bordered box to match the summary table height
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
-  doc.rect(bankBoxX, yPos, bankBoxWidth, bankBoxHeight, 'S');
 
   // Title
   doc.setFontSize(9);
@@ -451,19 +445,26 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Bank info
   let bankY = yPos + 12;
   doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(17, 24, 39);
   doc.text(`Bank: ${BANK_DETAILS.bankName}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
+  bankY += 4;
 
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
+  bankY += 4;
   doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
+  bankY += 4;
   doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
-  bankY += 4.5;
+  bankY += 4;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
+
+  // Draw bordered box using max of bank content height and summary height
+  const bankContentBottom = bankY + 4; // padding below last line
+  const bankBoxHeight = Math.max(totalRowBottomY - yPos, bankContentBottom - yPos);
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(bankBoxX, yPos, bankBoxWidth, bankBoxHeight, 'S');
 
   // Total in words below the summary table
   summaryY += 3;

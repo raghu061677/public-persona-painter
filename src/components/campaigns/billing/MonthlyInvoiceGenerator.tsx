@@ -594,7 +594,7 @@ export function MonthlyInvoiceGenerator({
         client_id: campaign.client_id,
         client_name: campaign.client_name,
         company_id: campaign.company_id,
-        invoice_date: format(new Date(), 'yyyy-MM-dd'),
+        invoice_date: format(smartInvoiceDate, 'yyyy-MM-dd'),
         due_date: format(dueDate, 'yyyy-MM-dd'),
         invoice_period_start: format(periodStart, 'yyyy-MM-dd'),
         invoice_period_end: format(periodEnd, 'yyyy-MM-dd'),

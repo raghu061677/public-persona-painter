@@ -152,6 +152,24 @@ export function InvoiceAdvancedFilters({
         </SheetHeader>
 
         <div className="space-y-6 py-4">
+          {/* Invoice Type Filter */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Invoice Type</Label>
+            <Select
+              value={local.invoice_type || "all"}
+              onValueChange={(v) => setLocal({ ...local, invoice_type: v as InvoiceTypeFilter })}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Invoices</SelectItem>
+                <SelectItem value="gst_18">Tax Invoice (18% GST) — INV/...</SelectItem>
+                <SelectItem value="zero_gst">Zero % / Non-GST — INV-Z/...</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Status Multi-Select */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status</Label>

@@ -168,6 +168,17 @@ export function PaymentRecordingPanel({
   const totalSettled = totalPaid + totalTds;
   const balance = Math.max(totalAmount - totalSettled, 0);
   const paymentProgress = totalAmount > 0 ? (totalSettled / totalAmount) * 100 : 0;
+  const exactCashRequired = Math.max(balance - (parseFloat(newPayment.tds_amount) || 0), 0);
+
+  const formatExactINR = (amount: number | null | undefined) => {
+    const safeAmount = Number(amount || 0);
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(safeAmount);
+  };
 
   // TDS base amount: taxable value (sub_total) before GST
   const effectiveTdsBase = useMemo(() => {
@@ -227,7 +238,7 @@ export function PaymentRecordingPanel({
     }
 
     if (totalSettleThis > balance + 1.00) {
-      toast.error(`Payment + TDS (${formatINR(totalSettleThis)}) exceeds balance due (${formatINR(balance)})`);
+      toast.error(`Payment + TDS (${formatExactINR(totalSettleThis)}) exceeds balance due (${formatExactINR(balance)})`);
       return;
     }
 
@@ -427,7 +438,7 @@ export function PaymentRecordingPanel({
               <DialogHeader>
                 <DialogTitle>Record Payment</DialogTitle>
                 <DialogDescription>
-                  Balance due: {formatINR(balance)}
+                  Balance due: {formatExactINR(balance)}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -445,6 +456,25 @@ export function PaymentRecordingPanel({
                       value={newPayment.amount}
                       onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
                     />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {tdsEnabled && (parseFloat(newPayment.tds_amount) || 0) > 0
+                        ? `Exact cash to receive after TDS: ${formatExactINR(exactCashRequired)}`
+                        : `Exact balance due: ${formatExactINR(balance)}`}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => setNewPayment((prev) => ({
+                        ...prev,
+                        amount: exactCashRequired.toFixed(2),
+                      }))}
+                    >
+                      Use exact amount
+                    </Button>
                   </div>
                 </div>
 
@@ -601,7 +631,7 @@ export function PaymentRecordingPanel({
                       
                       <span className="text-muted-foreground font-medium">Remaining Balance</span>
                       <span className={`text-right font-bold ${modalSettlement.remainingBalance > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>
-                        {formatINR(modalSettlement.remainingBalance)}
+                        {formatExactINR(modalSettlement.remainingBalance)}
                       </span>
                     </div>
                     {modalSettlement.remainingBalance <= 0.01 && (
@@ -699,7 +729,7 @@ export function PaymentRecordingPanel({
               <div>
                 <p className="text-sm text-muted-foreground">Balance Due</p>
                 <p className={`text-lg font-bold ${balance > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>
-                  {formatINR(balance)}
+                  {formatExactINR(balance)}
                 </p>
               </div>
             </div>

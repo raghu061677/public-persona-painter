@@ -1,6 +1,6 @@
 import { format, startOfMonth, endOfMonth, addDays, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { InvoiceFilters } from "./InvoiceAdvancedFilters";
+import type { InvoiceFilters, InvoiceTypeFilter } from "./InvoiceAdvancedFilters";
 import type { ListViewPreset } from "@/hooks/useListViewPreset";
 
 interface InvoiceQuickChipsProps {

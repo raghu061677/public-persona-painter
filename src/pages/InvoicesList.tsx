@@ -459,6 +459,28 @@ export default function InvoicesList() {
               <SlidersHorizontal className="h-4 w-4" />
               Filters
             </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/invoices/number-review')}
+                  className="gap-1.5"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden lg:inline">Number Review</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/finance/legacy-campaign-close')}
+                  className="gap-1.5"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span className="hidden lg:inline">Legacy Close</span>
+                </Button>
+              </>
+            )}
             <PageCustomization options={customizationOptions} />
             {isAdmin && (
               <Button

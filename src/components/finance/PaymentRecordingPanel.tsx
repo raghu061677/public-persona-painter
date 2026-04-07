@@ -226,7 +226,7 @@ export function PaymentRecordingPanel({
       return;
     }
 
-    if (totalSettleThis > balance + 0.01) {
+    if (totalSettleThis > balance + 1.00) {
       toast.error(`Payment + TDS (${formatINR(totalSettleThis)}) exceeds balance due (${formatINR(balance)})`);
       return;
     }

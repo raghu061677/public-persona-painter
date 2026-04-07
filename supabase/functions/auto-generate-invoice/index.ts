@@ -154,8 +154,23 @@ Deno.serve(withAuth(async (req) => {
       client_id: campaign.client_id,
       client_name: campaign.client_name,
       company_id: ctx.companyId,
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      invoice_date: (() => {
+        // Smart FY-aware date: if billing period is before April 2026, backdate to March 31, 2026
+        const now = new Date();
+        const fy2627Start = new Date('2026-04-01');
+        if (now >= fy2627Start && campaign.end_date && new Date(campaign.end_date) < fy2627Start) {
+          return '2026-03-31';
+        }
+        return now.toISOString().split('T')[0];
+      })(),
+      due_date: (() => {
+        const now = new Date();
+        const fy2627Start = new Date('2026-04-01');
+        const baseDate = (now >= fy2627Start && campaign.end_date && new Date(campaign.end_date) < fy2627Start)
+          ? new Date('2026-03-31')
+          : now;
+        return new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      })(),
       items,
       sub_total: subTotal,
       gst_percent: gstPercent,

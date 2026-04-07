@@ -18,7 +18,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
+import { Plus, Eye, Pencil, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
 import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";

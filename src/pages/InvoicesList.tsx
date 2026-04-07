@@ -699,6 +699,12 @@ export default function InvoicesList() {
                             </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
+                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
+                              {invoice.invoice_period_start && invoice.invoice_period_end ? (() => {
+                                const days = Math.max(1, Math.floor((new Date(invoice.invoice_period_end).getTime() - new Date(invoice.invoice_period_start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                                return <span className="font-medium text-foreground">{days}d</span>;
+                              })() : '—'}
+                            </TableCell>
                             <TableCell className="px-4 py-3">
                               <Select
                                 value={invoice.status}

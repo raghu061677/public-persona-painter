@@ -15392,7 +15392,7 @@ export type Database = {
         Args: { p_invoice_id: string }
         Returns: undefined
       }
-      update_overdue_invoices: { Args: never; Returns: number }
+      update_overdue_invoices: { Args: never; Returns: undefined }
       update_running_campaigns: {
         Args: { p_today: string }
         Returns: undefined

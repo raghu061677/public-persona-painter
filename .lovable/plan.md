@@ -1,68 +1,40 @@
 
 
-## Fix: Invoices Incorrectly Showing "Overdue" Despite Future Due Dates
+## Fix: Invoice Date for Old FY 2025-26 Campaigns
 
 ### Problem
-Two invoices (`INV/2025-26/0068` with due date April 15, and `INV-Z/2026-27/0001` with due date April 14) are marked as "Overdue" in the database even though their due dates haven't passed yet. Today is April 7, 2026.
+32 completed campaigns from FY 2025-26 have no invoices. When generating invoices now (April 2026), the system always sets `invoice_date = today`, which would:
+- Place the invoice in FY 2026-27 series (INV/2026-27/xxxx)
+- Create a date mismatch with the actual campaign period
 
-### Root Cause
-There is a database trigger (`check_invoice_overdue_on_update`) that automatically marks invoices as "Overdue" when `due_date < CURRENT_DATE`. However, this trigger has two problems:
+### Solution
+Add smart invoice date logic to the Monthly Invoice Generator. When the billing period falls within FY 2025-26 (before April 1, 2026), the invoice date defaults to **March 31, 2026** instead of today. This keeps the invoice in the correct FY series.
 
-1. **No reverse logic**: If an invoice's due date is later updated to a future date, the trigger never reverts the status back to "Sent"
-2. **Bulk function ran prematurely**: The `update_overdue_invoices()` function may have been called when these invoices had different due dates, or there was a timezone/date issue
+### Changes
 
-### Plan
+**File: `src/components/campaigns/billing/MonthlyInvoiceGenerator.tsx`**
 
-**Step 1: Fix the database trigger to handle both directions**
+1. Add a helper function to determine the correct invoice date based on billing period:
+   - If the billing month (e.g., `2025-12`, `2026-03`) is before April 2026, use `2026-03-31`
+   - If the billing month is April 2026 or later, use today's date
+   - This ensures the `finalize_invoice_number` RPC assigns the correct FY prefix
 
-Update `auto_mark_invoice_overdue()` to:
-- Mark as "Overdue" when `status = 'Sent'` AND `due_date < CURRENT_DATE` AND balance > 0
-- **Revert to "Sent"** when `status = 'Overdue'` AND `due_date >= CURRENT_DATE` (due date was pushed forward)
+2. Update line 579 to use this smart date instead of `new Date()`
 
-```sql
-CREATE OR REPLACE FUNCTION public.auto_mark_invoice_overdue()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  IF NEW.status = 'Sent' THEN
-    IF NEW.due_date < CURRENT_DATE AND COALESCE(NEW.balance_due, NEW.total_amount, 0) > 0 THEN
-      NEW.status := 'Overdue';
-    END IF;
-  ELSIF NEW.status = 'Overdue' THEN
-    IF NEW.due_date >= CURRENT_DATE THEN
-      NEW.status := 'Sent';
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-```
+3. Update the due date calculation accordingly (30 days from invoice date)
 
-**Step 2: Fix the two currently incorrect invoices**
+4. Add a visible info banner in the dialog when backdating is applied, so the admin knows the invoice date will be March 31, 2026 instead of today
 
-Run a corrective update to revert the 2 invoices with future due dates back to "Sent":
+**File: `supabase/functions/auto-generate-invoice/index.ts`**
 
-```sql
-UPDATE invoices 
-SET status = 'Sent', updated_at = now()
-WHERE status = 'Overdue' AND due_date >= CURRENT_DATE;
-```
+5. Apply the same FY-aware date logic (line 157) for the edge function path, in case it's used
 
-**Step 3: Update `update_overdue_invoices()` bulk function**
+### No database changes needed
+The existing `finalize_invoice_number` RPC already handles FY detection from the invoice date. Setting invoice_date to March 31 will automatically assign it to the INV/2025-26/ series.
 
-Add a reverse clause so the bulk function also fixes incorrectly-overdue invoices:
-
-```sql
--- Also revert incorrectly overdue invoices
-UPDATE invoices SET status = 'Sent', updated_at = now()
-WHERE status = 'Overdue' AND due_date >= CURRENT_DATE;
-```
-
-### Files Changed
-- **1 database migration** (trigger fix + data correction)
-- No frontend code changes needed -- the view page correctly displays whatever status is in the DB
-
-### Impact
-- Non-breaking, additive change to existing trigger
-- Fixes 2 currently affected invoices
-- Prevents future occurrences when due dates are edited
+### How to use after implementation
+1. Go to each old campaign's Billing tab
+2. Select the billing period and generate the invoice as usual
+3. The system will automatically set the invoice date to March 31, 2026
+4. Finalize the invoice — it will get an INV/2025-26/ number
 

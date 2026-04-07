@@ -64,6 +64,7 @@ interface CreateCreditNoteDialogProps {
     balance_due: number;
     gst_mode?: string;
     gst_percent?: number;
+    sub_total?: number;
     items?: any;
   };
   onCreditNoteCreated: () => void;

@@ -149,7 +149,7 @@ export default function InvoiceNumberReview() {
         client_name: inv.client_name,
         total_amount: inv.total_amount,
         status: inv.status,
-        gst_rate: inv.gst_rate ?? inv.gst_percent,
+        gst_rate: inv.gst_percent,
         series: parsed?.series || (inv.id?.startsWith("INV-Z") ? "INV-Z" : "INV"),
         fy_label: parsed?.fy || "",
         seq_number: parsed?.seq || 0,

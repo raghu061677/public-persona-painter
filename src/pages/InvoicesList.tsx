@@ -37,7 +37,7 @@ import { InvoicesSummaryBar } from "@/components/invoices/InvoicesSummaryBar";
 
 const INVOICE_STATUSES = ['Draft', 'Sent', 'Partial', 'Paid', 'Overdue', 'Cancelled'];
 
-type SortField = 'id' | 'client_name' | 'campaign_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
+type SortField = 'id' | 'client_name' | 'campaign_name' | 'campaign_start_date' | 'campaign_end_date' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {

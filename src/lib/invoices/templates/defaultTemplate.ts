@@ -494,8 +494,9 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     isInterState,
   });
 
-  // Draw bank box to match Total row
-  const bankBoxHeight = summaryResult.totalRowBottomY - bankStartY;
+  // Draw bank box using max of bank content and summary height
+  const bankContentBottom = bankY + 3;
+  const bankBoxHeight = Math.max(summaryResult.totalRowBottomY - bankStartY, bankContentBottom - bankStartY);
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.2);
   doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');

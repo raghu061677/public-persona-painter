@@ -635,15 +635,22 @@ export default function InvoicesList() {
                             }`}
                           >
                             <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
-                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                                   className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
                                 >
                                   {invoice.id}
                                 </button>
-                                {isOverdue && <AlertCircle className="h-4 w-4 text-red-500" />}
+                                {isOverdue && <AlertCircle className="h-4 w-4 text-destructive" />}
                               </div>
+                              <Badge variant="outline" className={`text-[10px] mt-0.5 w-fit ${
+                                invoice.id?.startsWith('INV-Z/') 
+                                  ? 'border-amber-500/30 text-amber-700 bg-amber-50' 
+                                  : 'border-primary/30 text-primary bg-primary/5'
+                              }`}>
+                                {invoice.id?.startsWith('INV-Z/') ? 'Zero % GST' : 'Tax Invoice'}
+                              </Badge>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <button

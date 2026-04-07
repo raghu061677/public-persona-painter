@@ -317,6 +317,13 @@ export function InvoiceFilterPills({
 }) {
   const pills: { key: keyof InvoiceFilters; label: string }[] = [];
 
+  if (filters.invoice_type && filters.invoice_type !== 'all') {
+    const typeLabels: Record<string, string> = {
+      gst_18: "Tax Invoice (18% GST)",
+      zero_gst: "Zero % / Non-GST",
+    };
+    pills.push({ key: "invoice_type", label: `Type: ${typeLabels[filters.invoice_type]}` });
+  }
   if (filters.status?.length) {
     pills.push({ key: "status", label: `Status: ${filters.status.join(", ")}` });
   }

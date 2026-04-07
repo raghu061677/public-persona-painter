@@ -577,9 +577,11 @@ export function MonthlyInvoiceGenerator({
       const periodStart = new Date(year, month - 1, 1);
       const periodEnd = endOfMonth(periodStart);
       
-      // Due date: 30 days from period start
-      const dueDate = new Date(periodStart);
-      dueDate.setDate(dueDate.getDate() + 30);
+      // Smart invoice date: backdate to March 31 for old FY periods
+      const smartInvoiceDate = getSmartInvoiceDate(selectedMonth);
+      
+      // Due date: 30 days from invoice date
+      const dueDate = addDays(smartInvoiceDate, 30);
       
       // Determine GST split rates
       const gstHalfPercent = round2(totals.gstPercent / 2);

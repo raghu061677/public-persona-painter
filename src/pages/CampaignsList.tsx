@@ -255,7 +255,7 @@ export default function CampaignsList() {
     if (!selectedCompanyId) return;
     const { data } = await supabase
       .from('invoices')
-      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at, items')
+      .select('id, campaign_id, billing_month, is_draft, status, invoice_no, created_at, items, invoice_period_start, invoice_period_end')
       .eq('company_id', selectedCompanyId);
     setInvoiceSummaries((data || []) as InvoiceSummaryRow[]);
   };

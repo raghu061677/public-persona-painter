@@ -33,6 +33,8 @@ export interface InvoiceSummaryRow {
   invoice_no: string | null;
   created_at: string;
   items?: any[] | null; // jsonb items with booking_start_date / booking_end_date
+  invoice_period_start?: string | null;
+  invoice_period_end?: string | null;
 }
 
 /**
@@ -68,8 +70,12 @@ export function extractInvoicedMonths(invoices: InvoiceSummaryRow[], campaignId:
       const coveredMonths = deriveMonthsFromItems(inv.items);
       if (coveredMonths.length > 0) {
         coveredMonths.forEach((m) => months.add(m));
+      } else if (inv.invoice_period_start && inv.invoice_period_end) {
+        // Fallback: use header-level invoice period dates
+        const periodMonths = generateBillableMonths(inv.invoice_period_start, inv.invoice_period_end);
+        periodMonths.forEach((m) => months.add(m));
       } else if (inv.billing_month) {
-        // Fallback: single billing_month
+        // Last fallback: single billing_month
         months.add(inv.billing_month);
       }
     }

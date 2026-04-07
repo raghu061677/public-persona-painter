@@ -2978,6 +2978,10 @@ export type Database = {
           is_deleted: boolean | null
           is_historical_entry: boolean | null
           is_recurring: boolean | null
+          legacy_close_at: string | null
+          legacy_close_by: string | null
+          legacy_close_notes: string | null
+          legacy_close_status: string | null
           manual_discount_amount: number | null
           manual_discount_reason: string | null
           mounting_total: number | null
@@ -3030,6 +3034,10 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          legacy_close_at?: string | null
+          legacy_close_by?: string | null
+          legacy_close_notes?: string | null
+          legacy_close_status?: string | null
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           mounting_total?: number | null
@@ -3082,6 +3090,10 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          legacy_close_at?: string | null
+          legacy_close_by?: string | null
+          legacy_close_notes?: string | null
+          legacy_close_status?: string | null
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           mounting_total?: number | null
@@ -6200,6 +6212,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "file_access_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_corrections_log: {
+        Row: {
+          action_type: string
+          company_id: string
+          conflict_status: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          performed_at: string | null
+          performed_by: string | null
+          reason: string | null
+          status: string
+        }
+        Insert: {
+          action_type: string
+          company_id: string
+          conflict_status?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          company_id?: string
+          conflict_status?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_corrections_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

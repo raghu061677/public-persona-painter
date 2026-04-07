@@ -113,7 +113,7 @@ export default function InvoiceNumberReview() {
     setLoading(true);
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, invoice_date, client_name, total_amount, status, gst_rate, gst_percent, is_finance_mistake, exclude_from_sequence, void_reason, paid_amount, credited_amount")
+      .select("id, invoice_date, client_name, total_amount, status, gst_percent, is_finance_mistake, exclude_from_sequence, void_reason, paid_amount, credited_amount")
       .eq("company_id", company.id)
       .not("id", "like", "DRAFT-%")
       .order("invoice_date", { ascending: true });

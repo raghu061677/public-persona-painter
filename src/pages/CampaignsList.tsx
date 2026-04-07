@@ -171,10 +171,19 @@ export default function CampaignsList() {
   }, [lv.loading, company?.id]);
 
   const ensureSpecialPresets = async () => {
+    // Query DB directly to avoid race conditions with stale lv.presets
+    const { data: dbPresets } = await supabase
+      .from("list_view_presets")
+      .select("preset_name")
+      .eq("company_id", company!.id)
+      .eq("page_key", "campaigns.list");
+
+    const existing = (dbPresets || []).map((p) => p.preset_name);
+
     const SPECIAL = [
       {
         preset_name: "Finance View",
-        selected_fields: ["sno", "campaign_id", "campaign_name", "client_name", "start_date", "end_date", "status", "total_amount"],
+        selected_fields: ["sno", "campaign_id", "campaign_name", "client_name", "start_date", "end_date", "status", "total_amount", "invoice_status", "invoice_progress"],
         sort: { field: "end_date", direction: "desc" as const },
         filters: {},
       },
@@ -192,7 +201,6 @@ export default function CampaignsList() {
       },
     ];
 
-    const existing = lv.presets.map((p) => p.preset_name);
     for (const sp of SPECIAL) {
       if (!existing.includes(sp.preset_name)) {
         await lv.saveCurrentAsView(sp.preset_name, false, true);

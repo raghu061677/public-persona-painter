@@ -645,7 +645,7 @@ export default function InvoicesList() {
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                       <TableCell colSpan={9} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={10} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {

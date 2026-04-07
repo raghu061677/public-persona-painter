@@ -355,6 +355,7 @@ export default function InvoiceDetail() {
               subTotal={invoice.sub_total || undefined}
               balanceDue={invoice.balance_due}
               paidAmount={invoice.paid_amount}
+              creditedAmount={invoice.credited_amount || 0}
               status={invoice.status}
               clientId={invoice.client_id}
               campaignId={invoice.campaign_id}

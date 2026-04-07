@@ -728,6 +728,12 @@ export function PaymentRecordingPanel({
                   <p className="text-lg font-bold text-blue-600">{formatINR(totalTds)}</p>
                 </div>
               )}
+              {totalCredited > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Credits Applied</p>
+                  <p className="text-lg font-bold text-purple-600">{formatINR(totalCredited)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Balance Due</p>
                 <p className={`text-lg font-bold ${balance > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>

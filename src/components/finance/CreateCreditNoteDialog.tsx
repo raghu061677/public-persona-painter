@@ -129,12 +129,21 @@ export function CreateCreditNoteDialog({
     if (open) {
       if (invoiceItems.length > 0) {
         setMode('from_invoice');
-        setItems(invoiceItems.map((item) => ({
-          id: crypto.randomUUID(),
-          description: buildDescription(item),
-          amount: getItemAmount(item),
-          selected: true,
-        })));
+        // Calculate proportional amounts based on actual invoice sub_total
+        const rawTotal = invoiceItems.reduce((s: number, item: InvoiceLineItem) => s + getItemAmount(item), 0);
+        const invoiceSubtotal = invoice.sub_total ?? (invoice.total_amount / (1 + (invoice.gst_percent ?? 18) / 100));
+        setItems(invoiceItems.map((item) => {
+          const rawAmt = getItemAmount(item);
+          const proportionalAmt = rawTotal > 0
+            ? Math.round((rawAmt / rawTotal) * invoiceSubtotal * 100) / 100
+            : 0;
+          return {
+            id: crypto.randomUUID(),
+            description: buildDescription(item),
+            amount: proportionalAmt,
+            selected: true,
+          };
+        }));
       } else {
         setMode('manual');
         setItems([{ id: crypto.randomUUID(), description: '', amount: 0, selected: true }]);

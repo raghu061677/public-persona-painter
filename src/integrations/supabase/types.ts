@@ -7321,6 +7321,7 @@ export type Database = {
           draft_number: string | null
           due_date: string
           estimation_id: string | null
+          exclude_from_sequence: boolean
           finalized_at: string | null
           gst_amount: number
           gst_mode: string | null
@@ -7336,6 +7337,7 @@ export type Database = {
           invoice_type: string
           is_cancelled: boolean
           is_draft: boolean | null
+          is_finance_mistake: boolean
           is_monthly_split: boolean | null
           items: Json | null
           notes: string | null
@@ -7360,6 +7362,9 @@ export type Database = {
           terms_mode: string
           total_amount: number
           updated_at: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           balance_due: number
@@ -7384,6 +7389,7 @@ export type Database = {
           draft_number?: string | null
           due_date: string
           estimation_id?: string | null
+          exclude_from_sequence?: boolean
           finalized_at?: string | null
           gst_amount: number
           gst_mode?: string | null
@@ -7399,6 +7405,7 @@ export type Database = {
           invoice_type?: string
           is_cancelled?: boolean
           is_draft?: boolean | null
+          is_finance_mistake?: boolean
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
@@ -7423,6 +7430,9 @@ export type Database = {
           terms_mode?: string
           total_amount: number
           updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           balance_due?: number
@@ -7447,6 +7457,7 @@ export type Database = {
           draft_number?: string | null
           due_date?: string
           estimation_id?: string | null
+          exclude_from_sequence?: boolean
           finalized_at?: string | null
           gst_amount?: number
           gst_mode?: string | null
@@ -7462,6 +7473,7 @@ export type Database = {
           invoice_type?: string
           is_cancelled?: boolean
           is_draft?: boolean | null
+          is_finance_mistake?: boolean
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
@@ -7486,6 +7498,9 @@ export type Database = {
           terms_mode?: string
           total_amount?: number
           updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -15339,6 +15354,16 @@ export type Database = {
       }
       remove_user_from_company: {
         Args: { p_company_id: string; p_user_id: string }
+        Returns: Json
+      }
+      reset_invoice_counter: {
+        Args: {
+          p_company_id: string
+          p_dry_run?: boolean
+          p_fy_label: string
+          p_prefix: string
+          p_target_seq: number
+        }
         Returns: Json
       }
       resolve_asset_id: { Args: { p_identifier: string }; Returns: string }

@@ -617,6 +617,9 @@ export default function InvoicesList() {
                           Due Date {getSortIcon('due_date')}
                         </Button>
                       </TableHead>
+                      <TableHead className="px-4 py-3 text-center font-semibold">
+                        Duration
+                      </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
                           Status {getSortIcon('status')}
@@ -638,11 +641,11 @@ export default function InvoicesList() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                       <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
+                       <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInvoices.length === 0 ? (
                       <TableRow>
-                       <TableCell colSpan={9} className="text-center py-8">No invoices found</TableCell>
+                       <TableCell colSpan={10} className="text-center py-8">No invoices found</TableCell>
                       </TableRow>
                     ) : (
                       filteredInvoices.map((invoice, index) => {
@@ -696,6 +699,12 @@ export default function InvoicesList() {
                             </TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
+                            <TableCell className="px-4 py-3 text-center text-xs text-muted-foreground">
+                              {invoice.invoice_period_start && invoice.invoice_period_end ? (() => {
+                                const days = Math.max(1, Math.floor((new Date(invoice.invoice_period_end).getTime() - new Date(invoice.invoice_period_start).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                                return <span className="font-medium text-foreground">{days}d</span>;
+                              })() : '—'}
+                            </TableCell>
                             <TableCell className="px-4 py-3">
                               <Select
                                 value={invoice.status}

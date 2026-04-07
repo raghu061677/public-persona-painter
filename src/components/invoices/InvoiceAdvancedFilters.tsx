@@ -20,8 +20,11 @@ const DURATION_QUICK = [
   { label: "90 days", value: 90 },
 ];
 
+export type InvoiceTypeFilter = 'all' | 'gst_18' | 'zero_gst';
+
 export interface InvoiceFilters {
   status?: string[];
+  invoice_type?: InvoiceTypeFilter;
   total_min?: number;
   balance_min?: number;
   due_between?: { from: string; to: string };
@@ -149,6 +152,24 @@ export function InvoiceAdvancedFilters({
         </SheetHeader>
 
         <div className="space-y-6 py-4">
+          {/* Invoice Type Filter */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Invoice Type</Label>
+            <Select
+              value={local.invoice_type || "all"}
+              onValueChange={(v) => setLocal({ ...local, invoice_type: v as InvoiceTypeFilter })}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Invoices</SelectItem>
+                <SelectItem value="gst_18">Tax Invoice (18% GST) — INV/...</SelectItem>
+                <SelectItem value="zero_gst">Zero % / Non-GST — INV-Z/...</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Status Multi-Select */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status</Label>
@@ -296,6 +317,13 @@ export function InvoiceFilterPills({
 }) {
   const pills: { key: keyof InvoiceFilters; label: string }[] = [];
 
+  if (filters.invoice_type && filters.invoice_type !== 'all') {
+    const typeLabels: Record<string, string> = {
+      gst_18: "Tax Invoice (18% GST)",
+      zero_gst: "Zero % / Non-GST",
+    };
+    pills.push({ key: "invoice_type", label: `Type: ${typeLabels[filters.invoice_type]}` });
+  }
   if (filters.status?.length) {
     pills.push({ key: "status", label: `Status: ${filters.status.join(", ")}` });
   }

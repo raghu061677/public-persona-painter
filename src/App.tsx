@@ -82,6 +82,8 @@ const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const InvoiceCreate = lazy(() => import("./pages/InvoiceCreate"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoiceNumberReview = lazy(() => import("./pages/admin/InvoiceNumberReview"));
+const LegacyCampaignCloseReview = lazy(() => import("./pages/admin/LegacyCampaignCloseReview"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
@@ -494,6 +496,8 @@ const App = () => (
               <Route path="invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices/*" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices-import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportInvoices /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="invoices/number-review" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceNumberReview /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/legacy-campaign-close" element={<ProtectedRoute requireAuth><ModernAppLayout><LegacyCampaignCloseReview /></ModernAppLayout></ProtectedRoute>} />
               <Route path="payment-reminders" element={<Navigate to="/admin/invoices" replace />} />
               <Route path="payment-confirmations" element={<Navigate to="/admin/payments?tab=confirmations" replace />} />
               <Route path="expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import { format, startOfMonth, endOfMonth, addDays, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { InvoiceFilters } from "./InvoiceAdvancedFilters";
+import type { InvoiceFilters, InvoiceTypeFilter } from "./InvoiceAdvancedFilters";
 import type { ListViewPreset } from "@/hooks/useListViewPreset";
 
 interface InvoiceQuickChipsProps {
@@ -107,8 +107,35 @@ export function InvoiceQuickChips({
         : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
     );
 
+  const handleTypeFilter = (type: InvoiceTypeFilter) => {
+    onFiltersChange({ ...filters, invoice_type: type === filters.invoice_type ? undefined : type });
+  };
+
   return (
     <div className="space-y-2 mb-4">
+      {/* Row 0: Invoice Type */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-muted-foreground font-medium mr-1">Type:</span>
+        <button
+          onClick={() => handleTypeFilter('all' as InvoiceTypeFilter)}
+          className={chipClass(!filters.invoice_type || filters.invoice_type === 'all')}
+        >
+          All
+        </button>
+        <button
+          onClick={() => handleTypeFilter('gst_18')}
+          className={chipClass(filters.invoice_type === 'gst_18')}
+        >
+          GST 18% (INV/...)
+        </button>
+        <button
+          onClick={() => handleTypeFilter('zero_gst')}
+          className={chipClass(filters.invoice_type === 'zero_gst')}
+        >
+          Zero % (INV-Z/...)
+        </button>
+      </div>
+
       {/* Row 1: Status */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs text-muted-foreground font-medium mr-1">Status:</span>

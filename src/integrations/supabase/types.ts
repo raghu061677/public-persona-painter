@@ -2978,6 +2978,10 @@ export type Database = {
           is_deleted: boolean | null
           is_historical_entry: boolean | null
           is_recurring: boolean | null
+          legacy_close_at: string | null
+          legacy_close_by: string | null
+          legacy_close_notes: string | null
+          legacy_close_status: string | null
           manual_discount_amount: number | null
           manual_discount_reason: string | null
           mounting_total: number | null
@@ -3030,6 +3034,10 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          legacy_close_at?: string | null
+          legacy_close_by?: string | null
+          legacy_close_notes?: string | null
+          legacy_close_status?: string | null
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           mounting_total?: number | null
@@ -3082,6 +3090,10 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          legacy_close_at?: string | null
+          legacy_close_by?: string | null
+          legacy_close_notes?: string | null
+          legacy_close_status?: string | null
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           mounting_total?: number | null
@@ -6200,6 +6212,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "file_access_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_corrections_log: {
+        Row: {
+          action_type: string
+          company_id: string
+          conflict_status: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          performed_at: string | null
+          performed_by: string | null
+          reason: string | null
+          status: string
+        }
+        Insert: {
+          action_type: string
+          company_id: string
+          conflict_status?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          company_id?: string
+          conflict_status?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_corrections_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -14281,13 +14349,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_public_share_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_public_share_safe"
@@ -14297,7 +14358,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -14311,7 +14372,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns_summary_secure"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -14325,7 +14386,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns_summary_secure"
             referencedColumns: ["id"]
           },
           {
@@ -14338,13 +14399,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]

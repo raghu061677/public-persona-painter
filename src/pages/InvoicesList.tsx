@@ -18,7 +18,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal } from "lucide-react";
+import { Plus, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
 import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
@@ -226,6 +226,15 @@ export default function InvoicesList() {
   const filteredInvoices = useMemo(() => {
     let result = [...invoices];
     const f = advancedFilters;
+
+    // Invoice type filter (by prefix)
+    if (f.invoice_type && f.invoice_type !== 'all') {
+      if (f.invoice_type === 'gst_18') {
+        result = result.filter(inv => inv.id?.startsWith('INV/') && !inv.id?.startsWith('INV-Z/'));
+      } else if (f.invoice_type === 'zero_gst') {
+        result = result.filter(inv => inv.id?.startsWith('INV-Z/'));
+      }
+    }
 
     // Global search
     const term = lv.searchQuery?.toLowerCase();
@@ -450,6 +459,28 @@ export default function InvoicesList() {
               <SlidersHorizontal className="h-4 w-4" />
               Filters
             </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/invoices/number-review')}
+                  className="gap-1.5"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden lg:inline">Number Review</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/finance/legacy-campaign-close')}
+                  className="gap-1.5"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span className="hidden lg:inline">Legacy Close</span>
+                </Button>
+              </>
+            )}
             <PageCustomization options={customizationOptions} />
             {isAdmin && (
               <Button
@@ -626,15 +657,22 @@ export default function InvoicesList() {
                             }`}
                           >
                             <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
-                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                                   className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
                                 >
                                   {invoice.id}
                                 </button>
-                                {isOverdue && <AlertCircle className="h-4 w-4 text-red-500" />}
+                                {isOverdue && <AlertCircle className="h-4 w-4 text-destructive" />}
                               </div>
+                              <Badge variant="outline" className={`text-[10px] mt-0.5 w-fit ${
+                                invoice.id?.startsWith('INV-Z/') 
+                                  ? 'border-amber-500/30 text-amber-700 bg-amber-50' 
+                                  : 'border-primary/30 text-primary bg-primary/5'
+                              }`}>
+                                {invoice.id?.startsWith('INV-Z/') ? 'Zero % GST' : 'Tax Invoice'}
+                              </Badge>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <button

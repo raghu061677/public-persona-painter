@@ -1,52 +1,48 @@
 
 
-## Fix: Credit Note Dialog Showing Wrong Item Amounts
+## Fix: Credit Note "Issue" Fails Due to Invoice Status Enum Mismatch
 
 ### Problem
-The Create Credit Note dialog for `INV/2025-26/0057` shows incorrect item amounts. The JSONB `items` array stores **full campaign-period amounts** (e.g., ₹39,000 per item, sum = ₹4,28,570), but the invoice's actual `sub_total` is ₹1,48,499.67 (prorated for the billing month). The dialog picks up the raw `amount` field from each item and adds 18% GST on top, producing a credit note total of ~₹3,31,674 — nearly double the actual invoice total of ₹1,75,229.61.
+When clicking "Issue Credit Note", the `issue_credit_note` RPC tries to set the invoice's `status` to `'Fully Credited'` or `'Partially Credited'`, but the `invoices.status` column uses the `invoice_status` enum which only allows: `Draft, Sent, Partial, Paid, Overdue, Cancelled`.
 
-### Root Cause
-In `CreateCreditNoteDialog.tsx`, `getItemAmount()` (line 105-107) returns `item.amount` directly from the JSONB. These amounts represent the full rent + mounting + printing for the entire campaign period, not the prorated amount that was actually billed.
+This causes the Postgres error: `column "status" is of type invoice_status but expression is of type text`.
 
-### Fix (1 file)
+### Fix (1 database migration)
 
-**File: `src/components/finance/CreateCreditNoteDialog.tsx`**
+Update the `issue_credit_note` RPC to use valid enum values when updating the invoice status:
 
-1. When building credit note items from invoice JSONB (lines 129-136), calculate each item's **proportional share** of the actual invoice `sub_total` instead of using the raw `amount`:
+- **`Fully Credited`** → Use `'Paid'` (the invoice is fully settled via credit)
+- **`Partially Credited`** → Use `'Partial'` (partially settled)
+- **`Sent`** remains `'Sent'` (already valid)
 
-```typescript
-// Calculate proportional amounts
-const rawTotal = invoiceItems.reduce((s, item) => s + getItemAmount(item), 0);
-const invoiceSubtotal = invoice.sub_total ?? (invoice.total_amount / (1 + (invoice.gst_percent ?? 18) / 100));
+Additionally, cast the value explicitly to `invoice_status` to prevent future type mismatches.
 
-setItems(invoiceItems.map((item) => {
-  const rawAmt = getItemAmount(item);
-  // Scale each item proportionally to match invoice sub_total
-  const proportionalAmt = rawTotal > 0 
-    ? Math.round((rawAmt / rawTotal) * invoiceSubtotal * 100) / 100 
-    : 0;
-  return {
-    id: crypto.randomUUID(),
-    description: buildDescription(item),
-    amount: proportionalAmt,
-    selected: true,
-  };
-}));
+```sql
+CREATE OR REPLACE FUNCTION public.issue_credit_note(...)
+  -- Lines 115-121 change from:
+  IF v_new_credited >= v_invoice_total THEN
+    v_new_status := 'Fully Credited';
+  ELSIF v_new_credited > 0 THEN
+    v_new_status := 'Partially Credited';
+  ELSE
+    v_new_status := 'Sent';
+  END IF;
+
+  -- To:
+  IF (v_new_credited + v_invoice_paid) >= v_invoice_total THEN
+    v_new_status := 'Paid';
+  ELSIF v_new_credited > 0 THEN
+    v_new_status := 'Partial';
+  ELSE
+    v_new_status := 'Sent';
+  END IF;
+
+  UPDATE public.invoices
+  SET ... status = v_new_status::invoice_status ...
 ```
 
-2. Add `sub_total` to the `CreateCreditNoteDialogProps` invoice interface and pass it from InvoiceDetail.tsx
-
-3. Update the max credit validation: `maxCredit` should use `invoice.total_amount` (already correct)
-
-**File: `src/pages/InvoiceDetail.tsx`**
-
-4. Pass `sub_total` to the dialog props:
-```typescript
-sub_total: invoice.sub_total,
-```
-
-### Result
-- Each item in the credit note will show its correct prorated amount matching the actual invoice billing
-- The total (subtotal + GST) will correctly match the invoice total when all items are selected
-- Existing validation (total cannot exceed invoice total_amount) continues to work
+### Impact
+- Fixes the error when issuing credit notes
+- Uses semantically correct enum values that the rest of the system already understands
+- No frontend changes needed
 

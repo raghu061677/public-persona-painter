@@ -617,6 +617,9 @@ export default function InvoicesList() {
                           Due Date {getSortIcon('due_date')}
                         </Button>
                       </TableHead>
+                      <TableHead className="px-4 py-3 text-center font-semibold">
+                        Duration
+                      </TableHead>
                       <TableHead className="px-4 py-3 text-left font-semibold">
                         <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
                           Status {getSortIcon('status')}

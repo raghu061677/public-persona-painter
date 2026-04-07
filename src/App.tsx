@@ -82,6 +82,8 @@ const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const InvoiceCreate = lazy(() => import("./pages/InvoiceCreate"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoiceNumberReview = lazy(() => import("./pages/admin/InvoiceNumberReview"));
+const LegacyCampaignCloseReview = lazy(() => import("./pages/admin/LegacyCampaignCloseReview"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));

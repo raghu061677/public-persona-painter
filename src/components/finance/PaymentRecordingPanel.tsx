@@ -166,7 +166,8 @@ export function PaymentRecordingPanel({
 
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
   const totalTds = payments.reduce((sum, p) => sum + Number(p.tds_amount || 0), 0);
-  const totalSettled = totalPaid + totalTds;
+  const totalCredited = creditedAmount || 0;
+  const totalSettled = totalPaid + totalTds + totalCredited;
   const balance = Math.max(totalAmount - totalSettled, 0);
   const paymentProgress = totalAmount > 0 ? (totalSettled / totalAmount) * 100 : 0;
   const exactCashRequired = Math.max(balance - (parseFloat(newPayment.tds_amount) || 0), 0);

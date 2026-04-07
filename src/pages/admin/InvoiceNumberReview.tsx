@@ -113,7 +113,7 @@ export default function InvoiceNumberReview() {
     setLoading(true);
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, invoice_date, client_name, total_amount, status, gst_rate, gst_percent, is_finance_mistake, exclude_from_sequence, void_reason, paid_amount, credited_amount")
+      .select("id, invoice_date, client_name, total_amount, status, gst_percent, is_finance_mistake, exclude_from_sequence, void_reason, paid_amount, credited_amount")
       .eq("company_id", company.id)
       .not("id", "like", "DRAFT-%")
       .order("invoice_date", { ascending: true });
@@ -135,7 +135,7 @@ export default function InvoiceNumberReview() {
         if (expectedFY && parsed.fy !== expectedFY) {
           anomaly = `FY mismatch: ID says ${parsed.fy}, date suggests ${expectedFY}`;
         }
-        const effectiveGst = inv.gst_rate ?? inv.gst_percent ?? 0;
+        const effectiveGst = inv.gst_percent ?? 0;
         if (effectiveGst === 0 && parsed.series === "INV") {
           anomaly = (anomaly ? anomaly + "; " : "") + "0% GST but uses INV/ prefix (should be INV-Z/)";
         } else if (effectiveGst > 0 && parsed.series === "INV-Z") {
@@ -149,7 +149,7 @@ export default function InvoiceNumberReview() {
         client_name: inv.client_name,
         total_amount: inv.total_amount,
         status: inv.status,
-        gst_rate: inv.gst_rate ?? inv.gst_percent,
+        gst_rate: inv.gst_percent,
         series: parsed?.series || (inv.id?.startsWith("INV-Z") ? "INV-Z" : "INV"),
         fy_label: parsed?.fy || "",
         seq_number: parsed?.seq || 0,

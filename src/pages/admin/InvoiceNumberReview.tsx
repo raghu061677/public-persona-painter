@@ -365,7 +365,7 @@ export default function InvoiceNumberReview() {
         entity_type: "invoice",
         entity_id: `${resetSeries}/${resetFY}`,
         old_value: { current_last_seq: resetPreview.current_last_seq, series: resetSeries, fy: resetFY },
-        new_value: { proposed_next_seq: targetSeq, confirmed_next_id: data?.proposed_next_id },
+        new_value: { proposed_next_seq: targetSeq, confirmed_next_id: (data as any)?.proposed_next_id },
         reason: resetReason || "Admin counter reset",
         status: "applied",
         performed_by: user?.id,

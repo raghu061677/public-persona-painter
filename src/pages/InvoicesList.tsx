@@ -333,16 +333,7 @@ export default function InvoicesList() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) {
-      toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Invoice deleted successfully" });
-      fetchInvoices();
-    }
-  };
+  // Remove delete handler - not needed for finance invoices
 
   const handleStatusChange = async (invoiceId: string, newStatus: string) => {
     const updateData: any = { status: newStatus };

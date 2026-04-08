@@ -46,12 +46,14 @@ export default function ReportsDashboard() {
     // Get asset counts
     const { count: totalAssets } = await supabase
       .from('media_assets')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('operational_status', 'active');
 
     const { count: bookedAssets } = await supabase
       .from('media_assets')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'Booked');
+      .eq('status', 'Booked')
+      .eq('operational_status', 'active');
 
     const occupancyPercent = totalAssets ? Math.round((bookedAssets || 0) / totalAssets * 100) : 0;
 

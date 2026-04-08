@@ -8511,6 +8511,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           current_campaign_id: string | null
+          deactivation_reason: string | null
           default_duration_mode: string | null
           dimensions: string
           direction: string | null
@@ -8543,6 +8544,7 @@ export type Database = {
           municipal_authority: string | null
           municipal_id: string | null
           next_maintenance_due: string | null
+          operational_status: Database["public"]["Enums"]["asset_operational_status"]
           ownership: Database["public"]["Enums"]["ownership_type"] | null
           primary_photo_url: string | null
           printing_rate_default: number | null
@@ -8583,6 +8585,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_campaign_id?: string | null
+          deactivation_reason?: string | null
           default_duration_mode?: string | null
           dimensions: string
           direction?: string | null
@@ -8615,6 +8618,7 @@ export type Database = {
           municipal_authority?: string | null
           municipal_id?: string | null
           next_maintenance_due?: string | null
+          operational_status?: Database["public"]["Enums"]["asset_operational_status"]
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           primary_photo_url?: string | null
           printing_rate_default?: number | null
@@ -8655,6 +8659,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_campaign_id?: string | null
+          deactivation_reason?: string | null
           default_duration_mode?: string | null
           dimensions?: string
           direction?: string | null
@@ -8687,6 +8692,7 @@ export type Database = {
           municipal_authority?: string | null
           municipal_id?: string | null
           next_maintenance_due?: string | null
+          operational_status?: Database["public"]["Enums"]["asset_operational_status"]
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           primary_photo_url?: string | null
           printing_rate_default?: number | null
@@ -14922,6 +14928,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           current_campaign_id: string | null
+          deactivation_reason: string | null
           default_duration_mode: string | null
           dimensions: string
           direction: string | null
@@ -14954,6 +14961,7 @@ export type Database = {
           municipal_authority: string | null
           municipal_id: string | null
           next_maintenance_due: string | null
+          operational_status: Database["public"]["Enums"]["asset_operational_status"]
           ownership: Database["public"]["Enums"]["ownership_type"] | null
           primary_photo_url: string | null
           printing_rate_default: number | null
@@ -15471,6 +15479,11 @@ export type Database = {
         | "QA Pending"
         | "Completed"
         | "Failed"
+      asset_operational_status:
+        | "active"
+        | "inactive"
+        | "removed"
+        | "maintenance"
       booking_status:
         | "pending"
         | "approved"
@@ -15713,6 +15726,12 @@ export const Constants = {
         "QA Pending",
         "Completed",
         "Failed",
+      ],
+      asset_operational_status: [
+        "active",
+        "inactive",
+        "removed",
+        "maintenance",
       ],
       booking_status: [
         "pending",

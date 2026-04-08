@@ -48,6 +48,7 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string>('user');
+  const [userEmail, setUserEmail] = useState<string>('');
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -69,6 +70,7 @@ export default function InvoiceDetail() {
         .single();
       setIsAdmin(data?.role === 'admin' || data?.role === 'finance');
       setUserRole(data?.role || 'user');
+      setUserEmail(user.email || '');
     }
   };
 
@@ -233,9 +235,9 @@ export default function InvoiceDetail() {
       const currentRole = userRole;
       const existingNotes = invoice.notes || '';
       const cancellationBlock = [
-        `[Cancelled on ${cancelDate} by ${currentRole}]`,
+        `[Cancelled on ${cancelDate} by ${currentRole}${userEmail ? ` (${userEmail})` : ''}]`,
         `Reason: ${cancelReason.trim()}`,
-        `Replaced by: (to be generated from campaign billing tab)`
+        `Replaced by: pending regeneration`
       ].join('\n');
       const updatedNotes = existingNotes
         ? `${existingNotes}\n\n${cancellationBlock}`

@@ -433,6 +433,7 @@ export default function InvoiceDetail() {
             {/* Editable metadata fields - always available */}
             <InvoiceMetadataEditor
               invoiceId={invoice.id}
+              invoiceDate={invoice.invoice_date || ''}
               notes={invoice.notes || ''}
               poNumber={invoice.client_po_number || ''}
               poDate={invoice.client_po_date || ''}

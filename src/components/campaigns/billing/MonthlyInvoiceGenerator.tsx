@@ -630,6 +630,15 @@ export function MonthlyInvoiceGenerator({
       
       if (invoiceError) throw invoiceError;
       
+      // Finalize: assign permanent invoice number (replaces DRAFT- placeholder)
+      let finalInvoiceId = invoiceId;
+      try {
+        const { finalizeInvoiceNumber } = await import('@/utils/finance');
+        finalInvoiceId = await finalizeInvoiceNumber(supabase, invoiceId, totals.gstPercent, campaign.company_id);
+      } catch (finErr) {
+        console.warn('[MonthlyInvoiceGenerator] Finalization failed, falling back to DRAFT ID:', finErr);
+      }
+      
       // Create detailed invoice_items
       const invoiceItems = filteredPreviews
         .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)

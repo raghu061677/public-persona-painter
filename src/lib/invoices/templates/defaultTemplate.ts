@@ -357,10 +357,13 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
     const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
-    const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || item.rent_amount || 0;
+    // INVARIANT: Finalized invoice items are immutable snapshots.
+    // Pricing must come from stored JSONB values, never from live campaign/media asset data.
+    // Priority: rent_amount → rate → amount (all stored in JSONB) → fallback to display_rate/negotiated_rate
+    const baseRate = item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
     const printingCost = item.printing_charges || item.printing_cost || 0;
     const mountingCost = item.mounting_charges || item.mounting_cost || 0;
-    const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
+    const itemTotal = baseRate + printingCost + mountingCost;
     
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
     unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);

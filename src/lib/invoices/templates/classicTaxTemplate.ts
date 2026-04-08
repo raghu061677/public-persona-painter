@@ -430,7 +430,9 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     }
 
     // Unit Price (Commercials)
-    const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;
+    // INVARIANT: Finalized invoice items are immutable snapshots.
+    // Priority: rent_amount → rate → amount (stored JSONB) → fallback to display_rate/negotiated_rate
+    const baseRate = item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
     const printingCost = item.printing_charges || item.printing_cost || 0;
     const mountingCost = item.mounting_charges || item.mounting_cost || 0;
     const commercials = [
@@ -439,7 +441,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       `Installation: ${formatCurrency(mountingCost)}`,
     ].join('\n');
 
-    const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
+    const itemTotal = baseRate + printingCost + mountingCost;
 
     return [
       (index + 1).toString(),

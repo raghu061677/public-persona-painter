@@ -263,8 +263,13 @@ export function CampaignBillingTab({
         });
       }
 
-      // Calculate due date (30 days from invoice date)
-      const dueDate = new Date();
+      // Smart date: backdate to FY 2025-26 if campaign ended before Apr 1, 2026
+      const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
+      const campaignEnd = new Date(campaign.end_date);
+      const invoiceDate = campaignEnd < fy2627Start
+        ? new Date(2026, 2, 31)  // March 31, 2026
+        : new Date();
+      const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
       // Create invoice
@@ -274,7 +279,7 @@ export function CampaignBillingTab({
         client_id: campaign.client_id,
         client_name: campaign.client_name,
         company_id: campaign.company_id,
-        invoice_date: format(new Date(), 'yyyy-MM-dd'),
+        invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
         due_date: format(dueDate, 'yyyy-MM-dd'),
         invoice_period_start: campaign.start_date,
         invoice_period_end: campaign.end_date,

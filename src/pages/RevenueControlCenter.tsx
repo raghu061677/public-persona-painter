@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { BillingAlertsWidget } from "@/components/reports/BillingAlertsWidget";
 
 // Lazy load heavy tab content
 const ReportAssetRevenueV2 = lazy(() => import("./ReportAssetRevenueV2"));

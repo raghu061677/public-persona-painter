@@ -270,7 +270,7 @@
  
        <div className="grid grid-cols-2 gap-4 text-xs">
          <div className="space-y-1">
-           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {invoice.invoice_no || invoice.id}</span></div>
+           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {(invoice.invoice_no && !invoice.invoice_no.startsWith('DRAFT-')) ? invoice.invoice_no : invoice.id}</span></div>
            <div className="flex"><span className="w-24">Invoice Date</span><span className="font-bold">: {formatDate(invoice.invoice_date)}</span></div>
            <div className="flex"><span className="w-24">Terms</span><span className="font-bold">: {termsLabel}</span></div>
            <div className="flex"><span className="w-24">Due Date</span><span className="font-bold">: {formatDate(invoice.due_date)}</span></div>

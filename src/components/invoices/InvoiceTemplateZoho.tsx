@@ -168,10 +168,15 @@
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
 
-            // Invoice JSONB items are source of truth for pricing; campaign_assets only backfill missing values
-            const rentAmount = item.rent_amount != null ? item.rent_amount : (ca?.rent_amount ?? item.rent_amount);
+            // CRITICAL: Invoice JSONB items are the IMMUTABLE source of truth for pricing.
+            // campaign_assets/media_assets are only used to backfill MISSING metadata
+            // (location, dimensions, etc.), NEVER to override financial values.
+            // Pricing priority: item.rent_amount → item.rate → item.amount → campaign_assets fallback
+            const storedPrice = item.rent_amount ?? item.rate ?? item.amount;
+            const rentAmount = storedPrice != null ? storedPrice : (ca?.rent_amount ?? 0);
             const printingCharges = item.printing_charges != null ? item.printing_charges : (ca?.printing_charges ?? 0);
             const mountingCharges = item.mounting_charges != null ? item.mounting_charges : (ca?.mounting_charges ?? 0);
+            // Recalculate line total from components — never trust pre-computed totals from external sources
             const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
 
             return {
@@ -184,17 +189,17 @@
               illumination_type: pick(item.illumination_type, ca?.illumination_type, ma?.illumination_type),
               dimensions: pick(item.dimensions, ca?.dimensions, ma?.dimensions),
               total_sqft: pick(item.total_sqft, ca?.total_sqft, ma?.total_sqft),
-              start_date: item.start_date ?? ca?.booking_start_date,
-              end_date: item.end_date ?? ca?.booking_end_date,
-              // Pricing overrides from campaign_assets
+              start_date: item.start_date ?? item.booking_start_date ?? ca?.booking_start_date,
+              end_date: item.end_date ?? item.booking_end_date ?? ca?.booking_end_date,
+              // Pricing: stored JSONB values take priority
               rent_amount: rentAmount,
               rate: rentAmount,
               printing_charges: printingCharges,
               mounting_charges: mountingCharges,
               amount: lineTotal,
               total: lineTotal,
-              booked_days: ca?.booked_days ?? item.booked_days,
-              daily_rate: ca?.daily_rate ?? item.daily_rate,
+              booked_days: item.booked_days ?? ca?.booked_days,
+              daily_rate: item.daily_rate ?? ca?.daily_rate,
             };
           });
         }
@@ -308,10 +313,11 @@
            </thead>
            <tbody>
             {items.map((item: any, index: number) => {
-                const rentAmount = item.rent_amount || item.rate || 0;
+                const rentAmount = item.rent_amount ?? item.rate ?? item.amount ?? 0;
                 const printingCharges = item.printing_charges || item.printing_cost || 0;
                 const mountingCharges = item.mounting_charges || item.mounting_cost || 0;
-                const lineTotal = item.total || item.amount || (rentAmount + printingCharges + mountingCharges);
+                // Always recalculate from components to ensure consistency
+                const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
 
                 // Detect discount/adjustment lines: negative amount or no real asset association
                 const isDiscountLine = (lineTotal < 0) || (rentAmount < 0) ||

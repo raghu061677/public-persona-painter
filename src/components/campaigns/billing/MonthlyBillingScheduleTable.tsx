@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { FileText, Eye, Loader2, Plus, CalendarDays } from "lucide-react";
- import { BillingPeriodInfo, CampaignTotalsResult, calculatePeriodAmountFromTotals } from "@/utils/computeCampaignTotals";
+ import { BillingPeriodInfo, CampaignTotalsResult, CampaignAsset, calculatePeriodAmountAssetWise, calculatePeriodAmountFromTotals } from "@/utils/computeCampaignTotals";
 import { BillingStatusBadge, BillingStatus, mapInvoiceStatusToBillingStatus } from "./BillingStatusBadge";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ interface InvoiceRecord {
 interface MonthlyBillingScheduleTableProps {
   periods: BillingPeriodInfo[];
    totals: CampaignTotalsResult;
+  campaignAssets?: CampaignAsset[];
   existingInvoices: InvoiceRecord[];
   onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
@@ -41,6 +42,7 @@ interface MonthlyBillingScheduleTableProps {
 export function MonthlyBillingScheduleTable({
   periods,
    totals,
+  campaignAssets,
   existingInvoices,
   onGenerateInvoice,
   onViewInvoice,
@@ -112,12 +114,21 @@ export function MonthlyBillingScheduleTable({
             const invoice = getInvoiceForPeriod(period);
             const hasInvoice = !!invoice;
             const selection = getChargeSelection(period.monthKey);
-             const amounts = calculatePeriodAmountFromTotals(
-              period,
-               totals,
-               selection.printing && !printingBilled,
-               selection.mounting && !mountingBilled
-            );
+             // Use asset-wise calculation when campaignAssets available (matches actual invoice generation)
+             const amounts = campaignAssets && campaignAssets.length > 0
+               ? calculatePeriodAmountAssetWise(
+                   period,
+                   campaignAssets,
+                   totals,
+                   selection.printing && !printingBilled,
+                   selection.mounting && !mountingBilled
+                 )
+               : calculatePeriodAmountFromTotals(
+                   period,
+                   totals,
+                   selection.printing && !printingBilled,
+                   selection.mounting && !mountingBilled
+                 );
 
             const isDraftInvoice = hasInvoice && invoice.status === 'Draft';
             const isLockedInvoice = hasInvoice && !isDraftInvoice;

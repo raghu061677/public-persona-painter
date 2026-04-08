@@ -110,6 +110,8 @@ interface Asset {
   base_rate?: number;
   gst_percent?: number;
   status: string;
+  operational_status?: string;
+  deactivation_reason?: string;
   primary_photo_url?: string;
   illumination_type?: string;
   direction?: string;

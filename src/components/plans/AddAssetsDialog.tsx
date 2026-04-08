@@ -99,8 +99,9 @@ export function AddAssetsDialog({
   }, [open]);
 
   /**
-   * Fetch ALL media assets (not filtered by status).
+   * Fetch ALL active media assets (not filtered by booking status).
    * Availability is determined by the booking engine, not media_assets.status.
+   * Removed/inactive assets are excluded from planning.
    */
   const fetchAllAssets = async () => {
     setLoading(true);
@@ -108,6 +109,7 @@ export function AddAssetsDialog({
       const { data, error } = await supabase
         .from('media_assets')
         .select('*')
+        .eq('operational_status', 'active')
         .order('city', { ascending: true });
 
       if (error) throw error;

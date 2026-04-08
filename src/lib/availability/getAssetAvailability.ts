@@ -326,11 +326,12 @@ export async function getCompanyAvailabilityCounts(
 ): Promise<{ total: number; vacant: number; booked: number; running: number; upcoming: number; blocked: number }> {
   const today = toDateString(new Date());
 
-  // Get all asset IDs
+  // Get all active asset IDs (exclude removed/inactive)
   const { data: assets } = await supabase
     .from('media_assets')
     .select('id')
-    .eq('company_id', companyId);
+    .eq('company_id', companyId)
+    .eq('operational_status', 'active');
 
   const allIds = (assets || []).map(a => a.id);
   if (allIds.length === 0) return { total: 0, vacant: 0, booked: 0, running: 0, upcoming: 0, blocked: 0 };

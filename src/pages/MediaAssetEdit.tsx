@@ -1128,7 +1128,7 @@ export default function MediaAssetEdit() {
                   </div>
 
                   <div className="input-group">
-                    <Label>Status</Label>
+                    <Label>Booking Status</Label>
                     <Select 
                       value={formData.status} 
                       onValueChange={(value) => updateField('status', value)}
@@ -1144,6 +1144,56 @@ export default function MediaAssetEdit() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="input-group">
+                    <Label>Operational Status</Label>
+                    <p className="text-xs text-muted-foreground mb-1">Controls whether this asset appears in availability & planning</p>
+                    <Select 
+                      value={formData.operational_status || 'active'} 
+                      onValueChange={(value) => updateField('operational_status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Active
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="inactive">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-gray-400" />
+                            Inactive
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="removed">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                            Removed
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="maintenance">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            Under Maintenance
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.operational_status && formData.operational_status !== 'active' && (
+                    <div className="input-group">
+                      <Label>Reason for Deactivation</Label>
+                      <Input
+                        placeholder="e.g., Road widening, Lease expired..."
+                        value={formData.deactivation_reason || ''}
+                        onChange={(e) => updateField('deactivation_reason', e.target.value)}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

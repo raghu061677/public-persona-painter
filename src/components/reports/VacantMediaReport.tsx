@@ -81,6 +81,7 @@ export function VacantMediaReport() {
         .from("media_assets")
         .select("*")
         .eq("status", "Available")
+        .eq("operational_status", "active")
         .order("city")
         .order("area");
 

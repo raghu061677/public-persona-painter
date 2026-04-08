@@ -57,6 +57,23 @@ export function generateBillableMonths(startDate: string, endDate: string): stri
 /**
  * Extract invoiced months from finalized (non-draft, non-cancelled) invoices.
  * For multi-month invoices, derives covered months from item date ranges.
+ *
+ * **Coverage Detection Priority (3-tier fallback)**:
+ *
+ * 1. **Item-level booking dates** (`booking_start_date` / `booking_end_date` in items JSONB)
+ *    — Most granular; each line item declares exactly which months it covers.
+ *    This is the preferred source and prevents false overdue for cross-month campaigns.
+ *
+ * 2. **Header-level invoice period** (`invoice_period_start` / `invoice_period_end`)
+ *    — Used when items lack booking dates. Covers the full date span declared
+ *    on the invoice header. Historical backfill populates these for older invoices.
+ *
+ * 3. **`billing_month` field** (single YYYY-MM string)
+ *    — Last resort. Only covers a single month, so cross-month campaigns
+ *    relying solely on this field may show false "overdue" for uncovered months.
+ *
+ * When creating new invoices, always populate either item-level booking dates
+ * or header-level period fields to ensure accurate coverage detection.
  */
 export function extractInvoicedMonths(invoices: InvoiceSummaryRow[], campaignId: string): string[] {
   const months = new Set<string>();
@@ -66,16 +83,16 @@ export function extractInvoicedMonths(invoices: InvoiceSummaryRow[], campaignId:
       !inv.is_draft &&
       inv.status !== "Cancelled"
     ) {
-      // Try to derive all covered months from items' date ranges
+      // Priority 1: Item-level booking date ranges (most accurate)
       const coveredMonths = deriveMonthsFromItems(inv.items);
       if (coveredMonths.length > 0) {
         coveredMonths.forEach((m) => months.add(m));
       } else if (inv.invoice_period_start && inv.invoice_period_end) {
-        // Fallback: use header-level invoice period dates
+        // Priority 2: Header-level invoice period dates
         const periodMonths = generateBillableMonths(inv.invoice_period_start, inv.invoice_period_end);
         periodMonths.forEach((m) => months.add(m));
       } else if (inv.billing_month) {
-        // Last fallback: single billing_month
+        // Priority 3: Single billing_month fallback (least reliable for cross-month campaigns)
         months.add(inv.billing_month);
       }
     }

@@ -65,7 +65,7 @@ export function CampaignBillingTab({
 }: CampaignBillingTabProps) {
   const navigate = useNavigate();
   const [existingInvoices, setExistingInvoices] = useState<InvoiceRecord[]>([]);
-  const [paymentDates, setPaymentDates] = useState<Record<string, string>>({});
+  const [paymentSummaries, setPaymentSummaries] = useState<Record<string, { payment_date: string; tds_amount: number; tds_rate: number | null; net_received: number }>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
@@ -110,24 +110,35 @@ export function CampaignBillingTab({
       if (error) throw error;
       setExistingInvoices(data || []);
 
-      // Fetch payment dates for paid invoices
+      // Fetch payment details (date, TDS, net received) for paid invoices
       const paidIds = (data || []).filter(inv => inv.status === 'Paid').map(inv => inv.id);
       if (paidIds.length > 0) {
         const { data: payments } = await supabase
           .from('payment_records')
-          .select('invoice_id, payment_date')
+          .select('invoice_id, payment_date, tds_amount, tds_rate, amount')
           .in('invoice_id', paidIds)
           .order('payment_date', { ascending: false });
         
-        const dateMap: Record<string, string> = {};
+        const summaryMap: Record<string, { payment_date: string; tds_amount: number; tds_rate: number | null; net_received: number }> = {};
         (payments || []).forEach(p => {
-          if (p.invoice_id && p.payment_date && !dateMap[p.invoice_id]) {
-            dateMap[p.invoice_id] = p.payment_date;
+          if (!p.invoice_id) return;
+          if (!summaryMap[p.invoice_id]) {
+            summaryMap[p.invoice_id] = {
+              payment_date: p.payment_date || '',
+              tds_amount: 0,
+              tds_rate: null,
+              net_received: 0,
+            };
+          }
+          summaryMap[p.invoice_id].tds_amount += Number(p.tds_amount || 0);
+          summaryMap[p.invoice_id].net_received += Number(p.amount || 0);
+          if (p.tds_rate && summaryMap[p.invoice_id].tds_rate === null) {
+            summaryMap[p.invoice_id].tds_rate = Number(p.tds_rate);
           }
         });
-        setPaymentDates(dateMap);
+        setPaymentSummaries(summaryMap);
       } else {
-        setPaymentDates({});
+        setPaymentSummaries({});
       }
       
       // Auto-detect billing mode based on existing invoices
@@ -647,10 +658,29 @@ export function CampaignBillingTab({
                         <div className="text-xs text-muted-foreground">
                           Due: {inv.due_date ? format(new Date(inv.due_date), "dd MMM yyyy") : "N/A"}
                         </div>
-                        {inv.status === 'Paid' && paymentDates[inv.id] && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            Paid on: {format(new Date(paymentDates[inv.id]), "dd MMM yyyy")}
-                          </div>
+                        {inv.status === 'Paid' && paymentSummaries[inv.id] && (
+                          <>
+                            {paymentSummaries[inv.id].payment_date && (
+                              <div className="text-xs text-green-600 dark:text-green-400">
+                                Paid on: {format(new Date(paymentSummaries[inv.id].payment_date), "dd MMM yyyy")}
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].tds_amount > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                TDS Deducted: ₹{paymentSummaries[inv.id].tds_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].tds_rate !== null && paymentSummaries[inv.id].tds_rate! > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                TDS Rate: {paymentSummaries[inv.id].tds_rate}%
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].net_received > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                Net Received: ₹{paymentSummaries[inv.id].net_received.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

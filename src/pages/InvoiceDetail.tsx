@@ -234,9 +234,9 @@ export default function InvoiceDetail() {
       const currentRole = userRole;
       const existingNotes = invoice.notes || '';
       const cancellationBlock = [
-        `[Cancelled on ${cancelDate} by ${currentRole}]`,
+        `[Cancelled on ${cancelDate} by ${currentRole}${userEmail ? ` (${userEmail})` : ''}]`,
         `Reason: ${cancelReason.trim()}`,
-        `Replaced by: (to be generated from campaign billing tab)`
+        `Replaced by: pending regeneration`
       ].join('\n');
       const updatedNotes = existingNotes
         ? `${existingNotes}\n\n${cancellationBlock}`

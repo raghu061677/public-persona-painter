@@ -712,19 +712,9 @@ export default function InvoicesList() {
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
                             <TableCell className="px-4 py-3">
-                              <Select
-                                value={invoice.status}
-                                onValueChange={(value) => handleStatusChange(invoice.id, value)}
-                              >
-                                <SelectTrigger className={`w-[120px] h-8 text-xs ${getInvoiceStatusColor(invoice.status)}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {INVOICE_STATUSES.map((status) => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Badge className={`text-xs ${getInvoiceStatusColor(invoice.status)}`}>
+                                {invoice.status}
+                              </Badge>
                             </TableCell>
                             <TableCell className="px-4 py-3 text-right">
                               {canSeeInvField('total_amount', invoice) ? formatINR(invoice.total_amount) : <span className="text-muted-foreground select-none">••••••</span>}

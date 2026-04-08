@@ -491,7 +491,26 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         },
       },
       { accessorKey: "gst_percent", header: "GST %" },
-      { accessorKey: "status", header: "Status" },
+      { accessorKey: "status", header: "Booking Status" },
+      {
+        accessorKey: "operational_status",
+        header: "Ops Status",
+        cell: ({ row }) => {
+          const opStatus = row.original.operational_status || 'active';
+          const config: Record<string, { label: string; className: string }> = {
+            active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+            inactive: { label: 'Inactive', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+            removed: { label: 'Removed', className: 'bg-red-100 text-red-700 border-red-200' },
+            maintenance: { label: 'Maintenance', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+          };
+          const c = config[opStatus] || config.active;
+          return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${c.className}`}>
+              {c.label}
+            </span>
+          );
+        },
+      },
       {
         accessorKey: "is_public",
         header: "Is Public",

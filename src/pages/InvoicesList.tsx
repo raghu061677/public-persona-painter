@@ -337,17 +337,7 @@ export default function InvoicesList() {
 
   // Remove delete handler - not needed for finance invoices
 
-  const handleStatusChange = async (invoiceId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus };
-    if (newStatus === 'Paid') updateData.balance_due = 0;
-    const { error } = await supabase.from('invoices').update(updateData).eq('id', invoiceId);
-    if (error) {
-      toast({ title: "Error", description: "Failed to update invoice status", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: `Invoice status updated to ${newStatus}` });
-      fetchInvoices();
-    }
-  };
+  // Status changes removed from list page — use invoice detail page for validated status transitions
 
   // Stats for header cards
   const totalInvoices = filteredInvoices.length;

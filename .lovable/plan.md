@@ -1,30 +1,38 @@
 
 
-## Minor Refinements to Already-Implemented Cancel Invoice + Generate Button
+## Fix: Generate Button Not Appearing After Invoice Cancellation (Monthly Mode)
 
-Both core fixes are already in place from the previous implementation round. Only two small refinements remain:
+### Root Cause
 
-### Refinement 1: Improve cancellation note user identifier
-**File**: `src/pages/InvoiceDetail.tsx`
+**INV/2026-27/0010** has `is_monthly_split: true`, so it's classified as a **monthly** invoice (not single). The monthly billing path has two places that don't account for cancelled invoices:
 
-Currently the note says `[Cancelled on 2026-04-08 by admin]`. Enhance to include the user's email when available for better audit trail: `[Cancelled on 2026-04-08 by admin (user@example.com)]`.
+1. **`MonthlyBillingScheduleTable.tsx` line 62-72**: `getInvoiceForPeriod()` finds the cancelled invoice for April 2026, sets `hasInvoice = true`, and shows "View" instead of "Generate".
 
-In `checkAdminStatus` (line 62-73): store the user's email alongside the role. In `handleCancelInvoice` (line 236): use `${userRole} (${userEmail})` or fall back to just the role if email is unavailable.
+2. **`CampaignBillingTab.tsx` line 570**: `existingInvoices.length === 0` hides the "Generate All" button because the cancelled invoice is still counted.
 
-Also update line 238 wording from `"Replaced by: (to be generated from campaign billing tab)"` to `"Replaced by: pending regeneration"`.
+The single-invoice mode was already fixed in the previous round (line 712), but the monthly mode was missed.
 
-### Refinement 2: No changes needed to CampaignBillingTab.tsx
-The generate button logic on line 712 already correctly filters out Cancelled invoices. Cancelled invoices remain visible in the list (line 655-709) with greyed-out styling and destructive badge. No further changes required.
+### Fix (2 files, 2 small changes)
 
-### Already implemented (no changes needed)
-- Status pre-check inside `handleCancelInvoice` (line 206)
-- `paid_amount > 1` check (line 210)
-- `payment_records` existence check (line 214-220)
-- `credit_notes` existence check (line 223-229)
-- Append-only notes logic (line 240-242)
-- Cancel dialog with required reason textarea
-- Button visibility guard for terminal statuses
+**File 1: `src/components/campaigns/billing/MonthlyBillingScheduleTable.tsx`**
+- Line 63: Filter out Cancelled invoices in `getInvoiceForPeriod`:
+  ```
+  return existingInvoices.filter(inv => inv.status !== 'Cancelled').find(inv => { ... });
+  ```
 
-### Summary
-Only `InvoiceDetail.tsx` needs a 3-line tweak: store user email, include it in the note, and update the "Replaced by" wording.
+**File 2: `src/components/campaigns/billing/CampaignBillingTab.tsx`**
+- Line 570: Change `existingInvoices.length === 0` to exclude cancelled invoices:
+  ```
+  existingInvoices.filter(inv => inv.status !== 'Cancelled').length === 0
+  ```
+
+### What stays untouched
+- No schema changes
+- No finance engine changes
+- No single invoice mode changes (already working)
+- No credit note or payment flow changes
+- Cancelled invoices remain visible in the invoice list for audit trail
+
+### Expected Result
+After the fix, navigating to CAM-202604-0011 billing tab will show the "Generate" button for April 2026 since the cancelled invoice is ignored.
 

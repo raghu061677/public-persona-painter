@@ -69,6 +69,7 @@ export default function InvoiceDetail() {
         .single();
       setIsAdmin(data?.role === 'admin' || data?.role === 'finance');
       setUserRole(data?.role || 'user');
+      setUserEmail(user.email || '');
     }
   };
 

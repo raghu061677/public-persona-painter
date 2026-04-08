@@ -65,7 +65,7 @@ export function CampaignBillingTab({
 }: CampaignBillingTabProps) {
   const navigate = useNavigate();
   const [existingInvoices, setExistingInvoices] = useState<InvoiceRecord[]>([]);
-  const [paymentDates, setPaymentDates] = useState<Record<string, string>>({});
+  const [paymentSummaries, setPaymentSummaries] = useState<Record<string, { payment_date: string; tds_amount: number; tds_rate: number | null; net_received: number }>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);

@@ -133,12 +133,15 @@ export default function RevenueControlCenter() {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 15);
 
-      // Top city
+      // Top city — derived from invoice items (invoice-backed, not campaign_assets)
       const cityMap = new Map<string, number>();
-      companyCampaignAssets.forEach((a) => {
-        if (!a.city) return;
-        const val = a.total_price || a.negotiated_rate || a.card_rate || 0;
-        cityMap.set(a.city, (cityMap.get(a.city) || 0) + val);
+      invoices.forEach((inv) => {
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        items.forEach((item: any) => {
+          const city = item?.city || "Unknown";
+          const amount = item?.rent_amount ?? item?.rate ?? item?.amount ?? 0;
+          cityMap.set(city, (cityMap.get(city) || 0) + Number(amount));
+        });
       });
       const topCity = [...cityMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
 

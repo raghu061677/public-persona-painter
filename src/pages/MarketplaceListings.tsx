@@ -93,6 +93,7 @@ export default function MarketplaceListings() {
       .select("id, city, area, location, media_type, dimensions, card_rate")
       .eq("company_id", company.id)
       .eq("status", "Available")
+      .eq("operational_status", "active")
       .order("city");
     setAssets(data || []);
   };

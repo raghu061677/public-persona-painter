@@ -154,6 +154,8 @@ export default function MediaAssetEdit() {
         electricity: data.electricity?.toString() || "",
         maintenance: data.maintenance?.toString() || "",
         vendor_details: data.vendor_details || {},
+        operational_status: data.operational_status || 'active',
+        deactivation_reason: data.deactivation_reason || '',
         consumer_name: data.consumer_name || "",
         service_number: data.service_number || "",
         unique_service_number: data.unique_service_number || "",

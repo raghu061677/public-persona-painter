@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { BillingAlertsWidget } from "@/components/reports/BillingAlertsWidget";
 
 // Lazy load heavy tab content
 const ReportAssetRevenueV2 = lazy(() => import("./ReportAssetRevenueV2"));
@@ -66,7 +67,7 @@ export default function RevenueControlCenter() {
         .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id, items, is_draft")
         .eq("company_id", company.id)
         .eq("is_draft", false)
-        .not("status", "in", '("Cancelled","Void")');
+        .neq("status", "Cancelled");
 
       if (invError) throw invError;
       const invoices = allInvoices || [];
@@ -282,6 +283,9 @@ export default function RevenueControlCenter() {
             </div>
           ) : (
             <>
+              {/* Billing Alerts — operational widget, excluded from financial KPIs */}
+              <BillingAlertsWidget />
+
               {/* Collection Efficiency */}
               <Card>
                 <CardHeader>

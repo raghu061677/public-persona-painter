@@ -724,7 +724,7 @@ export function MonthlyInvoiceGenerator({
 
       // Trigger email notifications for the generated invoice
       try {
-        const invoiceData = { id: invoiceId, invoice_no: invoiceId, invoice_date: format(new Date(), 'yyyy-MM-dd'), due_date: format(dueDate, 'yyyy-MM-dd'), total_amount: totals.grandTotal, balance_due: totals.grandTotal, client_name: campaign.client_name };
+        const invoiceData = { id: finalInvoiceId, invoice_no: finalInvoiceId, invoice_date: format(new Date(), 'yyyy-MM-dd'), due_date: format(dueDate, 'yyyy-MM-dd'), total_amount: totals.grandTotal, balance_due: totals.grandTotal, client_name: campaign.client_name };
         const emailPayload = buildInvoicePayload(invoiceData, { name: campaign.client_name }, company);
         triggerEmail('invoice_generated_internal', emailPayload, [{ to: company?.email || '' }], invoiceId);
         // Client notification (confirm mode via template send_mode)

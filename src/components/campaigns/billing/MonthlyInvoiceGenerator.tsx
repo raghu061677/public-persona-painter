@@ -630,6 +630,15 @@ export function MonthlyInvoiceGenerator({
       
       if (invoiceError) throw invoiceError;
       
+      // Finalize: assign permanent invoice number (replaces DRAFT- placeholder)
+      let finalInvoiceId = invoiceId;
+      try {
+        const { finalizeInvoiceNumber } = await import('@/utils/finance');
+        finalInvoiceId = await finalizeInvoiceNumber(supabase, invoiceId, totals.gstPercent, campaign.company_id);
+      } catch (finErr) {
+        console.warn('[MonthlyInvoiceGenerator] Finalization failed, falling back to DRAFT ID:', finErr);
+      }
+      
       // Create detailed invoice_items
       const invoiceItems = filteredPreviews
         .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)
@@ -641,7 +650,7 @@ export function MonthlyInvoiceGenerator({
             (oneTimeOnly ? (!preview.mountingAlreadyBilled || allowRebill) : true);
           
           return {
-            invoice_id: invoiceId,
+            invoice_id: finalInvoiceId,
             campaign_asset_id: preview.campaignAsset.id,
             asset_id: preview.campaignAsset.asset_id,
             asset_code: preview.assetCode,
@@ -715,13 +724,13 @@ export function MonthlyInvoiceGenerator({
 
       // Trigger email notifications for the generated invoice
       try {
-        const invoiceData = { id: invoiceId, invoice_no: invoiceId, invoice_date: format(new Date(), 'yyyy-MM-dd'), due_date: format(dueDate, 'yyyy-MM-dd'), total_amount: totals.grandTotal, balance_due: totals.grandTotal, client_name: campaign.client_name };
+        const invoiceData = { id: finalInvoiceId, invoice_no: finalInvoiceId, invoice_date: format(new Date(), 'yyyy-MM-dd'), due_date: format(dueDate, 'yyyy-MM-dd'), total_amount: totals.grandTotal, balance_due: totals.grandTotal, client_name: campaign.client_name };
         const emailPayload = buildInvoicePayload(invoiceData, { name: campaign.client_name }, company);
-        triggerEmail('invoice_generated_internal', emailPayload, [{ to: company?.email || '' }], invoiceId);
+        triggerEmail('invoice_generated_internal', emailPayload, [{ to: company?.email || '' }], finalInvoiceId);
         // Client notification (confirm mode via template send_mode)
         const { data: client } = await supabase.from('clients').select('email, name').eq('id', campaign.client_id).single();
         if (client?.email) {
-          triggerEmail('invoice_generated_client', emailPayload, [{ to: client.email, name: client.name }], invoiceId);
+          triggerEmail('invoice_generated_client', emailPayload, [{ to: client.email, name: client.name }], finalInvoiceId);
         }
       } catch (emailErr) {
         console.warn('[MonthlyInvoiceGenerator] Email trigger failed (non-blocking):', emailErr);
@@ -729,7 +738,7 @@ export function MonthlyInvoiceGenerator({
       
       toast({
         title: "Invoice Generated",
-        description: `Invoice ${invoiceId} created for ${format(periodStart, 'MMMM yyyy')} with ${filteredPreviews.length} assets`,
+        description: `Invoice ${finalInvoiceId} created for ${format(periodStart, 'MMMM yyyy')} with ${filteredPreviews.length} assets`,
       });
       
       onOpenChange(false);

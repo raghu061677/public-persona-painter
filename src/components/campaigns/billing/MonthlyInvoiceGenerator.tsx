@@ -511,7 +511,9 @@ export function MonthlyInvoiceGenerator({
       // Generate draft invoice ID - permanent number assigned on finalization
       const invoiceId = `DRAFT-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
       
-      // Build items array for legacy compatibility
+      // INVARIANT: Finalized invoice items are immutable snapshots.
+      // All pricing and metadata must be stored directly in JSONB so that
+      // display never depends on live campaign_assets or media_assets records.
       const items = filteredPreviews
         .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)
         .map((preview, index) => ({
@@ -519,18 +521,30 @@ export function MonthlyInvoiceGenerator({
           description: `${preview.campaignAsset.media_type} - ${preview.campaignAsset.location}, ${preview.campaignAsset.area}`,
           asset_code: preview.assetCode,
           asset_id: preview.campaignAsset.asset_id,
+          campaign_asset_id: preview.campaignAsset.id,
           // Snapshot fields for stable PDFs
           location: preview.campaignAsset.location ?? null,
           area: preview.campaignAsset.area ?? null,
           direction: preview.campaignAsset.direction ?? null,
           media_type: preview.campaignAsset.media_type ?? null,
           illumination: preview.campaignAsset.illumination_type ?? null,
+          illumination_type: preview.campaignAsset.illumination_type ?? null,
+          dimensions: preview.campaignAsset.dimensions ?? null,
           dimension_text: preview.campaignAsset.dimensions ?? null,
+          total_sqft: preview.campaignAsset.total_sqft ?? null,
           hsn_sac: '998361',
+          // Billing dates & days — source of truth for this invoice line
+          booking_start_date: format(preview.billStartDate, 'yyyy-MM-dd'),
+          booking_end_date: format(preview.billEndDate, 'yyyy-MM-dd'),
+          booked_days: preview.billableDays,
+          daily_rate: preview.dailyRate,
           period: `${format(preview.billStartDate, 'dd MMM')} - ${format(preview.billEndDate, 'dd MMM yyyy')}`,
           days: preview.billableDays,
-          rate: preview.monthlyRate,
+          rate: round2(preview.calculatedAmount),
+          rent_amount: round2(preview.calculatedAmount),
           amount: round2(preview.calculatedAmount),
+          total: round2(preview.calculatedAmount),
+          quantity: 1,
         }));
       
       // Add printing/mounting if applicable

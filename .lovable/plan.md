@@ -1,61 +1,43 @@
 
 
-## Fix: Cancel INV/2025-26/0022 + Add Cancel Button for Unpaid Finalized Invoices
+## Plan: Enhanced Cancel Invoice + Show Generate Button After Cancellation
 
-### Current State
+### Two issues to fix:
 
-- **INV/2025-26/0022**: Status "Overdue", total ₹1,85,850 (wrong), zero payments, zero credit notes, zero TDS
-- **Problem**: The invoice detail page only allows deleting **Draft** invoices. Finalized invoices (like this one with status "Overdue") have no cancel/void option — only "Credit Note" is available
-- The system already recognizes "Cancelled" as a valid status (excluded from receivables, aging, dashboards, reminders everywhere)
+**Issue 1: Cancel Invoice needs enhanced metadata**
 
-### Solution: Add "Cancel Invoice" button for unpaid finalized invoices
+The current `handleCancelInvoice` in `InvoiceDetail.tsx` (line 223) appends:
+```
+[CANCELLED 4/8/2026]: reason text
+```
 
-**File**: `src/pages/InvoiceDetail.tsx`
+Needs to be enhanced to:
+```
+[Cancelled on 2026-04-08 by admin]
+Reason: Wrong pricing — 90-day calculation instead of 42-day
+Replaced by: (to be generated from campaign billing tab)
+```
 
-**Safety checks before allowing cancel**:
-1. Invoice must be finalized (not draft)
-2. `paid_amount` must be 0 (or negligible ≤ ₹1)
-3. No linked payment records (query `payment_records` table)
-4. No linked credit notes (query `credit_notes` table)
-5. User must be admin/finance role
+Also needs: paid_amount check (currently only checks `(invoice.paid_amount || 0) <= 1` in the button visibility but not inside `handleCancelInvoice` itself), and status pre-check inside the handler.
 
-**UI placement**: Next to the existing "Credit Note" button, add a "Cancel Invoice" button (destructive variant) that:
-1. Shows a confirmation dialog explaining the action
-2. Requires a cancellation reason (textarea)
-3. On confirm: updates `invoices` set `status = 'Cancelled'`, `balance_due = 0`, and stores the reason in `notes` field
-4. Logs the action for audit trail
+**Changes in `src/pages/InvoiceDetail.tsx`**:
+- Update line 222-223 to format the cancellation note with ISO date, user role info, and structured format
+- Add paid_amount and status validation inside `handleCancelInvoice` (before the DB calls)
+- Fetch current user info to include in the note
 
-**Code changes**:
+**Issue 2: "Generate Single Invoice" button hidden when cancelled invoice exists**
 
-1. Add a `handleCancelInvoice` function:
-   - Verify no payments exist (`payment_records` where `invoice_id = id`)
-   - Verify no credit notes exist (`credit_notes` where `invoice_id = id`)
-   - Update invoice: `status: 'Cancelled'`, `balance_due: 0`
-   - Append cancellation reason to notes
+In `CampaignBillingTab.tsx`, line 654-707: the generate button only shows when `singleInvoices.length === 0`. After cancelling INV/2025-26/0022, it still appears in `singleInvoices` (status=Cancelled), so the button stays hidden.
 
-2. Add cancel button in the action bar (line ~285):
-   ```tsx
-   {isAdmin && isFinalized && invoice.status !== 'Cancelled' && 
-    invoice.status !== 'Paid' && invoice.status !== 'Fully Credited' && (
-     <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
-       Cancel Invoice
-     </Button>
-   )}
-   ```
-
-3. Add a simple confirmation dialog with reason input
+**Changes in `src/components/campaigns/billing/CampaignBillingTab.tsx`**:
+- Filter out Cancelled invoices from `singleInvoices` when deciding whether to show the "Generate Single Invoice" button
+- Specifically: change the condition on line 707 from `singleInvoices.length > 0` to check for active (non-cancelled) invoices
+- Keep cancelled invoices visible in the list (greyed out) for audit trail, but show the generate button if all single invoices are cancelled
 
 ### What stays untouched
 - No schema changes
-- No finance calculation changes
-- No billing engine changes
-- Existing "Cancelled" status handling throughout the app already works (excluded from receivables, aging, dashboards)
-- Draft delete flow unchanged
-- Credit note flow unchanged
-
-### After the fix
-1. Go to INV/2025-26/0022 detail page
-2. Click "Cancel Invoice", provide reason ("Wrong pricing — 90-day calculation instead of 42-day")
-3. Invoice becomes Cancelled, excluded from overdue/receivables
-4. Regenerate correct invoice from CAM-202602-0015 billing tab (will use the fixed rent_amount logic)
+- No finance engine changes
+- No credit note flow changes
+- No draft delete changes
+- Monthly invoice generator unchanged
 

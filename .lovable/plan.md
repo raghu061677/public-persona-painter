@@ -1,43 +1,30 @@
 
 
-## Plan: Enhanced Cancel Invoice + Show Generate Button After Cancellation
+## Minor Refinements to Already-Implemented Cancel Invoice + Generate Button
 
-### Two issues to fix:
+Both core fixes are already in place from the previous implementation round. Only two small refinements remain:
 
-**Issue 1: Cancel Invoice needs enhanced metadata**
+### Refinement 1: Improve cancellation note user identifier
+**File**: `src/pages/InvoiceDetail.tsx`
 
-The current `handleCancelInvoice` in `InvoiceDetail.tsx` (line 223) appends:
-```
-[CANCELLED 4/8/2026]: reason text
-```
+Currently the note says `[Cancelled on 2026-04-08 by admin]`. Enhance to include the user's email when available for better audit trail: `[Cancelled on 2026-04-08 by admin (user@example.com)]`.
 
-Needs to be enhanced to:
-```
-[Cancelled on 2026-04-08 by admin]
-Reason: Wrong pricing — 90-day calculation instead of 42-day
-Replaced by: (to be generated from campaign billing tab)
-```
+In `checkAdminStatus` (line 62-73): store the user's email alongside the role. In `handleCancelInvoice` (line 236): use `${userRole} (${userEmail})` or fall back to just the role if email is unavailable.
 
-Also needs: paid_amount check (currently only checks `(invoice.paid_amount || 0) <= 1` in the button visibility but not inside `handleCancelInvoice` itself), and status pre-check inside the handler.
+Also update line 238 wording from `"Replaced by: (to be generated from campaign billing tab)"` to `"Replaced by: pending regeneration"`.
 
-**Changes in `src/pages/InvoiceDetail.tsx`**:
-- Update line 222-223 to format the cancellation note with ISO date, user role info, and structured format
-- Add paid_amount and status validation inside `handleCancelInvoice` (before the DB calls)
-- Fetch current user info to include in the note
+### Refinement 2: No changes needed to CampaignBillingTab.tsx
+The generate button logic on line 712 already correctly filters out Cancelled invoices. Cancelled invoices remain visible in the list (line 655-709) with greyed-out styling and destructive badge. No further changes required.
 
-**Issue 2: "Generate Single Invoice" button hidden when cancelled invoice exists**
+### Already implemented (no changes needed)
+- Status pre-check inside `handleCancelInvoice` (line 206)
+- `paid_amount > 1` check (line 210)
+- `payment_records` existence check (line 214-220)
+- `credit_notes` existence check (line 223-229)
+- Append-only notes logic (line 240-242)
+- Cancel dialog with required reason textarea
+- Button visibility guard for terminal statuses
 
-In `CampaignBillingTab.tsx`, line 654-707: the generate button only shows when `singleInvoices.length === 0`. After cancelling INV/2025-26/0022, it still appears in `singleInvoices` (status=Cancelled), so the button stays hidden.
-
-**Changes in `src/components/campaigns/billing/CampaignBillingTab.tsx`**:
-- Filter out Cancelled invoices from `singleInvoices` when deciding whether to show the "Generate Single Invoice" button
-- Specifically: change the condition on line 707 from `singleInvoices.length > 0` to check for active (non-cancelled) invoices
-- Keep cancelled invoices visible in the list (greyed out) for audit trail, but show the generate button if all single invoices are cancelled
-
-### What stays untouched
-- No schema changes
-- No finance engine changes
-- No credit note flow changes
-- No draft delete changes
-- Monthly invoice generator unchanged
+### Summary
+Only `InvoiceDetail.tsx` needs a 3-line tweak: store user email, include it in the note, and update the "Replaced by" wording.
 

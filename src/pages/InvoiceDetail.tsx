@@ -68,6 +68,7 @@ export default function InvoiceDetail() {
         .eq('user_id', user.id)
         .single();
       setIsAdmin(data?.role === 'admin' || data?.role === 'finance');
+      setUserRole(data?.role || 'user');
     }
   };
 

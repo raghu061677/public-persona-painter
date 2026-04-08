@@ -647,6 +647,11 @@ export function CampaignBillingTab({
                         <div className="text-xs text-muted-foreground">
                           Due: {inv.due_date ? format(new Date(inv.due_date), "dd MMM yyyy") : "N/A"}
                         </div>
+                        {inv.status === 'Paid' && paymentDates[inv.id] && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            Paid on: {format(new Date(paymentDates[inv.id]), "dd MMM yyyy")}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

@@ -658,10 +658,29 @@ export function CampaignBillingTab({
                         <div className="text-xs text-muted-foreground">
                           Due: {inv.due_date ? format(new Date(inv.due_date), "dd MMM yyyy") : "N/A"}
                         </div>
-                        {inv.status === 'Paid' && paymentDates[inv.id] && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            Paid on: {format(new Date(paymentDates[inv.id]), "dd MMM yyyy")}
-                          </div>
+                        {inv.status === 'Paid' && paymentSummaries[inv.id] && (
+                          <>
+                            {paymentSummaries[inv.id].payment_date && (
+                              <div className="text-xs text-green-600 dark:text-green-400">
+                                Paid on: {format(new Date(paymentSummaries[inv.id].payment_date), "dd MMM yyyy")}
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].tds_amount > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                TDS Deducted: ₹{paymentSummaries[inv.id].tds_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].tds_rate !== null && paymentSummaries[inv.id].tds_rate! > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                TDS Rate: {paymentSummaries[inv.id].tds_rate}%
+                              </div>
+                            )}
+                            {paymentSummaries[inv.id].net_received > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                Net Received: ₹{paymentSummaries[inv.id].net_received.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

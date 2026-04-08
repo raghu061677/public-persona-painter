@@ -337,17 +337,7 @@ export default function InvoicesList() {
 
   // Remove delete handler - not needed for finance invoices
 
-  const handleStatusChange = async (invoiceId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus };
-    if (newStatus === 'Paid') updateData.balance_due = 0;
-    const { error } = await supabase.from('invoices').update(updateData).eq('id', invoiceId);
-    if (error) {
-      toast({ title: "Error", description: "Failed to update invoice status", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: `Invoice status updated to ${newStatus}` });
-      fetchInvoices();
-    }
-  };
+  // Status changes removed from list page — use invoice detail page for validated status transitions
 
   // Stats for header cards
   const totalInvoices = filteredInvoices.length;
@@ -722,19 +712,9 @@ export default function InvoicesList() {
                             <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                             <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
                             <TableCell className="px-4 py-3">
-                              <Select
-                                value={invoice.status}
-                                onValueChange={(value) => handleStatusChange(invoice.id, value)}
-                              >
-                                <SelectTrigger className={`w-[120px] h-8 text-xs ${getInvoiceStatusColor(invoice.status)}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {INVOICE_STATUSES.map((status) => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Badge className={`text-xs ${getInvoiceStatusColor(invoice.status)}`}>
+                                {invoice.status}
+                              </Badge>
                             </TableCell>
                             <TableCell className="px-4 py-3 text-right">
                               {canSeeInvField('total_amount', invoice) ? formatINR(invoice.total_amount) : <span className="text-muted-foreground select-none">••••••</span>}

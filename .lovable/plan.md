@@ -1,38 +1,32 @@
 
 
-## Fix: Generate Button Not Appearing After Invoice Cancellation (Monthly Mode)
+## Plan: Restrict Invoice Status Changes on List Page
 
-### Root Cause
+### Problem
+The status dropdown on `/admin/invoices` allows **any** status transition without validation — e.g., Sent → Draft, Paid → Draft, Cancelled → Sent. This bypasses all the careful validation in the invoice detail page and creates fiscal integrity risks.
 
-**INV/2026-27/0010** has `is_monthly_split: true`, so it's classified as a **monthly** invoice (not single). The monthly billing path has two places that don't account for cancelled invoices:
+### Recommended approach
 
-1. **`MonthlyBillingScheduleTable.tsx` line 62-72**: `getInvoiceForPeriod()` finds the cancelled invoice for April 2026, sets `hasInvoice = true`, and shows "View" instead of "Generate".
+**Replace the free-form status dropdown with a read-only status badge on the list page.**
 
-2. **`CampaignBillingTab.tsx` line 570**: `existingInvoices.length === 0` hides the "Generate All" button because the cancelled invoice is still counted.
+Status changes should only happen from the invoice detail page where proper validation exists (payment checks, credit note checks, cancellation metadata, audit trails).
 
-The single-invoice mode was already fixed in the previous round (line 712), but the monthly mode was missed.
+### Changes (1 file)
 
-### Fix (2 files, 2 small changes)
-
-**File 1: `src/components/campaigns/billing/MonthlyBillingScheduleTable.tsx`**
-- Line 63: Filter out Cancelled invoices in `getInvoiceForPeriod`:
-  ```
-  return existingInvoices.filter(inv => inv.status !== 'Cancelled').find(inv => { ... });
-  ```
-
-**File 2: `src/components/campaigns/billing/CampaignBillingTab.tsx`**
-- Line 570: Change `existingInvoices.length === 0` to exclude cancelled invoices:
-  ```
-  existingInvoices.filter(inv => inv.status !== 'Cancelled').length === 0
-  ```
+**`src/pages/InvoicesList.tsx`**
+- Remove the `<Select>` dropdown for status (lines 725-737)
+- Replace with a read-only `<Badge>` showing the current status with appropriate color
+- Remove the `handleStatusChange` function (lines 340-350) since it's no longer needed
+- Keep the View/Edit buttons — users click through to the detail page to manage status
 
 ### What stays untouched
 - No schema changes
 - No finance engine changes
-- No single invoice mode changes (already working)
-- No credit note or payment flow changes
-- Cancelled invoices remain visible in the invoice list for audit trail
+- Invoice detail page status management (cancel, etc.) unchanged
+- All other list page functionality (filters, sort, export) unchanged
 
-### Expected Result
-After the fix, navigating to CAM-202604-0011 billing tab will show the "Generate" button for April 2026 since the cancelled invoice is ignored.
+### Result
+- Status is displayed as a colored badge (consistent with other list pages)
+- All status transitions go through the detail page with proper validation and audit trails
+- No accidental or unauthorized status changes from the list view
 

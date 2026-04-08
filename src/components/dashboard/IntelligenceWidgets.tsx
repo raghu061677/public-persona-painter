@@ -42,6 +42,7 @@ export function IntelligenceWidgets() {
       .from("media_assets")
       .select("id, city, area, media_type, card_rate, updated_at")
       .eq("status", "Available")
+      .eq("operational_status", "active")
       .lt("updated_at", thirtyDaysAgo.toISOString())
       .order("updated_at", { ascending: true })
       .limit(5);

@@ -186,7 +186,8 @@ const Dashboard = () => {
       const { data: assetsByStatus } = await supabase
         .from("media_assets")
         .select("id, status")
-        .eq("company_id", selectedCompanyId);
+        .eq("company_id", selectedCompanyId)
+        .eq("operational_status", "active");
 
       const allAssetIds = (assetsByStatus || []).map((a: any) => a.id);
 

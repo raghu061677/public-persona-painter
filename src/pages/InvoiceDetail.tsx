@@ -10,7 +10,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck, Save } from "lucide-react";
+import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck, Save, Ban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
@@ -38,6 +48,9 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const [previewNumber, setPreviewNumber] = useState<string | null>(null);
 
   useEffect(() => {
@@ -180,6 +193,56 @@ export default function InvoiceDetail() {
     }
   };
 
+  const handleCancelInvoice = async () => {
+    if (!invoice || !cancelReason.trim()) {
+      toast({ title: "Error", description: "Please provide a cancellation reason", variant: "destructive" });
+      return;
+    }
+    setCancelling(true);
+    try {
+      // Safety check: no payments linked
+      const { data: payments } = await supabase
+        .from('payment_records')
+        .select('id')
+        .eq('invoice_id', invoice.id)
+        .limit(1);
+      if (payments && payments.length > 0) {
+        throw new Error("Cannot cancel — this invoice has linked payment records. Delete payments first.");
+      }
+      // Safety check: no credit notes linked
+      const { data: credits } = await supabase
+        .from('credit_notes')
+        .select('id')
+        .eq('invoice_id', invoice.id)
+        .limit(1);
+      if (credits && credits.length > 0) {
+        throw new Error("Cannot cancel — this invoice has linked credit notes.");
+      }
+      // Cancel the invoice
+      const existingNotes = invoice.notes || '';
+      const updatedNotes = `${existingNotes}\n\n[CANCELLED ${new Date().toLocaleDateString()}]: ${cancelReason.trim()}`.trim();
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'Cancelled',
+          balance_due: 0,
+          notes: updatedNotes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoice.id);
+      if (error) throw error;
+      toast({ title: "Invoice Cancelled", description: `${invoice.id} has been cancelled and excluded from receivables.` });
+      setCancelDialogOpen(false);
+      setCancelReason('');
+      fetchInvoice();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to cancel invoice", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -290,6 +353,15 @@ export default function InvoiceDetail() {
               </Button>
             )}
             </ActionGuard>
+            {/* Cancel Invoice — only for unpaid finalized invoices */}
+            <ActionGuard module="finance" action="delete">
+            {isAdmin && isFinalized && !['Cancelled', 'Paid', 'Fully Credited'].includes(invoice.status) && (invoice.paid_amount || 0) <= 1 && (
+              <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
+                <Ban className="mr-2 h-4 w-4" />
+                Cancel Invoice
+              </Button>
+            )}
+            </ActionGuard>
           </div>
         </div>
 
@@ -391,6 +463,39 @@ export default function InvoiceDetail() {
             onCreditNoteCreated={fetchInvoice}
           />
         )}
+
+        {/* Cancel Invoice Confirmation Dialog */}
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Invoice {invoice.id}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will mark the invoice as <strong>Cancelled</strong> and exclude it from all receivables, aging reports, and dashboards. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="e.g., Wrong pricing — 90-day calculation instead of 42-day"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCancelReason('')}>Keep Invoice</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelInvoice}
+                disabled={!cancelReason.trim() || cancelling}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel Invoice'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
     </ModuleGuard>

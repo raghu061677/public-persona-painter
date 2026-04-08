@@ -60,33 +60,23 @@ export default function RevenueControlCenter() {
     try {
       setLoading(true);
       
-      // Fetch invoices for revenue data
-      const { data: invoices, error: invError } = await supabase
+      // Fetch ACTIVE invoices only (exclude Draft, Cancelled, Void)
+      const { data: allInvoices, error: invError } = await supabase
         .from("invoices")
-        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id")
-        .eq("company_id", company.id);
+        .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id, items, is_draft")
+        .eq("company_id", company.id)
+        .eq("is_draft", false)
+        .not("status", "in", '("Cancelled","Void")');
 
       if (invError) throw invError;
+      const invoices = allInvoices || [];
 
-      // Fetch payment records for collected amounts
+      // Fetch payment records (exclude deleted)
       const { data: payments } = await supabase
         .from("payment_records")
         .select("amount")
-        .eq("company_id", company.id);
-
-      // Fetch campaigns for this company to filter campaign_assets
-      const { data: campaigns } = await supabase
-        .from("campaigns")
-        .select("id")
-        .eq("company_id", company.id);
-      const campaignIds = new Set((campaigns || []).map(c => c.id));
-
-      // Fetch campaign assets and filter by company campaigns
-      const { data: allCampaignAssets } = await supabase
-        .from("campaign_assets")
-        .select("city, total_price, negotiated_rate, card_rate, campaign_id");
-
-      const companyCampaignAssets = (allCampaignAssets || []).filter(a => campaignIds.has(a.campaign_id));
+        .eq("company_id", company.id)
+        .or("is_deleted.is.null,is_deleted.eq.false");
 
       // Fetch total expenses for expense impact
       const { data: expensesData } = await supabase
@@ -95,9 +85,10 @@ export default function RevenueControlCenter() {
         .eq("company_id", company.id);
       setTotalExpenses((expensesData || []).reduce((s, e) => s + (e.total_amount || 0), 0));
 
-      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const collected = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      const outstanding = totalRevenue - collected;
+      const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      const collected = (payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+      // Outstanding = sum of balance_due from active invoices (accounts for TDS, credits)
+      const outstanding = invoices.reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
 
       // Revenue by client
       const clientMap = new Map<string, number>();
@@ -142,12 +133,15 @@ export default function RevenueControlCenter() {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 15);
 
-      // Top city
+      // Top city — derived from invoice items (invoice-backed, not campaign_assets)
       const cityMap = new Map<string, number>();
-      companyCampaignAssets.forEach((a) => {
-        if (!a.city) return;
-        const val = a.total_price || a.negotiated_rate || a.card_rate || 0;
-        cityMap.set(a.city, (cityMap.get(a.city) || 0) + val);
+      invoices.forEach((inv) => {
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        items.forEach((item: any) => {
+          const city = item?.city || "Unknown";
+          const amount = item?.rent_amount ?? item?.rate ?? item?.amount ?? 0;
+          cityMap.set(city, (cityMap.get(city) || 0) + Number(amount));
+        });
       });
       const topCity = [...cityMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
 

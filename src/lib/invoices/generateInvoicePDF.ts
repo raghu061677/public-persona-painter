@@ -237,10 +237,15 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       const source: any = campaignAsset || mediaAsset;
       if (!source) return item;
 
-      // Override pricing from campaign_assets (source of truth)
-      const rentAmount = campaignAsset?.rent_amount != null ? campaignAsset.rent_amount : item.rent_amount;
-      const printingCharges = campaignAsset?.printing_charges != null ? campaignAsset.printing_charges : item.printing_charges;
-      const mountingCharges = campaignAsset?.mounting_charges != null ? campaignAsset.mounting_charges : item.mounting_charges;
+      // CRITICAL: Invoice JSONB items are the IMMUTABLE source of truth for pricing.
+      // campaign_assets/media_assets are only used to backfill MISSING metadata
+      // (location, dimensions, etc.), NEVER to override financial values.
+      // campaign_assets.rent_amount stores the FULL campaign-level rate, not prorated monthly.
+      const storedPrice = item.rent_amount ?? item.rate ?? item.amount;
+      const rentAmount = storedPrice != null ? storedPrice : (campaignAsset?.rent_amount ?? 0);
+      const printingCharges = item.printing_charges != null ? item.printing_charges : (campaignAsset?.printing_charges ?? 0);
+      const mountingCharges = item.mounting_charges != null ? item.mounting_charges : (campaignAsset?.mounting_charges ?? 0);
+      // Recalculate line total from components — never trust pre-computed totals from external sources
       const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
 
       return {
@@ -258,7 +263,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         total_sqft: pick(item.total_sqft, campaignAsset?.total_sqft, mediaAsset?.total_sqft) || 0,
         booking_start_date: item.booking_start_date ?? campaignAsset?.booking_start_date,
         booking_end_date: item.booking_end_date ?? campaignAsset?.booking_end_date,
-        // Pricing overrides
+        // Pricing: stored JSONB values take priority over campaign_assets
         rent_amount: rentAmount,
         rate: rentAmount,
         printing_charges: printingCharges,
@@ -266,7 +271,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         amount: lineTotal,
         total: lineTotal,
         booked_days: (() => { const s = item.booking_start_date ?? campaignAsset?.booking_start_date; const e = item.booking_end_date ?? campaignAsset?.booking_end_date; return (s && e) ? Math.max(1, Math.floor((new Date(e).getTime() - new Date(s).getTime()) / (1000 * 60 * 60 * 24)) + 1) : (campaignAsset?.booked_days ?? item.booked_days); })(),
-        daily_rate: campaignAsset?.daily_rate ?? item.daily_rate,
+        daily_rate: item.daily_rate ?? campaignAsset?.daily_rate,
       };
     });
   }

@@ -586,7 +586,7 @@ export function MonthlyInvoiceGenerator({
       const periodEnd = endOfMonth(periodStart);
       
       // Smart invoice date: backdate to March 31 for old FY periods
-      const smartInvoiceDate = getSmartInvoiceDate(selectedMonth);
+      const smartInvoiceDate = getSmartInvoiceDate(selectedMonth, format(periodEnd, 'yyyy-MM-dd'));
       
       // Due date: 30 days from invoice date
       const dueDate = addDays(smartInvoiceDate, 30);

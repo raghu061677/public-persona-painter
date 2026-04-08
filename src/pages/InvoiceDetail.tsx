@@ -352,6 +352,15 @@ export default function InvoiceDetail() {
               </Button>
             )}
             </ActionGuard>
+            {/* Cancel Invoice — only for unpaid finalized invoices */}
+            <ActionGuard module="finance" action="delete">
+            {isAdmin && isFinalized && !['Cancelled', 'Paid', 'Fully Credited'].includes(invoice.status) && (invoice.paid_amount || 0) <= 1 && (
+              <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
+                <Ban className="mr-2 h-4 w-4" />
+                Cancel Invoice
+              </Button>
+            )}
+            </ActionGuard>
           </div>
         </div>
 

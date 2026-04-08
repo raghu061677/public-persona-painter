@@ -462,6 +462,39 @@ export default function InvoiceDetail() {
             onCreditNoteCreated={fetchInvoice}
           />
         )}
+
+        {/* Cancel Invoice Confirmation Dialog */}
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Invoice {invoice.id}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will mark the invoice as <strong>Cancelled</strong> and exclude it from all receivables, aging reports, and dashboards. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="e.g., Wrong pricing — 90-day calculation instead of 42-day"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCancelReason('')}>Keep Invoice</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelInvoice}
+                disabled={!cancelReason.trim() || cancelling}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel Invoice'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
     </ModuleGuard>

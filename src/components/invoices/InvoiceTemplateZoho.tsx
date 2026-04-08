@@ -168,10 +168,10 @@
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
 
-            // Override pricing from campaign_assets (source of truth) when available
-            const rentAmount = ca?.rent_amount != null ? ca.rent_amount : item.rent_amount;
-            const printingCharges = ca?.printing_charges != null ? ca.printing_charges : item.printing_charges;
-            const mountingCharges = ca?.mounting_charges != null ? ca.mounting_charges : item.mounting_charges;
+            // Invoice JSONB items are source of truth for pricing; campaign_assets only backfill missing values
+            const rentAmount = item.rent_amount != null ? item.rent_amount : (ca?.rent_amount ?? item.rent_amount);
+            const printingCharges = item.printing_charges != null ? item.printing_charges : (ca?.printing_charges ?? 0);
+            const mountingCharges = item.mounting_charges != null ? item.mounting_charges : (ca?.mounting_charges ?? 0);
             const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
 
             return {

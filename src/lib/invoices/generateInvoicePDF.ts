@@ -98,9 +98,11 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
 
       enrichedItems = campAssets.map((ca: any, idx: number) => {
-        const rentAmt = ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
-        const printAmt = ca.printing_charges || ca.printing_cost || 0;
-        const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
+        // Prefer existing invoice JSONB item pricing over campaign_assets totals
+        const existing: any = (enrichedItems && enrichedItems[idx]) || {};
+        const rentAmt = existing.rent_amount ?? existing.rate ?? ca.rent_amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
+        const printAmt = existing.printing_charges ?? ca.printing_charges ?? ca.printing_cost ?? 0;
+        const mountAmt = existing.mounting_charges ?? ca.mounting_charges ?? ca.mounting_cost ?? 0;
         const lineTotal = rentAmt + printAmt + mountAmt;
         // Use null instead of '-' so downstream hydration from media_assets can fill gaps
         const validOrNull = (v: any) => (v && v !== '-' && v !== 'N/A') ? v : null;

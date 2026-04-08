@@ -66,7 +66,7 @@ export default function RevenueControlCenter() {
         .select("id, client_name, invoice_date, total_amount, balance_due, status, campaign_id, items, is_draft")
         .eq("company_id", company.id)
         .eq("is_draft", false)
-        .not("status", "in", '("Cancelled","Void")');
+        .neq("status", "Cancelled");
 
       if (invError) throw invError;
       const invoices = allInvoices || [];

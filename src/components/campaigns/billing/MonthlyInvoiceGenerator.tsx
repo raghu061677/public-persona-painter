@@ -650,7 +650,7 @@ export function MonthlyInvoiceGenerator({
             (oneTimeOnly ? (!preview.mountingAlreadyBilled || allowRebill) : true);
           
           return {
-            invoice_id: invoiceId,
+            invoice_id: finalInvoiceId,
             campaign_asset_id: preview.campaignAsset.id,
             asset_id: preview.campaignAsset.asset_id,
             asset_code: preview.assetCode,

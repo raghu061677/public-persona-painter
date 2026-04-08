@@ -60,7 +60,7 @@ export function MonthlyBillingScheduleTable({
 
    // Find invoice for a specific period - match by billing_month key to avoid timezone issues
    const getInvoiceForPeriod = (period: BillingPeriodInfo): InvoiceRecord | undefined => {
-    return existingInvoices.filter(inv => inv.status !== 'Cancelled').find(inv => {
+    return existingInvoices.filter(inv => !['Cancelled', 'Void'].includes(inv.status)).find(inv => {
       // Primary match: billing_month (e.g. "2024-03") === monthKey
       if (inv.billing_month) {
         return inv.billing_month === period.monthKey;

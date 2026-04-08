@@ -230,7 +230,7 @@ export default function InvoiceDetail() {
       }
       // Build structured cancellation note with ISO date and user role
       const cancelDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const userRole = roles.length > 0 ? roles[0] : 'user';
+      const currentRole = userRole;
       const existingNotes = invoice.notes || '';
       const cancellationBlock = [
         `[Cancelled on ${cancelDate} by ${userRole}]`,

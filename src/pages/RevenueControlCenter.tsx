@@ -283,6 +283,9 @@ export default function RevenueControlCenter() {
             </div>
           ) : (
             <>
+              {/* Billing Alerts — operational widget, excluded from financial KPIs */}
+              <BillingAlertsWidget />
+
               {/* Collection Efficiency */}
               <Card>
                 <CardHeader>

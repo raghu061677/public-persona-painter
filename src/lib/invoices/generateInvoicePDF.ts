@@ -99,7 +99,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
 
       enrichedItems = campAssets.map((ca: any, idx: number) => {
         // Prefer existing invoice JSONB item pricing over campaign_assets totals
-        const existing: any = (items && items[idx]) || {};
+        const existing: any = (enrichedItems && enrichedItems[idx]) || {};
         const rentAmt = existing.rent_amount ?? existing.rate ?? ca.rent_amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
         const printAmt = existing.printing_charges ?? ca.printing_charges ?? ca.printing_cost ?? 0;
         const mountAmt = existing.mounting_charges ?? ca.mounting_charges ?? ca.mounting_cost ?? 0;

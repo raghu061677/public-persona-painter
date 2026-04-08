@@ -239,8 +239,9 @@ export function CampaignBillingTab({
           illumination_type: ca.illumination_type || null,
           dimensions: ca.dimensions || null,
           total_sqft: ca.total_sqft || 0,
-          booking_start_date: ca.booking_start_date || ca.start_date,
-          booking_end_date: ca.booking_end_date || ca.end_date,
+          // Date priority: effective > booking > raw (prevents stale end_date from inflating duration)
+          booking_start_date: ca.effective_start_date || ca.booking_start_date || ca.start_date,
+          booking_end_date: ca.effective_end_date || ca.booking_end_date || ca.end_date,
           booked_days: ca.booked_days,
           daily_rate: ca.daily_rate,
           quantity: 1,

@@ -37,11 +37,19 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { format, getDaysInMonth, startOfMonth, endOfMonth, max, min, differenceInDays, parseISO, addDays } from "date-fns";
 
-/** If billing month falls in FY 2025-26 (before April 2026), backdate invoice to March 31, 2026 */
-function getSmartInvoiceDate(billingMonth: string): Date {
+/** If billing period or month falls in FY 2025-26 (before April 2026), backdate invoice to March 31, 2026 */
+function getSmartInvoiceDate(billingMonth: string, periodEnd?: string): Date {
+  const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
+  // Check period end date first (handles multi-month invoices)
+  if (periodEnd) {
+    const endDate = new Date(periodEnd);
+    if (endDate < fy2627Start) {
+      return new Date(2026, 2, 31); // March 31, 2026
+    }
+  }
+  // Fallback: check billing month
   const [y, m] = billingMonth.split('-').map(Number);
   const billingDate = new Date(y, m - 1, 1);
-  const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
   if (billingDate < fy2627Start) {
     return new Date(2026, 2, 31); // March 31, 2026
   }

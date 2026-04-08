@@ -73,7 +73,7 @@ export function MonthlyBillingScheduleTable({
 
   // Get one-time charge selection for a period
   const getChargeSelection = (monthKey: string) => {
-    return selectedOneTimeCharges[monthKey] || { printing: false, mounting: false };
+    return selectedOneTimeCharges[monthKey] || { printing: true, mounting: true };
   };
 
   // Toggle one-time charge

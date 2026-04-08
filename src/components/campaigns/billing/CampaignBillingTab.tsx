@@ -567,7 +567,7 @@ export function CampaignBillingTab({
                   : 'Generate a single pro-rata invoice for this short campaign.'}
               </p>
             </div>
-            {totals.billingPeriods.length > 1 && existingInvoices.length === 0 && (
+            {totals.billingPeriods.length > 1 && existingInvoices.filter(inv => inv.status !== 'Cancelled').length === 0 && (
               <Button
                 onClick={() => setShowBulkDialog(true)}
                 disabled={generating}

@@ -738,7 +738,7 @@ export function MonthlyInvoiceGenerator({
       
       toast({
         title: "Invoice Generated",
-        description: `Invoice ${invoiceId} created for ${format(periodStart, 'MMMM yyyy')} with ${filteredPreviews.length} assets`,
+        description: `Invoice ${finalInvoiceId} created for ${format(periodStart, 'MMMM yyyy')} with ${filteredPreviews.length} assets`,
       });
       
       onOpenChange(false);

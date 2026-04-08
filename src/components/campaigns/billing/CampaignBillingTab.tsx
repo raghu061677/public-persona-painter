@@ -651,13 +651,16 @@ export function CampaignBillingTab({
             <Separator />
 
             {/* Existing Single Invoices */}
-            {singleInvoices.length > 0 ? (
+            {/* Show existing invoices list if any exist (including cancelled for audit trail) */}
+            {singleInvoices.length > 0 && (
               <div className="space-y-2">
                 <div className="text-sm font-medium text-muted-foreground">Generated Invoices:</div>
                 {singleInvoices.map((inv) => (
                   <div 
                     key={inv.id} 
-                    className="flex items-center justify-between p-3 border rounded-lg bg-background"
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      inv.status === 'Cancelled' ? 'bg-muted/50 opacity-60' : 'bg-background'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <FileText className="h-4 w-4 text-muted-foreground" />
@@ -693,7 +696,7 @@ export function CampaignBillingTab({
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant={inv.status === 'Paid' ? 'default' : inv.status === 'Draft' ? 'secondary' : 'outline'}>
+                      <Badge variant={inv.status === 'Paid' ? 'default' : inv.status === 'Cancelled' ? 'destructive' : inv.status === 'Draft' ? 'secondary' : 'outline'}>
                         {inv.status}
                       </Badge>
                       <div className="font-medium">{formatCurrency(inv.total_amount)}</div>
@@ -704,7 +707,9 @@ export function CampaignBillingTab({
                   </div>
                 ))}
               </div>
-            ) : (
+            )}
+            {/* Show Generate Single Invoice button if no active (non-cancelled) single invoices exist */}
+            {singleInvoices.filter(inv => inv.status !== 'Cancelled').length === 0 && (
               <div className="text-center py-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
                   No invoices generated yet for this campaign.

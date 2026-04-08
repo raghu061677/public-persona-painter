@@ -47,6 +47,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string>('user');
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -67,6 +68,7 @@ export default function InvoiceDetail() {
         .eq('user_id', user.id)
         .single();
       setIsAdmin(data?.role === 'admin' || data?.role === 'finance');
+      setUserRole(data?.role || 'user');
     }
   };
 
@@ -200,6 +202,14 @@ export default function InvoiceDetail() {
     }
     setCancelling(true);
     try {
+      // Pre-validation: check status is not already terminal
+      if (['Cancelled', 'Paid', 'Fully Credited'].includes(invoice.status)) {
+        throw new Error(`Cannot cancel — invoice status is already "${invoice.status}".`);
+      }
+      // Pre-validation: check paid_amount is zero or negligible
+      if ((invoice.paid_amount || 0) > 1) {
+        throw new Error(`Cannot cancel — invoice has ₹${invoice.paid_amount} paid. Reverse payments first.`);
+      }
       // Safety check: no payments linked
       const { data: payments } = await supabase
         .from('payment_records')
@@ -218,9 +228,18 @@ export default function InvoiceDetail() {
       if (credits && credits.length > 0) {
         throw new Error("Cannot cancel — this invoice has linked credit notes.");
       }
-      // Cancel the invoice
+      // Build structured cancellation note with ISO date and user role
+      const cancelDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const currentRole = userRole;
       const existingNotes = invoice.notes || '';
-      const updatedNotes = `${existingNotes}\n\n[CANCELLED ${new Date().toLocaleDateString()}]: ${cancelReason.trim()}`.trim();
+      const cancellationBlock = [
+        `[Cancelled on ${cancelDate} by ${currentRole}]`,
+        `Reason: ${cancelReason.trim()}`,
+        `Replaced by: (to be generated from campaign billing tab)`
+      ].join('\n');
+      const updatedNotes = existingNotes
+        ? `${existingNotes}\n\n${cancellationBlock}`
+        : cancellationBlock;
       const { error } = await supabase
         .from('invoices')
         .update({

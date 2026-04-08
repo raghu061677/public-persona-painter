@@ -255,8 +255,8 @@ export function MonthlyInvoiceGenerator({
   }, [campaignAssets]);
 
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [includePrinting, setIncludePrinting] = useState(false);
-  const [includeMounting, setIncludeMounting] = useState(false);
+  const [includePrinting, setIncludePrinting] = useState(true);
+  const [includeMounting, setIncludeMounting] = useState(true);
   const [oneTimeOnly, setOneTimeOnly] = useState(true);
   const [allowRebill, setAllowRebill] = useState(false);
   const [includeAlreadyInvoiced, setIncludeAlreadyInvoiced] = useState(false);

@@ -65,6 +65,7 @@ export function CampaignBillingTab({
 }: CampaignBillingTabProps) {
   const navigate = useNavigate();
   const [existingInvoices, setExistingInvoices] = useState<InvoiceRecord[]>([]);
+  const [paymentDates, setPaymentDates] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
@@ -108,6 +109,26 @@ export function CampaignBillingTab({
 
       if (error) throw error;
       setExistingInvoices(data || []);
+
+      // Fetch payment dates for paid invoices
+      const paidIds = (data || []).filter(inv => inv.status === 'Paid').map(inv => inv.id);
+      if (paidIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('payment_records')
+          .select('invoice_id, payment_date')
+          .in('invoice_id', paidIds)
+          .order('payment_date', { ascending: false });
+        
+        const dateMap: Record<string, string> = {};
+        (payments || []).forEach(p => {
+          if (p.invoice_id && p.payment_date && !dateMap[p.invoice_id]) {
+            dateMap[p.invoice_id] = p.payment_date;
+          }
+        });
+        setPaymentDates(dateMap);
+      } else {
+        setPaymentDates({});
+      }
       
       // Auto-detect billing mode based on existing invoices
       if (data && data.length > 0) {
@@ -626,6 +647,11 @@ export function CampaignBillingTab({
                         <div className="text-xs text-muted-foreground">
                           Due: {inv.due_date ? format(new Date(inv.due_date), "dd MMM yyyy") : "N/A"}
                         </div>
+                        {inv.status === 'Paid' && paymentDates[inv.id] && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            Paid on: {format(new Date(paymentDates[inv.id]), "dd MMM yyyy")}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

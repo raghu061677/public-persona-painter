@@ -22,7 +22,8 @@ export function IntelligenceWidgets() {
     const { data: bookedByCity } = await supabase
       .from("media_assets")
       .select("city, status")
-      .eq("status", "Booked");
+      .eq("status", "Booked")
+      .eq("operational_status", "active");
 
     const cityMap = new Map<string, number>();
     (bookedByCity || []).forEach((a) => {

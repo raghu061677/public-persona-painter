@@ -30,6 +30,7 @@ interface InvoiceRecord {
 interface MonthlyBillingScheduleTableProps {
   periods: BillingPeriodInfo[];
    totals: CampaignTotalsResult;
+  campaignAssets?: CampaignAsset[];
   existingInvoices: InvoiceRecord[];
   onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
@@ -41,6 +42,7 @@ interface MonthlyBillingScheduleTableProps {
 export function MonthlyBillingScheduleTable({
   periods,
    totals,
+  campaignAssets,
   existingInvoices,
   onGenerateInvoice,
   onViewInvoice,

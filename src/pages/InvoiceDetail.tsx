@@ -193,7 +193,56 @@ export default function InvoiceDetail() {
     }
   };
 
-  if (loading) {
+  const handleCancelInvoice = async () => {
+    if (!invoice || !cancelReason.trim()) {
+      toast({ title: "Error", description: "Please provide a cancellation reason", variant: "destructive" });
+      return;
+    }
+    setCancelling(true);
+    try {
+      // Safety check: no payments linked
+      const { data: payments } = await supabase
+        .from('payment_records')
+        .select('id')
+        .eq('invoice_id', invoice.id)
+        .limit(1);
+      if (payments && payments.length > 0) {
+        throw new Error("Cannot cancel — this invoice has linked payment records. Delete payments first.");
+      }
+      // Safety check: no credit notes linked
+      const { data: credits } = await supabase
+        .from('credit_notes')
+        .select('id')
+        .eq('invoice_id', invoice.id)
+        .limit(1);
+      if (credits && credits.length > 0) {
+        throw new Error("Cannot cancel — this invoice has linked credit notes.");
+      }
+      // Cancel the invoice
+      const existingNotes = invoice.notes || '';
+      const updatedNotes = `${existingNotes}\n\n[CANCELLED ${new Date().toLocaleDateString()}]: ${cancelReason.trim()}`.trim();
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'Cancelled',
+          balance_due: 0,
+          notes: updatedNotes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoice.id);
+      if (error) throw error;
+      toast({ title: "Invoice Cancelled", description: `${invoice.id} has been cancelled and excluded from receivables.` });
+      setCancelDialogOpen(false);
+      setCancelReason('');
+      fetchInvoice();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to cancel invoice", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">Loading invoice...</p>

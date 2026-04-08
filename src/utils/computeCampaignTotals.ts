@@ -284,8 +284,74 @@ export function computeCampaignTotals({
  }
  
  /**
-  * Calculate amount for a specific billing period
-  * Used for monthly invoice generation
+  * Calculate amount for a specific billing period — ASSET-WISE
+  * Computes per-asset overlap with the period, sums (monthlyRate / 30) × overlapDays.
+  * This matches what MonthlyInvoiceGenerator actually bills.
+  */
+ export function calculatePeriodAmountAssetWise(
+   period: BillingPeriodInfo,
+   campaignAssets: CampaignAsset[],
+   totals: CampaignTotalsResult,
+   includePrinting: boolean = false,
+   includeMounting: boolean = false,
+ ) {
+   let baseRent = 0;
+   const activeAssets = campaignAssets.filter(a => !a.is_removed);
+
+   for (const asset of activeAssets) {
+     const assetStart = asset.effective_start_date
+       ? new Date(asset.effective_start_date)
+       : asset.booking_start_date
+         ? new Date(asset.booking_start_date)
+         : asset.start_date ? new Date(asset.start_date) : period.periodStart;
+     const assetEnd = asset.effective_end_date
+       ? new Date(asset.effective_end_date)
+       : asset.booking_end_date
+         ? new Date(asset.booking_end_date)
+         : asset.end_date ? new Date(asset.end_date) : period.periodEnd;
+
+     // Calculate overlap between asset booking and this billing period
+     const overlapStart = assetStart > period.periodStart ? assetStart : period.periodStart;
+     const overlapEnd = assetEnd < period.periodEnd ? assetEnd : period.periodEnd;
+
+     if (overlapStart > overlapEnd) continue; // No overlap
+
+     const overlapDays = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+     if (overlapDays <= 0) continue;
+
+     const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
+     baseRent += (monthlyRate / BILLING_CYCLE_DAYS) * overlapDays;
+   }
+
+   baseRent = Math.round(baseRent * 100) / 100;
+
+   const printing = includePrinting ? totals.printingCost : 0;
+   const mounting = includeMounting ? totals.mountingCost : 0;
+
+   // Distribute discount proportionally based on this period's rent share of total
+   const discountShare = totals.displayCost > 0
+     ? Math.round((totals.manualDiscountAmount * baseRent / totals.displayCost) * 100) / 100
+     : 0;
+
+   const subtotalBeforeDiscount = baseRent + printing + mounting;
+   const subtotal = Math.round((subtotalBeforeDiscount - discountShare) * 100) / 100;
+   const gstAmount = Math.round(subtotal * (totals.gstRate / 100) * 100) / 100;
+   const total = subtotal + gstAmount;
+
+   return {
+     baseRent,
+     printing,
+     mounting,
+     discount: discountShare,
+     subtotal,
+     gstAmount,
+     total,
+   };
+ }
+
+ /**
+  * Calculate amount for a specific billing period (proportional distribution)
+  * LEGACY: Used as fallback when campaignAssets are not available
   */
  export function calculatePeriodAmountFromTotals(
    period: BillingPeriodInfo,
@@ -302,7 +368,6 @@ export function computeCampaignTotals({
      baseRent = totals.displayCost;
    } else {
      // Multi-period: calculate this period's share based on pro-rata factor
-     // Sum of all proRataFactors should equal totalMonths for proper distribution
      const totalProRata = totals.billingPeriods.reduce((sum, p) => sum + p.proRataFactor, 0);
      baseRent = Math.round((totals.displayCost * period.proRataFactor / totalProRata) * 100) / 100;
    }
@@ -314,10 +379,8 @@ export function computeCampaignTotals({
    let periodDiscountShare: number;
    
    if (totals.totalMonths <= 1) {
-     // Single period: apply full discount
      periodDiscountShare = totals.manualDiscountAmount;
    } else {
-     // Multi-period: distribute discount proportionally across periods
      const totalProRata = totals.billingPeriods.reduce((sum, p) => sum + p.proRataFactor, 0);
      periodDiscountShare = Math.round((totals.manualDiscountAmount * period.proRataFactor / totalProRata) * 100) / 100;
    }

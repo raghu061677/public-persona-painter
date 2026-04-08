@@ -219,7 +219,8 @@ export function CampaignBillingTab({
 
       // Build per-asset detailed items
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
-        const rentAmt = ca.negotiated_rate || ca.card_rate || 0;
+        // Prioritize pre-calculated rent_amount (prorated for actual booked days) over raw monthly rate
+        const rentAmt = ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
         const printAmt = ca.printing_charges || ca.printing_cost || 0;
         const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
         const lineTotal = rentAmt + printAmt + mountAmt;
@@ -238,13 +239,15 @@ export function CampaignBillingTab({
           illumination_type: ca.illumination_type || null,
           dimensions: ca.dimensions || null,
           total_sqft: ca.total_sqft || 0,
-          booking_start_date: ca.booking_start_date || ca.start_date,
-          booking_end_date: ca.booking_end_date || ca.end_date,
+          // Date priority: effective > booking > raw (prevents stale end_date from inflating duration)
+          booking_start_date: ca.effective_start_date || ca.booking_start_date || ca.start_date,
+          booking_end_date: ca.effective_end_date || ca.booking_end_date || ca.end_date,
           booked_days: ca.booked_days,
           daily_rate: ca.daily_rate,
           quantity: 1,
           rate: rentAmt,
           rent_amount: rentAmt,
+          display_rate: ca.negotiated_rate || ca.card_rate || 0, // monthly rate for reference
           printing_charges: printAmt,
           mounting_charges: mountAmt,
           amount: lineTotal,

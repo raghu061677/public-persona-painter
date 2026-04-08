@@ -138,7 +138,8 @@ const Dashboard = () => {
       const { count: assetsCount } = await supabase
         .from("media_assets")
         .select("*", { count: "exact", head: true })
-        .eq("company_id", selectedCompanyId);
+        .eq("company_id", selectedCompanyId)
+        .eq("operational_status", "active");
 
       // Fetch active campaigns count for this company
       const { count: campaignsCount } = await supabase
@@ -185,7 +186,8 @@ const Dashboard = () => {
       const { data: assetsByStatus } = await supabase
         .from("media_assets")
         .select("id, status")
-        .eq("company_id", selectedCompanyId);
+        .eq("company_id", selectedCompanyId)
+        .eq("operational_status", "active");
 
       const allAssetIds = (assetsByStatus || []).map((a: any) => a.id);
 

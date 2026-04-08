@@ -62,7 +62,8 @@ export function MonitoringDashboard() {
       // Fetch assets by status
       const { data: assets } = await supabase
         .from("media_assets")
-        .select("status");
+        .select("status")
+        .eq("operational_status", "active");
 
       const statusCounts = assets?.reduce((acc: any, asset) => {
         acc[asset.status] = (acc[asset.status] || 0) + 1;

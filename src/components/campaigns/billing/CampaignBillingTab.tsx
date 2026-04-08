@@ -110,24 +110,35 @@ export function CampaignBillingTab({
       if (error) throw error;
       setExistingInvoices(data || []);
 
-      // Fetch payment dates for paid invoices
+      // Fetch payment details (date, TDS, net received) for paid invoices
       const paidIds = (data || []).filter(inv => inv.status === 'Paid').map(inv => inv.id);
       if (paidIds.length > 0) {
         const { data: payments } = await supabase
           .from('payment_records')
-          .select('invoice_id, payment_date')
+          .select('invoice_id, payment_date, tds_amount, tds_rate, amount')
           .in('invoice_id', paidIds)
           .order('payment_date', { ascending: false });
         
-        const dateMap: Record<string, string> = {};
+        const summaryMap: Record<string, { payment_date: string; tds_amount: number; tds_rate: number | null; net_received: number }> = {};
         (payments || []).forEach(p => {
-          if (p.invoice_id && p.payment_date && !dateMap[p.invoice_id]) {
-            dateMap[p.invoice_id] = p.payment_date;
+          if (!p.invoice_id) return;
+          if (!summaryMap[p.invoice_id]) {
+            summaryMap[p.invoice_id] = {
+              payment_date: p.payment_date || '',
+              tds_amount: 0,
+              tds_rate: null,
+              net_received: 0,
+            };
+          }
+          summaryMap[p.invoice_id].tds_amount += Number(p.tds_amount || 0);
+          summaryMap[p.invoice_id].net_received += Number(p.amount || 0);
+          if (p.tds_rate && summaryMap[p.invoice_id].tds_rate === null) {
+            summaryMap[p.invoice_id].tds_rate = Number(p.tds_rate);
           }
         });
-        setPaymentDates(dateMap);
+        setPaymentSummaries(summaryMap);
       } else {
-        setPaymentDates({});
+        setPaymentSummaries({});
       }
       
       // Auto-detect billing mode based on existing invoices

@@ -48,6 +48,9 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const [previewNumber, setPreviewNumber] = useState<string | null>(null);
 
   useEffect(() => {

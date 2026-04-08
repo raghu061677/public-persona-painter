@@ -247,6 +247,7 @@ export function CampaignBillingTab({
           quantity: 1,
           rate: rentAmt,
           rent_amount: rentAmt,
+          display_rate: ca.negotiated_rate || ca.card_rate || 0, // monthly rate for reference
           printing_charges: printAmt,
           mounting_charges: mountAmt,
           amount: lineTotal,

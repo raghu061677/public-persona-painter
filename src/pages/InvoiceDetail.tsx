@@ -10,7 +10,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck, Save } from "lucide-react";
+import { ArrowLeft, Trash2, Lock, FileText, Send, Info, ShieldCheck, Save, Ban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";

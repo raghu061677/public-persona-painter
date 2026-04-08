@@ -1,34 +1,45 @@
 
 
-## Two Targeted Enhancements: TDS Display + Coverage Logic Comments
+## Fix: Single Invoice Smart Date for FY 2025-26 Campaigns
 
-### Task 1: Show TDS Details for Paid Invoices in Billing Tab
+### Problem
+
+Campaign **CAM-2026-January-848** (Kidzonia, Nov 18 2025 – Feb 15 2026) is fully completed but has no invoice yet. When generating a **single invoice** now (April 8, 2026), the system uses `new Date()` as the invoice date, placing it in **FY 2026-27**. The campaign belongs to **FY 2025-26**.
+
+The `getSmartInvoiceDate()` function already exists in `MonthlyInvoiceGenerator.tsx` and correctly backdates to March 31, 2026 for old-FY periods — but **`handleGenerateSingleInvoice` in `CampaignBillingTab.tsx` does not use it**.
+
+### Fix
 
 **File**: `src/components/campaigns/billing/CampaignBillingTab.tsx`
 
-The `payment_records` table already has `tds_amount`, `tds_rate`, and `amount` columns. Changes:
+In `handleGenerateSingleInvoice` (around lines 266-278):
 
-1. **Expand the payment fetch** to include `tds_amount, tds_rate, amount` alongside the existing `invoice_id, payment_date`
-2. **Replace the simple `paymentDates` map** with a richer `paymentSummaries` map containing payment date, TDS amount, TDS rate, and net received (aggregated across multiple payment records per invoice)
-3. **Render TDS info** below the existing "Paid on" line, conditionally:
-   - "TDS Deducted: ₹X,XXX.XX" — only when `tds_amount > 0`
-   - "TDS Rate: X%" — only when `tds_rate` is available
-   - "Net Received: ₹X,XXX.XX" — sum of `amount` field from payment records
-   - Uses small muted text styling consistent with existing finance UI
+1. Add the same smart date logic inline (or extract the shared helper):
+   - If `campaign.end_date` is before April 1, 2026 → set `invoice_date` to `2026-03-31` and `due_date` to `2026-04-30`
+   - Otherwise use today's date as currently done
 
-### Task 2: Document Coverage Priority Logic
+2. Specifically change:
+   ```typescript
+   // BEFORE (lines 266-278):
+   const dueDate = new Date();
+   dueDate.setDate(dueDate.getDate() + 30);
+   // invoice_date: format(new Date(), 'yyyy-MM-dd'),
 
-**File**: `src/utils/campaignInvoiceStatus.ts`
-
-The `extractInvoicedMonths` function **already implements the correct 3-tier priority**:
-1. Item-level booking dates → 2. Header-level period dates → 3. `billing_month` fallback
-
-**Change**: Add explicit documentation comments explaining this priority order and why it prevents false overdue for cross-month campaigns. No logic changes needed.
+   // AFTER:
+   const fy2627Start = new Date(2026, 3, 1);
+   const campaignEnd = new Date(campaign.end_date);
+   const invoiceDate = campaignEnd < fy2627Start
+     ? new Date(2026, 2, 31)  // March 31, 2026
+     : new Date();
+   const dueDate = new Date(invoiceDate);
+   dueDate.setDate(dueDate.getDate() + 30);
+   // invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
+   ```
 
 ### What stays untouched
 - No schema changes
 - No finance calculation changes
-- No billing engine rebuild
-- Invoice totals, GST, payment logic all unchanged
-- Display-only enhancement using existing data
+- Monthly invoice generator unchanged
+- Invoice amounts, GST, items all unchanged
+- Only the date assignment for single invoices is corrected
 

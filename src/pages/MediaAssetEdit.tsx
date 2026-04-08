@@ -206,6 +206,8 @@ export default function MediaAssetEdit() {
           media_type: formData.media_type,
           municipal_id: formData.municipal_id || null,
           status: formData.status,
+          operational_status: formData.operational_status || 'active',
+          deactivation_reason: formData.operational_status !== 'active' ? (formData.deactivation_reason || null) : null,
           category: formData.category,
           location: formData.location,
           area: formData.area,

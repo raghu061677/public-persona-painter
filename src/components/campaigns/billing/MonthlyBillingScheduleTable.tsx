@@ -114,12 +114,21 @@ export function MonthlyBillingScheduleTable({
             const invoice = getInvoiceForPeriod(period);
             const hasInvoice = !!invoice;
             const selection = getChargeSelection(period.monthKey);
-             const amounts = calculatePeriodAmountFromTotals(
-              period,
-               totals,
-               selection.printing && !printingBilled,
-               selection.mounting && !mountingBilled
-            );
+             // Use asset-wise calculation when campaignAssets available (matches actual invoice generation)
+             const amounts = campaignAssets && campaignAssets.length > 0
+               ? calculatePeriodAmountAssetWise(
+                   period,
+                   campaignAssets,
+                   totals,
+                   selection.printing && !printingBilled,
+                   selection.mounting && !mountingBilled
+                 )
+               : calculatePeriodAmountFromTotals(
+                   period,
+                   totals,
+                   selection.printing && !printingBilled,
+                   selection.mounting && !mountingBilled
+                 );
 
             const isDraftInvoice = hasInvoice && invoice.status === 'Draft';
             const isLockedInvoice = hasInvoice && !isDraftInvoice;

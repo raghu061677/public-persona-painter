@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface InvoiceMetadataEditorProps {
   invoiceId: string;
+  invoiceDate?: string;
   notes: string;
   poNumber: string;
   poDate: string;
@@ -19,6 +20,7 @@ interface InvoiceMetadataEditorProps {
 
 export function InvoiceMetadataEditor({
   invoiceId,
+  invoiceDate,
   notes,
   poNumber,
   poDate,
@@ -26,6 +28,7 @@ export function InvoiceMetadataEditor({
   onUpdate,
 }: InvoiceMetadataEditorProps) {
   const [form, setForm] = useState({
+    invoice_date: invoiceDate || '',
     notes,
     client_po_number: poNumber,
     client_po_date: poDate,
@@ -39,6 +42,7 @@ export function InvoiceMetadataEditor({
       const { error } = await supabase
         .from("invoices")
         .update({
+          invoice_date: form.invoice_date || null,
           notes: form.notes || null,
           client_po_number: form.client_po_number || null,
           client_po_date: form.client_po_date || null,
@@ -68,7 +72,17 @@ export function InvoiceMetadataEditor({
         <CardTitle className="text-base">Invoice Details (Editable)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <Label htmlFor="invoiceDate">Invoice Date</Label>
+            <Input
+              id="invoiceDate"
+              type="date"
+              value={form.invoice_date?.split("T")[0] || ""}
+              onChange={(e) => setForm({ ...form, invoice_date: e.target.value })}
+              className="mt-1"
+            />
+          </div>
           <div>
             <Label htmlFor="dueDate">Due Date</Label>
             <Input

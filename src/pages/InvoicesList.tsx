@@ -229,6 +229,12 @@ export default function InvoicesList() {
   // Apply search + advanced filters + sort
   const filteredInvoices = useMemo(() => {
     let result = [...invoices];
+
+    // FY filter (applied before advanced filters)
+    if (fyFilter && fyFilter !== 'all') {
+      result = result.filter(inv => isDateInFY(inv.invoice_date, fyFilter));
+    }
+
     const f = advancedFilters;
 
     // Invoice type filter (by prefix)
@@ -321,7 +327,7 @@ export default function InvoicesList() {
     });
 
     return result;
-  }, [invoices, lv.searchQuery, advancedFilters, sortField, sortDirection]);
+  }, [invoices, lv.searchQuery, advancedFilters, sortField, sortDirection, fyFilter]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

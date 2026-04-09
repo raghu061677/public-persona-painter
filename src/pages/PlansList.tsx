@@ -273,6 +273,7 @@ export default function PlansList() {
       const query = supabase
         .from('plans')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
       
       // Only filter by company_id if not a platform admin
@@ -449,11 +450,16 @@ export default function PlansList() {
   }, [searchTerm, plans]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this plan?")) return;
+    if (!confirm("Are you sure you want to delete this plan? It will be moved to Deleted and can be reviewed later.")) return;
 
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -465,7 +471,7 @@ export default function PlansList() {
     } else {
       toast({
         title: "Success",
-        description: "Plan deleted successfully",
+        description: "Plan moved to Deleted",
       });
       fetchPlans();
     }
@@ -502,9 +508,16 @@ export default function PlansList() {
   };
 
   const handleBlock = async (id: string) => {
+    const reason = prompt("Enter rejection reason (optional):");
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .update({ status: 'Rejected' })
+      .update({
+        status: 'Rejected',
+        rejected_by: user?.id || null,
+        rejected_at: new Date().toISOString(),
+        rejection_reason: reason || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -597,19 +610,24 @@ export default function PlansList() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedPlans.size} plan(s)?`)) return;
+    if (!confirm(`Are you sure you want to delete ${selectedPlans.size} plan(s)? They will be moved to Deleted.`)) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('plans')
-        .delete()
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id || null,
+        } as any)
         .in('id', Array.from(selectedPlans));
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `${selectedPlans.size} plan(s) deleted successfully`,
+        description: `${selectedPlans.size} plan(s) moved to Deleted`,
       });
 
       setSelectedPlans(new Set());

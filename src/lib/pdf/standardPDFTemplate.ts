@@ -441,6 +441,17 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   const bankBoxX = leftMargin;
   const bankBoxWidth = leftColWidth;
   const bankPad = 4;
+  const bankLineH = 4.5; // line height for bank detail rows
+
+  // Calculate bank content height FIRST, then draw box, then render text inside
+  // Title (9pt) at +6, content starts at +12, 5 lines × bankLineH + 5mm bottom padding
+  const bankContentHeight = 12 + (5 * bankLineH) + 5;
+  const bankBoxHeight = Math.max(totalRowBottomY - yPos, bankContentHeight);
+
+  // Draw bordered box FIRST so text renders on top
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(bankBoxX, yPos, bankBoxWidth, bankBoxHeight, 'S');
 
   // Title
   doc.setFontSize(9);
@@ -448,29 +459,22 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setTextColor(30, 64, 175);
   doc.text('Bank Details', bankBoxX + bankPad, yPos + 6);
 
-  // Bank info
+  // Bank info — reduced font to 7pt to prevent overflow on long branch names
   let bankY = yPos + 12;
   doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(17, 24, 39);
   doc.text(`Bank: ${BANK_DETAILS.bankName}`, bankBoxX + bankPad, bankY);
-  bankY += 4;
+  bankY += bankLineH;
 
   doc.setFont('NotoSans', 'normal');
   doc.text(`Branch: ${BANK_DETAILS.branch}`, bankBoxX + bankPad, bankY);
-  bankY += 4;
+  bankY += bankLineH;
   doc.text(`A/C Name: ${BANK_DETAILS.accountName}`, bankBoxX + bankPad, bankY);
-  bankY += 4;
+  bankY += bankLineH;
   doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
-  bankY += 4;
+  bankY += bankLineH;
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
-
-  // Draw bordered box using max of bank content height and summary height
-  const bankContentBottom = bankY + 4; // padding below last line
-  const bankBoxHeight = Math.max(totalRowBottomY - yPos, bankContentBottom - yPos);
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
-  doc.rect(bankBoxX, yPos, bankBoxWidth, bankBoxHeight, 'S');
 
   // Total in words below the summary table
   summaryY += 3;

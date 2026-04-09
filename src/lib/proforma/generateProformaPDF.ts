@@ -68,9 +68,11 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     };
   });
 
+  const isInterState = (data.tax_type === 'igst' || data.tax_type === 'IGST');
   const untaxedAmount = data.taxable_amount;
-  const cgst = data.cgst_amount;
-  const sgst = data.sgst_amount;
+  const cgst = isInterState ? 0 : data.cgst_amount;
+  const sgst = isInterState ? 0 : data.sgst_amount;
+  const igst = isInterState ? (data.igst_amount || data.cgst_amount + data.sgst_amount) : 0;
 
   return await generateStandardizedPDF({
     documentType: 'PROFORMA INVOICE',
@@ -94,6 +96,8 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     untaxedAmount,
     cgst,
     sgst,
+    igst,
+    isInterState,
     totalInr: data.grand_total,
   });
 };

@@ -4,6 +4,7 @@
  import { formatDate } from '@/utils/plans';
  import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
  import { getTermsFromCompany } from '@/lib/terms/standardTerms';
+ import { prorateInvoiceLineItems } from '@/lib/invoices/prorateLineItems';
  
  interface InvoiceTemplateZohoProps {
    invoiceId: string;

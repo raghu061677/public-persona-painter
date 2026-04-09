@@ -1,80 +1,70 @@
 
-Objective: fix the approval workflow so “Sent” plans actually create actionable approvals, and surface block/unblock actions from the plan context without rebuilding anything.
 
-What is happening now
-- `/admin/plans/PLAN-202604-0009` shows “Waiting for Approval” because `PlanDetail.tsx` sets `plans.status = 'Sent'` before the approval workflow is successfully created.
-- The actual workflow creation is failing in the database function with the runtime error already visible in console: `operator does not exist: text = plan_type`.
-- Because `plan_approvals` rows are not being created, all approval UIs stay empty:
-  - sidebar pending count
-  - `/admin/approvals`
-  - dashboard pending approvals widget
-  - plan-level approve/reject buttons
-- So this is not just a UI issue; it is a failed workflow creation with a misleading plan status.
-- There is also drift in the approval system:
-  1. `/admin/approvals/rules` manages `approval_rules`
-  2. workflow creation still reads `approval_settings`
-  3. auth context uses `company_users`
-  4. approval queue/sidebar mostly use `user_roles`
-  5. queue page has its own direct update path instead of the canonical approval RPC
-- “Block / Unblock assets from plans” is currently not implemented on the plan page. The existing hold/release flow lives in `AssetHoldDialog` / `ReleaseHoldDialog` and is exposed from media availability / asset contexts, not `PlanDetail`.
+## Fix: Stale Approval State on Plan Detail & Approvals Queue
 
-Minimal-disruption implementation plan
-1. Repair approval workflow creation at the source
-- Fix `create_plan_approval_workflow` so plan type comparison uses compatible types and no longer crashes.
-- Keep the existing idempotency guard.
-- Make the function use the same real rule source the UI expects:
-  - preferred: read `approval_rules`
-  - safe fallback: legacy `approval_settings` if needed for existing data
-- Result: when a plan is submitted, real `plan_approvals` rows are created.
+### What is actually happening
 
-2. Stop putting plans into a false “Sent” state
-- Update submit-for-approval flow in `PlanDetail.tsx` and bulk send in `PlansList.tsx`.
-- Only leave a plan in `Sent` when approval rows exist.
-- If workflow creation fails, show the exact failure and keep the plan in a non-sent state or retry setup immediately.
-- Also change the plan page badge logic so “Waiting for Approval” is shown only when pending approval rows actually exist.
+The database confirms the previous fix **did work**:
+- **PLAN-202604-0009**: status = `Converted`, has L1 (sales, approved) + L2 (finance, approved)
+- **PLAN-202604-0008**: status = `Approved`, has L1 (sales, approved)
 
-3. Unify who can see approvals
-- Centralize approver-role resolution in a tiny helper instead of duplicating queries.
-- Use one consistent effective-role source across:
-  - `ApprovalsQueue.tsx`
-  - `PendingApprovalsWidget.tsx`
-  - `ResponsiveSidebar.tsx`
-  - `PlanDetail.tsx`
-- Include delegation logic already present in `src/utils/approvals.ts`.
-- Keep legacy compatibility if some users still have `user_roles`, but align with active company role data so approval visibility stops drifting.
+Both plans were successfully approved and one was converted to a campaign. The approval workflow creation and processing worked correctly.
 
-4. Make approval actions use the canonical path everywhere
-- `ApprovalsQueue.tsx` should stop directly updating `plan_approvals` rows and use `process_plan_approval` like the other approval surfaces.
-- `PlanDetail.tsx` should not grab the first pending approval blindly; it should fetch the current user’s eligible pending approval row.
-- This prevents wrong-level approvals and keeps plan status transitions consistent.
+**Why you still see "Waiting for Approval" and "0 Pending":** The Plan Detail page loads plan data once on mount and never refreshes it. If you had the page open before the approval was processed (or if the published app at app.go-ads.in has not been redeployed with the latest code), you see stale state. A simple browser refresh should show the correct status.
 
-5. Add plan-level block/unblock entry points safely
-- Reuse existing `AssetHoldDialog` / `ReleaseHoldDialog` from the plan page instead of inventing a new hold system.
-- Add per-asset action(s) on plan item rows in `PlanDetail`:
-  - Block / Hold asset
-  - Release hold if an active hold exists
-- This keeps the change small, uses current asset-hold data, and gives you the “block/unblock from plan” action where you expect it.
+### What still needs hardening
 
-Files likely touched
-- `supabase/migrations/...` (function fix; no schema rebuild)
-- `src/pages/PlanDetail.tsx`
-- `src/pages/PlansList.tsx`
-- `src/pages/approvals/ApprovalsQueue.tsx`
-- `src/components/dashboard/PendingApprovalsWidget.tsx`
-- `src/components/layout/ResponsiveSidebar.tsx`
-- `src/utils/approvals.ts`
-- possibly the plan-item row render area used by `PlanDetail` for the hold/release buttons
+Even though the fix worked, the UI is fragile because:
 
-Technical notes
-- Primary root cause: broken DB function `create_plan_approval_workflow`.
-- Secondary root cause: approval runtime/config drift (`approval_rules` vs `approval_settings`).
-- Tertiary drift: role source mismatch (`company_users` vs `user_roles`) and duplicated queue logic.
-- Existing approval RLS/policy/helper coverage should also be checked for all required roles actually used by rules (especially if operations approval is enabled).
+1. **"Waiting for Approval" badge** at line 1399 trusts `plan.status === 'sent'` blindly — it does not verify that pending approval rows actually exist
+2. **No realtime subscription** on the `plans` table for status changes — so if another user approves, the page stays stale
+3. **No self-healing** — if a plan somehow ends up in `Sent` with all approvals already processed, there is no reconciliation
 
-Expected outcome after fix
-- Submitting a plan for approval creates real pending approval rows.
-- Sidebar pending count and `/admin/approvals` show the same items.
-- Plan detail shows “Waiting for Approval” only when a valid workflow exists.
-- Approve/reject becomes available only for the correct approver and works consistently.
-- Archived false states (“Sent but no approvals”) stop recurring.
-- Plan page gains direct block/unblock asset actions using the existing hold system.
+### Changes
+
+**File: `src/pages/PlanDetail.tsx`**
+
+1. **Add realtime subscription for plan status changes**
+   - Subscribe to `postgres_changes` on the `plans` table filtered to the current plan ID
+   - On any update, refetch plan data via `fetchPlan()`
+   - Clean up subscription on unmount
+   - This ensures approvals processed by another user or tab are reflected immediately
+
+2. **Derive "Waiting for Approval" from actual approval rows, not just plan.status**
+   - Change the badge condition from `plan.status === 'sent'` to `plan.status === 'sent' && pendingApprovalsCount > 0`
+   - When status is `Sent` but `pendingApprovalsCount === 0`, show a "Status out of sync" indicator with a "Refresh" button
+   - This prevents false "Waiting for Approval" displays
+
+3. **Add auto-reconciliation on load**
+   - After `fetchPlan()` and `loadPendingApprovals()` complete, if `plan.status === 'Sent'` and no pending approvals exist, check if all approvals are approved/rejected
+   - If all approved: auto-update plan status to `Approved`
+   - If any rejected: auto-update to `Rejected`
+   - This self-heals plans stuck in the wrong state
+
+**File: `src/pages/approvals/ApprovalsQueue.tsx`**
+
+4. **Add realtime subscription for approval changes**
+   - Subscribe to `postgres_changes` on `plan_approvals` table
+   - Auto-refresh the queue when any approval row changes
+   - This ensures the queue is never stale
+
+**File: `src/components/layout/ResponsiveSidebar.tsx`**
+
+5. **Add periodic refresh for sidebar pending count**
+   - Refresh the pending approval count every 30 seconds instead of only on mount
+   - This keeps the sidebar badge accurate without requiring a full page reload
+
+### What stays untouched
+- Database function `create_plan_approval_workflow` — already working correctly
+- `process_plan_approval` RPC — already working correctly
+- `approval_settings` / `approval_rules` data — correctly configured
+- No schema changes
+- No finance changes
+
+### Expected outcome
+- Plan Detail page reflects approval state changes in real-time
+- "Waiting for Approval" only shows when real pending approvals exist
+- Plans stuck in false `Sent` state auto-correct on page load
+- Sidebar badge stays current
+- Approvals queue auto-refreshes when approvals change
+

@@ -472,9 +472,16 @@ export default function PlanDetail() {
   };
 
   const handleBlock = async () => {
+    const reason = prompt("Enter rejection reason (optional):");
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .update({ status: 'Rejected' })
+      .update({
+        status: 'Rejected',
+        rejected_by: user?.id || null,
+        rejected_at: new Date().toISOString(),
+        rejection_reason: reason || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -493,11 +500,16 @@ export default function PlanDetail() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this plan?")) return;
+    if (!confirm("Are you sure you want to delete this plan? It will be moved to Deleted.")) return;
 
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -509,7 +521,7 @@ export default function PlanDetail() {
     } else {
       toast({
         title: "Success",
-        description: "Plan deleted successfully",
+        description: "Plan moved to Deleted",
       });
       navigate('/admin/plans');
     }

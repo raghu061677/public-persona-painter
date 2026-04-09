@@ -60,6 +60,8 @@ import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
 import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimeline";
+import { PlanHoldDialog } from "@/components/plans/PlanHoldDialog";
+import { PlanReleaseHoldDialog } from "@/components/plans/PlanReleaseHoldDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageCustomization } from "@/components/ui/page-customization";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
@@ -98,6 +100,8 @@ export default function PlanDetail() {
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
   const [showROWarningDialog, setShowROWarningDialog] = useState(false);
+  const [showPlanHoldDialog, setShowPlanHoldDialog] = useState(false);
+  const [showPlanReleaseHoldDialog, setShowPlanReleaseHoldDialog] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);

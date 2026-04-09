@@ -359,9 +359,9 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     
     // INVARIANT: Finalized invoice items are immutable snapshots.
     // Use prorated amounts for line totals (calculated in generateInvoicePDF.ts)
-    const baseRate = item.display_rent ?? item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
-    const printingCost = item.display_printing ?? item.printing_charges || item.printing_cost || 0;
-    const mountingCost = item.display_mounting ?? item.mounting_charges || item.mounting_cost || 0;
+    const baseRate = (item.display_rent != null ? item.display_rent : null) ?? item.rent_amount ?? item.rate ?? item.amount ?? item.unit_price ?? item.display_rate ?? item.negotiated_rate ?? 0;
+    const printingCost = (item.display_printing != null ? item.display_printing : null) ?? item.printing_charges ?? item.printing_cost ?? 0;
+    const mountingCost = (item.display_mounting != null ? item.display_mounting : null) ?? item.mounting_charges ?? item.mounting_cost ?? 0;
     // Use prorated_line_total if available (from prorateInvoiceLineItems), else fallback
     const itemTotal = item.prorated_line_total ?? (baseRate + printingCost + mountingCost);
     

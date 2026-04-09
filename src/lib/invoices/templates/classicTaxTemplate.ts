@@ -431,9 +431,9 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
 
     // Unit Price (Commercials) - show monthly rate for display
     // Use prorated_line_total for the SUBTOTAL column
-    const baseRate = item.display_rent ?? item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
-    const printingCost = item.display_printing ?? item.printing_charges || item.printing_cost || 0;
-    const mountingCost = item.display_mounting ?? item.mounting_charges || item.mounting_cost || 0;
+    const baseRate = (item.display_rent != null ? item.display_rent : null) ?? item.rent_amount ?? item.rate ?? item.amount ?? item.unit_price ?? item.display_rate ?? item.negotiated_rate ?? 0;
+    const printingCost = (item.display_printing != null ? item.display_printing : null) ?? item.printing_charges ?? item.printing_cost ?? 0;
+    const mountingCost = (item.display_mounting != null ? item.display_mounting : null) ?? item.mounting_charges ?? item.mounting_cost ?? 0;
     const commercials = [
       `Display: ${formatCurrency(baseRate)}`,
       `Printing: ${formatCurrency(printingCost)}`,

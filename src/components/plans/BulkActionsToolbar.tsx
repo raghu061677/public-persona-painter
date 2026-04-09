@@ -46,31 +46,25 @@ export function BulkActionsToolbar({
   const selectedCount = selectedIds.size;
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedCount} plan(s)? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ${selectedCount} plan(s)? They will be moved to Deleted.`)) {
       return;
     }
 
     setLoading(true);
     try {
-      // Delete plan items first
-      const { error: itemsError } = await supabase
-        .from('plan_items')
-        .delete()
-        .in('plan_id', Array.from(selectedIds));
-
-      if (itemsError) throw itemsError;
-
-      // Then delete plans
-      const { error: plansError } = await supabase
+      const { error } = await supabase
         .from('plans')
-        .delete()
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+        } as any)
         .in('id', Array.from(selectedIds));
 
-      if (plansError) throw plansError;
+      if (error) throw error;
 
       toast({
         title: "Success",
-        description: `${selectedCount} plan(s) deleted successfully`,
+        description: `${selectedCount} plan(s) moved to Deleted`,
       });
 
       onClearSelection();

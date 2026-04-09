@@ -128,7 +128,8 @@ export function BillingAlertsWidget() {
         .from("campaigns")
         .select("id, campaign_name, client_name, start_date, end_date, billing_cycle")
         .eq("company_id", company.id)
-        .eq("status", "Running");
+        .eq("status", "Running")
+        .or("is_deleted.is.null,is_deleted.eq.false");
 
       if (!campaigns?.length) {
         setAlerts([]);

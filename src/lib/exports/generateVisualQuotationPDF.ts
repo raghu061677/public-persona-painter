@@ -189,9 +189,15 @@ export async function generateVisualQuotationPDF(
     };
   });
 
+  const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
   const gstTotal = Number(plan.gst_amount || 0);
-  const cgst = Math.round(gstTotal / 2);
-  const sgst = gstTotal - cgst;
+  let cgst = 0, sgst = 0, igst = 0;
+  if (isInterState) {
+    igst = gstTotal;
+  } else {
+    cgst = Math.round(gstTotal / 2);
+    sgst = gstTotal - cgst;
+  }
   const totalInr = Number(plan.grand_total || 0);
   const untaxedAmount = Math.max(0, totalInr - gstTotal);
 
@@ -216,6 +222,8 @@ export async function generateVisualQuotationPDF(
     untaxedAmount,
     cgst,
     sgst,
+    igst,
+    isInterState,
     totalInr,
     terms: options.termsAndConditions,
     paymentTerms: resolvedPaymentTerms,

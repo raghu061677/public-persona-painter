@@ -105,8 +105,8 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [statusTab, setStatusTab] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
-  const [viewMode, setViewMode] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
+  const [statusTab, setStatusTab] = useState<"current_month" | "all_active" | "archived" | "rejected" | "deleted" | "all">("current_month");
+  const [viewMode, setViewMode] = useState<"current_month" | "all_active" | "archived" | "rejected" | "deleted" | "all">("current_month");
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);

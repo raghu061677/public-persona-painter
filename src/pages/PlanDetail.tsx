@@ -2011,7 +2011,7 @@ export default function PlanDetail() {
         )}
 
         {/* Approval History Timeline */}
-        {(['pending', 'approved', 'rejected', 'converted'].includes(plan.status?.toLowerCase())) && (
+        {(['sent', 'pending', 'approved', 'rejected', 'converted'].includes(plan.status?.toLowerCase())) && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Approval History</CardTitle>

@@ -774,29 +774,49 @@ export default function PlansList() {
           onPresetDuplicate={lv.duplicatePreset}
           onExportExcel={actions.canExport() ? (fields) => handleExportExcel(filteredPlans, fields) : undefined}
           onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredPlans, fields) : undefined}
-          onReset={lv.resetToDefaults}
+          onReset={() => {
+            lv.resetToDefaults();
+            setFilterStatus('');
+            setSearchTerm('');
+            setDatePeriod('current_month');
+            setDatePeriodRange(getPeriodRange('current_month'));
+            setFyFilter('all');
+          }}
+          extraActions={
+            <>
+              <DatePeriodFilter
+                value={datePeriod}
+                customRange={customDateRange}
+                onChange={(period, range, custom) => {
+                  setDatePeriod(period);
+                  setDatePeriodRange(range);
+                  if (custom) setCustomDateRange(custom);
+                  // When selecting a date period, switch view to all_active to avoid conflict
+                  if (period !== 'all' && viewMode === 'current_month') {
+                    setViewMode('all_active');
+                  }
+                }}
+              />
+              <FYFilterDropdown value={fyFilter} onChange={setFyFilter} />
+              {filterStatus && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setFilterStatus('')}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Status: {filterStatus}
+                </Button>
+              )}
+            </>
+          }
         />
 
-        {/* Plans Summary Bar */}
-        <PlansSummaryBar plans={filteredPlans} />
-
+        {/* View Mode Tabs (Archive state) */}
         <Card>
           <CardContent className="p-2">
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
-              <Button
-                variant={viewMode === "current_month" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("current_month")}
-                className="whitespace-nowrap"
-              >
-                <ClipboardList className="mr-1.5 h-4 w-4" />
-                Current Month ({plans.filter(p => {
-                  if (p.is_archived) return false;
-                  const d = new Date(p.created_at);
-                  const now = new Date();
-                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                }).length})
-              </Button>
               <Button
                 variant={viewMode === "all_active" ? "default" : "ghost"}
                 size="sm"
@@ -824,140 +844,48 @@ export default function PlansList() {
                 <FolderOpen className="mr-1.5 h-4 w-4" />
                 All Plans ({plans.length})
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Search and Filters Bar */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-4">
-              {/* Search Input with Suggestions */}
-              <div className="relative">
-                <Popover open={searchOpen && searchSuggestions.length > 0} onOpenChange={setSearchOpen}>
-                  <PopoverTrigger asChild>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Search by Plan ID, Customer Name, or Display Name..."
-                        value={searchTerm}
-                        onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          if (e.target.value.length >= 2) setSearchOpen(true);
-                        }}
-                        onFocus={() => {
-                          if (searchTerm.length >= 2) setSearchOpen(true);
-                        }}
-                        className="pl-10 pr-10 h-11"
-                      />
-                      {searchTerm && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                          onClick={() => {
-                            setSearchTerm('');
-                            setSearchOpen(false);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <Command>
-                      <CommandList>
-                        <CommandEmpty>No results found.</CommandEmpty>
-                        {['Plan ID', 'Customer', 'Display'].map((type) => {
-                          const typeItems = searchSuggestions.filter(s => s.type === type);
-                          if (typeItems.length === 0) return null;
-                          return (
-                            <CommandGroup key={type} heading={type}>
-                              {typeItems.map((suggestion) => (
-                                <CommandItem
-                                  key={`${suggestion.type}:${suggestion.value}`}
-                                  value={suggestion.value}
-                                  onSelect={() => {
-                                    setSearchTerm(suggestion.value);
-                                    setSearchOpen(false);
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  <span className="truncate">{suggestion.label}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          );
-                        })}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+              {/* Status quick filter */}
+              <div className="ml-auto">
+                <Select value={filterStatus || "all_statuses"} onValueChange={(v) => setFilterStatus(v === 'all_statuses' ? '' : v)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all_statuses">All Statuses</SelectItem>
+                    {uniqueStatuses.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* Enhanced Filters */}
-              <EnhancedFilterToggle
-                open={getSetting('showFilters', false)}
-                onOpenChange={(val) => updateSetting('showFilters', val)}
-                activeFiltersCount={[filterStatus].filter(Boolean).length}
-                showClearButton={true}
-                onClearFilters={() => {
-                  setSearchTerm('');
-                  setFilterStatus('');
-                }}
-              >
-                <div className="space-y-4">
-                  <TableFilters
-                    filters={[
-                      {
-                        key: "status",
-                        label: "Status",
-                        type: "select",
-                        options: uniqueStatuses.map(s => ({ value: s, label: s })),
-                      },
-                    ]}
-                    filterValues={{
-                      status: filterStatus,
-                    }}
-                    onFilterChange={(key, value) => {
-                      if (key === "status") setFilterStatus(value);
-                    }}
-                    onClearFilters={() => {
-                      setSearchTerm("");
-                      setFilterStatus("");
-                    }}
-                    allColumns={allColumns}
-                    visibleColumns={visibleColumns}
-                    onColumnVisibilityChange={setVisibleColumns}
-                    onResetColumns={resetColumns}
-                    density={density}
-                    onDensityChange={setDensity}
-                    tableKey="plans"
-                    settings={settings}
-                    onUpdateSettings={updateSettings}
-                    onResetSettings={resetSettings}
-                  />
-                  <FilterPresets
-                    tableKey="plans"
-                    currentFilters={{
-                      searchTerm,
-                      status: filterStatus,
-                    }}
-                    onApplyPreset={(filters) => {
-                      setSearchTerm(filters.searchTerm || "");
-                      setFilterStatus(filters.status || "");
-                    }}
-                  />
-                </div>
-              </EnhancedFilterToggle>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bulk Actions Toolbar */}
+        {/* Filter Pills */}
+        <PlanFilterPills
+          filterStatus={filterStatus}
+          datePeriod={datePeriod}
+          fyFilter={fyFilter}
+          searchTerm={searchTerm}
+          viewMode={viewMode}
+          onClearStatus={() => setFilterStatus('')}
+          onClearDatePeriod={() => { setDatePeriod('all'); setDatePeriodRange(undefined); }}
+          onClearFY={() => setFyFilter('all')}
+          onClearSearch={() => { setSearchTerm(''); lv.setSearchQuery(''); }}
+          onClearAll={() => {
+            setFilterStatus('');
+            setDatePeriod('current_month');
+            setDatePeriodRange(getPeriodRange('current_month'));
+            setFyFilter('all');
+            setSearchTerm('');
+            lv.setSearchQuery('');
+          }}
+        />
+
+        {/* Plans Summary Bar */}
+        <PlansSummaryBar plans={filteredPlans} />
+
         {selectedPlans.size > 0 && (
           <Card className="mb-4">
             <CardContent className="p-4">

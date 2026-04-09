@@ -390,8 +390,13 @@ export default function PlansList() {
 
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
+    // For "deleted" view, use the separate deletedPlans array
+    if (viewMode === "deleted") {
+      return deletedPlans;
+    }
+
     return globalSearchFiltered.filter(plan => {
-      // View mode filter (archive/rejected/deleted state)
+      // View mode filter (archive/rejected state)
       if (viewMode === "current_month" || viewMode === "all_active") {
         if (plan.is_archived || plan.status === 'Rejected') return false;
       } else if (viewMode === "archived") {
@@ -399,8 +404,7 @@ export default function PlansList() {
       } else if (viewMode === "rejected") {
         if (plan.status !== 'Rejected') return false;
       }
-      // "deleted" and "all" handled by fetchPlans query (is_deleted=false by default)
-      // "all" shows everything
+      // "all" shows everything (non-deleted)
 
       // Date period filter on created_at
       if (datePeriodRange) {
@@ -429,7 +433,7 @@ export default function PlansList() {
       
       return true;
     });
-  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus, datePeriodRange, fyFilter]);
+  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus, datePeriodRange, fyFilter, deletedPlans]);
 
   // Apply sorting
   const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);

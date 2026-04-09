@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
 import { FYFilterDropdown, isDateInFY } from "@/components/invoices/FYFilterDropdown";
+import { ListToolbar } from "@/components/list-views";
 
 // Global List View System
 import { useListView } from "@/hooks/useListView";
@@ -489,6 +490,53 @@ export default function InvoicesList() {
           </div>
         </div>
 
+        {/* Global List View Toolbar */}
+        <ListToolbar
+          searchQuery={lv.searchQuery}
+          onSearchChange={lv.setSearchQuery}
+          searchPlaceholder="Search by client, campaign, invoice ID..."
+          fields={lv.catalog.fields}
+          groups={lv.catalog.groups}
+          selectedFields={lv.selectedFields}
+          defaultFieldKeys={lv.catalog.defaultFieldKeys}
+          onFieldsChange={lv.setSelectedFields}
+          presets={lv.presets}
+          activePreset={lv.activePreset}
+          onPresetSelect={handlePresetSelect}
+          onPresetSave={lv.saveCurrentAsView}
+          onPresetUpdate={lv.updateCurrentView}
+          onPresetDelete={lv.deletePreset}
+          onPresetDuplicate={lv.duplicatePreset}
+          onExportExcel={(fields) => { setExportMode("excel"); setShowExportDialog(true); }}
+          onExportPdf={(fields) => { setExportMode("pdf"); setShowExportDialog(true); }}
+          onReset={() => { lv.resetToDefaults(); handleResetFilters(); setFyFilter(getFinancialYear()); }}
+          extraActions={
+            <>
+              <FYFilterDropdown
+                value={fyFilter}
+                onChange={setFyFilter}
+                availableFYs={invoices.map(inv => {
+                  try { return getFinancialYear(new Date(inv.invoice_date)); } catch { return ''; }
+                }).filter(Boolean)}
+              />
+              <Button
+                variant={Object.keys(advancedFilters).length > 0 ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowAdvancedFilters(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {Object.keys(advancedFilters).length > 0 && (
+                  <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 text-xs font-bold">
+                    {Object.keys(advancedFilters).length}
+                  </span>
+                )}
+              </Button>
+            </>
+          }
+        />
+
         {/* Stats Cards */}
         {getSetting('showStats', true) && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -560,29 +608,6 @@ export default function InvoicesList() {
 
         {/* Summary Bar */}
         <InvoicesSummaryBar invoices={filteredInvoices} />
-
-        {/* Search + FY Filter */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <FYFilterDropdown
-            value={fyFilter}
-            onChange={setFyFilter}
-            availableFYs={invoices.map(inv => {
-              try { return getFinancialYear(new Date(inv.invoice_date)); } catch { return ''; }
-            }).filter(Boolean)}
-          />
-          <div className="relative flex-1 max-w-md min-w-[200px]">
-            <input
-              type="text"
-              placeholder="Search by client, campaign, invoice ID, or due date..."
-              value={lv.searchQuery}
-              onChange={(e) => lv.setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
 
         {/* Invoices Table */}
         <div className="bg-card rounded-lg border shadow-sm overflow-hidden">

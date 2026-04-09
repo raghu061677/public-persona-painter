@@ -66,20 +66,16 @@ export default function ApprovalsQueue() {
     try {
       setLoading(true);
       
-      // Get user's roles
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user?.id);
+      // Get user's effective approval roles (user_roles + company_users + delegations)
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user?.id || '');
 
-      if (!userRoles || userRoles.length === 0) {
+      if (roles.length === 0) {
         setApprovals([]);
         return;
       }
 
-      const roles = userRoles.map(ur => ur.role);
-
-      // Fetch pending approvals that match user's roles
+      // Fetch pending approvals that match user's effective roles
       const { data, error } = await supabase
         .from("plan_approvals")
         .select(`
@@ -96,7 +92,7 @@ export default function ApprovalsQueue() {
           )
         `)
         .eq("status", "pending")
-        .in("required_role", roles)
+        .in("required_role", roles as any)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -146,15 +142,12 @@ export default function ApprovalsQueue() {
     try {
       setProcessingAction(true);
       
-      const { error } = await supabase
-        .from("plan_approvals")
-        .update({
-          status: "approved",
-          approver_id: user?.id,
-          approved_at: new Date().toISOString(),
-          comments: comments || null,
-        })
-        .eq("id", selectedApproval.id);
+      // Use canonical RPC instead of direct update
+      const { error } = await supabase.rpc("process_plan_approval", {
+        p_approval_id: selectedApproval.id,
+        p_status: "approved",
+        p_comments: comments || null,
+      });
 
       if (error) throw error;
 
@@ -189,15 +182,12 @@ export default function ApprovalsQueue() {
     try {
       setProcessingAction(true);
       
-      const { error } = await supabase
-        .from("plan_approvals")
-        .update({
-          status: "rejected",
-          approver_id: user?.id,
-          approved_at: new Date().toISOString(),
-          comments: comments,
-        })
-        .eq("id", selectedApproval.id);
+      // Use canonical RPC instead of direct update
+      const { error } = await supabase.rpc("process_plan_approval", {
+        p_approval_id: selectedApproval.id,
+        p_status: "rejected",
+        p_comments: comments,
+      });
 
       if (error) throw error;
 

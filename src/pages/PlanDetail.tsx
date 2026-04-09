@@ -127,11 +127,19 @@ export default function PlanDetail() {
 
   const loadPendingApprovals = async () => {
     if (!id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get user's effective roles to check if THEY have pending approvals for this plan
+    const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+    const roles = await getEffectiveApprovalRoles(user.id);
+
     const { data, error } = await supabase
       .from("plan_approvals")
       .select("*", { count: "exact" })
       .eq("plan_id", id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .in("required_role", roles as any);
 
     if (!error && data) {
       setPendingApprovalsCount(data.length);

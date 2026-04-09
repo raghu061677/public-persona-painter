@@ -47,6 +47,8 @@ export interface PDFDocumentData {
   untaxedAmount: number;
   cgst: number;
   sgst: number;
+  igst?: number;
+  isInterState?: boolean;
   totalInr: number;
 
   // Optional overrides
@@ -396,8 +398,12 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   const summaryRows: { label: string; value: number; bold?: boolean; highlight?: boolean }[] = [
     { label: 'Sub Total', value: data.untaxedAmount },
-    { label: 'CGST @ 9%', value: data.cgst },
-    { label: 'SGST @ 9%', value: data.sgst },
+    ...(data.isInterState
+      ? [{ label: 'IGST @ 18%', value: data.igst || 0 }]
+      : [
+          { label: 'CGST @ 9%', value: data.cgst },
+          { label: 'SGST @ 9%', value: data.sgst },
+        ]),
     { label: 'Total', value: data.totalInr, bold: true, highlight: true },
   ];
 
@@ -681,8 +687,12 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
 
   const docSummaryRows: { label: string; value: number; bold?: boolean; highlight?: boolean }[] = [
     { label: 'Sub Total', value: data.untaxedAmount },
-    { label: 'CGST @ 9%', value: data.cgst },
-    { label: 'SGST @ 9%', value: data.sgst },
+    ...(data.isInterState
+      ? [{ label: 'IGST @ 18%', value: data.igst || 0 }]
+      : [
+          { label: 'CGST @ 9%', value: data.cgst },
+          { label: 'SGST @ 9%', value: data.sgst },
+        ]),
     { label: 'Total', value: data.totalInr, bold: true, highlight: true },
   ];
 

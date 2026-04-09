@@ -33,6 +33,7 @@ import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
 import { InvoiceMetadataEditor } from "@/components/invoices/InvoiceMetadataEditor";
 import { CreditNotesList } from "@/components/finance/CreditNotesList";
 import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
+import { InvoiceAuditTimeline } from "@/components/invoices/InvoiceAuditTimeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {
@@ -392,6 +393,7 @@ export default function InvoiceDetail() {
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="credits">Credit Notes</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="preview" className="mt-6">
@@ -462,6 +464,10 @@ export default function InvoiceDetail() {
               invoiceId={invoice.id} 
               onCreditNoteChange={fetchInvoice} 
             />
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            <InvoiceAuditTimeline invoice={invoice} />
           </TabsContent>
         </Tabs>
 

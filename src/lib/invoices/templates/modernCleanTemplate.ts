@@ -410,11 +410,11 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
 
   // ========== BANK DETAILS + FINANCIAL SUMMARY (Side by Side) ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
-  const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
+  const gstPercentFinal = parseFloat(data.invoice.gst_percent) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || 0;
   const balanceDue = data.invoice.balance_due != null ? parseFloat(data.invoice.balance_due) : grandTotal;
-  const isInterState = data.invoice.tax_type === 'igst' || data.invoice.gst_mode === 'IGST';
+  const isInterStateFinal = data.invoice.tax_type === 'igst' || data.invoice.gst_mode === 'IGST';
 
   // Check page space
   if (yPos > pageHeight - 90) {
@@ -454,14 +454,14 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     y: bankStartY,
     width: totalsBoxWidth,
     subtotal,
-    gstPercent,
+    gstPercent: gstPercentFinal,
     gstAmount,
     grandTotal,
     balanceDue,
     paidAmount: parseFloat(data.invoice.paid_amount) || 0,
     tdsAmount: data.invoice.total_tds_amount || 0,
     paidDate: data.invoice.last_payment_date || null,
-    isInterState,
+    isInterState: isInterStateFinal,
   });
 
   // Draw bank box using max of bank content and summary height

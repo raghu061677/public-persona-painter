@@ -19,11 +19,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus, Eye, Pencil, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
-import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
+import { getInvoiceStatusColor, formatINR, getDaysOverdue, getFinancialYear } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { FYFilterDropdown, isDateInFY } from "@/components/invoices/FYFilterDropdown";
 
 // Global List View System
 import { useListView } from "@/hooks/useListView";
@@ -57,6 +58,7 @@ export default function InvoicesList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);
+  const [fyFilter, setFyFilter] = useState<string>(() => getFinancialYear());
 
   // Apply executive summary drill-down filters on first load
   useEffect(() => {
@@ -227,6 +229,12 @@ export default function InvoicesList() {
   // Apply search + advanced filters + sort
   const filteredInvoices = useMemo(() => {
     let result = [...invoices];
+
+    // FY filter (applied before advanced filters)
+    if (fyFilter && fyFilter !== 'all') {
+      result = result.filter(inv => isDateInFY(inv.invoice_date, fyFilter));
+    }
+
     const f = advancedFilters;
 
     // Invoice type filter (by prefix)
@@ -319,7 +327,7 @@ export default function InvoicesList() {
     });
 
     return result;
-  }, [invoices, lv.searchQuery, advancedFilters, sortField, sortDirection]);
+  }, [invoices, lv.searchQuery, advancedFilters, sortField, sortDirection, fyFilter]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -553,9 +561,16 @@ export default function InvoicesList() {
         {/* Summary Bar */}
         <InvoicesSummaryBar invoices={filteredInvoices} />
 
-        {/* Search */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+        {/* Search + FY Filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <FYFilterDropdown
+            value={fyFilter}
+            onChange={setFyFilter}
+            availableFYs={invoices.map(inv => {
+              try { return getFinancialYear(new Date(inv.invoice_date)); } catch { return ''; }
+            }).filter(Boolean)}
+          />
+          <div className="relative flex-1 max-w-md min-w-[200px]">
             <input
               type="text"
               placeholder="Search by client, campaign, invoice ID, or due date..."

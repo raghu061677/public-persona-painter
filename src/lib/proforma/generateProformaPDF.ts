@@ -21,6 +21,8 @@ interface ProformaInvoiceData {
   taxable_amount: number;
   cgst_amount: number;
   sgst_amount: number;
+  igst_amount?: number;
+  tax_type?: string;
   grand_total: number;
 }
 

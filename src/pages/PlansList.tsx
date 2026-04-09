@@ -87,6 +87,8 @@ export default function PlansList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
+  const [deletedPlans, setDeletedPlans] = useState<any[]>([]);
+  const [deletedCount, setDeletedCount] = useState(0);
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
@@ -105,8 +107,8 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [statusTab, setStatusTab] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
-  const [viewMode, setViewMode] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
+  const [statusTab, setStatusTab] = useState<"current_month" | "all_active" | "archived" | "rejected" | "deleted" | "all">("current_month");
+  const [viewMode, setViewMode] = useState<"current_month" | "all_active" | "archived" | "rejected" | "deleted" | "all">("current_month");
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -273,6 +275,7 @@ export default function PlansList() {
       const query = supabase
         .from('plans')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
       
       // Only filter by company_id if not a platform admin
@@ -360,6 +363,19 @@ export default function PlansList() {
       const scopedPlans = planScopeFilter(plansWithSqft);
       setPlans(scopedPlans);
       setGlobalSearchFiltered(scopedPlans);
+
+      // Fetch deleted plans count (and data if on deleted tab)
+      const deletedQuery = supabase
+        .from('plans')
+        .select('id, plan_name, client_name, status, created_at, deleted_at, deleted_by, total_amount', { count: 'exact' })
+        .eq('is_deleted', true);
+      if (!isPlatformAdmin) {
+        deletedQuery.eq('company_id', userCompanyId);
+      }
+      const { data: deletedData, count: dCount } = await deletedQuery;
+      setDeletedCount(dCount || 0);
+      setDeletedPlans(deletedData || []);
+
       setLoading(false);
     } catch (error: any) {
       console.error('Error in fetchPlans:', error);
@@ -374,14 +390,21 @@ export default function PlansList() {
 
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
+    // For "deleted" view, use the separate deletedPlans array
+    if (viewMode === "deleted") {
+      return deletedPlans;
+    }
+
     return globalSearchFiltered.filter(plan => {
-      // View mode filter (archive state only)
+      // View mode filter (archive/rejected state)
       if (viewMode === "current_month" || viewMode === "all_active") {
-        if (plan.is_archived) return false;
+        if (plan.is_archived || plan.status === 'Rejected') return false;
       } else if (viewMode === "archived") {
         if (!plan.is_archived) return false;
+      } else if (viewMode === "rejected") {
+        if (plan.status !== 'Rejected') return false;
       }
-      // "all" shows everything
+      // "all" shows everything (non-deleted)
 
       // Date period filter on created_at
       if (datePeriodRange) {
@@ -410,7 +433,7 @@ export default function PlansList() {
       
       return true;
     });
-  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus, datePeriodRange, fyFilter]);
+  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus, datePeriodRange, fyFilter, deletedPlans]);
 
   // Apply sorting
   const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);
@@ -449,11 +472,16 @@ export default function PlansList() {
   }, [searchTerm, plans]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this plan?")) return;
+    if (!confirm("Are you sure you want to delete this plan? It will be moved to Deleted and can be reviewed later.")) return;
 
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -465,7 +493,7 @@ export default function PlansList() {
     } else {
       toast({
         title: "Success",
-        description: "Plan deleted successfully",
+        description: "Plan moved to Deleted",
       });
       fetchPlans();
     }
@@ -502,9 +530,16 @@ export default function PlansList() {
   };
 
   const handleBlock = async (id: string) => {
+    const reason = prompt("Enter rejection reason (optional):");
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('plans')
-      .update({ status: 'Rejected' })
+      .update({
+        status: 'Rejected',
+        rejected_by: user?.id || null,
+        rejected_at: new Date().toISOString(),
+        rejection_reason: reason || null,
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -597,19 +632,24 @@ export default function PlansList() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedPlans.size} plan(s)?`)) return;
+    if (!confirm(`Are you sure you want to delete ${selectedPlans.size} plan(s)? They will be moved to Deleted.`)) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('plans')
-        .delete()
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id || null,
+        } as any)
         .in('id', Array.from(selectedPlans));
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `${selectedPlans.size} plan(s) deleted successfully`,
+        description: `${selectedPlans.size} plan(s) moved to Deleted`,
       });
 
       setSelectedPlans(new Set());
@@ -834,6 +874,24 @@ export default function PlansList() {
               >
                 <Archive className="mr-1.5 h-4 w-4" />
                 Archived ({plans.filter(p => p.is_archived).length})
+              </Button>
+              <Button
+                variant={viewMode === "rejected" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("rejected")}
+                className="whitespace-nowrap"
+              >
+                <Ban className="mr-1.5 h-4 w-4" />
+                Rejected ({plans.filter(p => p.status === 'Rejected').length})
+              </Button>
+              <Button
+                variant={viewMode === "deleted" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("deleted")}
+                className="whitespace-nowrap"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Deleted ({deletedCount})
               </Button>
               <Button
                 variant={viewMode === "all" ? "default" : "ghost"}

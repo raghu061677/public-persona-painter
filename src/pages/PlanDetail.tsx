@@ -2248,6 +2248,34 @@ export default function PlanDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Plan Hold Dialog */}
+        {plan && id && (
+          <PlanHoldDialog
+            open={showPlanHoldDialog}
+            onOpenChange={setShowPlanHoldDialog}
+            planId={id}
+            planClientId={plan.client_id || ""}
+            planClientName={plan.client_name || ""}
+            planStartDate={new Date(plan.start_date)}
+            planEndDate={new Date(plan.end_date)}
+            allAssetIds={planItems.map(item => item.asset_id)}
+            selectedAssetIds={Array.from(selectedItems)}
+            onSuccess={fetchPlan}
+          />
+        )}
+
+        {/* Plan Release Hold Dialog */}
+        {plan && id && (
+          <PlanReleaseHoldDialog
+            open={showPlanReleaseHoldDialog}
+            onOpenChange={setShowPlanReleaseHoldDialog}
+            planId={id}
+            planClientId={plan.client_id || ""}
+            selectedAssetIds={Array.from(selectedItems)}
+            onSuccess={fetchPlan}
+          />
+        )}
       </div>
     </div>
     {EmailConfirmDialog}

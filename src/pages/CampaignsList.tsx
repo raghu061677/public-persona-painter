@@ -112,6 +112,7 @@ export default function CampaignsList() {
   const [renewDialog, setRenewDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [fyFilter, setFyFilter] = useState<string>("all");
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { settings, updateSettings, resetSettings, isReady: settingsReady } = useTableSettings("campaigns");

@@ -102,8 +102,12 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
   const totalMounting = items.reduce((s, i) => s + i.mountingCost, 0);
   const subTotal = items.reduce((s, i) => s + i.amount, 0);
   const gstTotal = Number(plan.gst_amount || 0);
-  const cgst = Math.round(gstTotal / 2);
-  const sgst = gstTotal - cgst;
+  const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
+  let cgst = 0, sgst = 0;
+  if (!isInterState) {
+    cgst = Math.round(gstTotal / 2);
+    sgst = gstTotal - cgst;
+  }
   const grandTotal = Number(plan.grand_total || 0);
 
   const companyAddress = [

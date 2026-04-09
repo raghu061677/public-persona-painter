@@ -750,7 +750,7 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bkY);
   doc.setTextColor(0, 0, 0);
 
-  yPos = boxY + bankBoxHeight + 5;
+  yPos = boxY + bankBoxHeight2 + 5;
 
   // Payment terms
   if (data.paymentTerms) {

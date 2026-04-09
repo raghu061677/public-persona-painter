@@ -872,6 +872,24 @@ export default function PlansList() {
                 Archived ({plans.filter(p => p.is_archived).length})
               </Button>
               <Button
+                variant={viewMode === "rejected" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("rejected")}
+                className="whitespace-nowrap"
+              >
+                <Ban className="mr-1.5 h-4 w-4" />
+                Rejected ({plans.filter(p => p.status === 'Rejected').length})
+              </Button>
+              <Button
+                variant={viewMode === "deleted" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("deleted")}
+                className="whitespace-nowrap"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Deleted ({deletedCount})
+              </Button>
+              <Button
                 variant={viewMode === "all" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("all")}

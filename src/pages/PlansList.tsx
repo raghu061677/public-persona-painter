@@ -87,6 +87,8 @@ export default function PlansList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
+  const [deletedPlans, setDeletedPlans] = useState<any[]>([]);
+  const [deletedCount, setDeletedCount] = useState(0);
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });

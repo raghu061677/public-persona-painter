@@ -279,6 +279,11 @@ export default function CampaignsList() {
   const filteredCampaigns = useMemo(() => {
     const searchTerm = lv.searchQuery;
     let result = campaigns.filter(campaign => {
+      // FY filter
+      if (fyFilter && fyFilter !== 'all') {
+        if (!isDateInFY(campaign.start_date, fyFilter)) return false;
+      }
+
       // Text search
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -517,20 +522,23 @@ export default function CampaignsList() {
           onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredCampaigns, fields) : undefined}
           onReset={() => { lv.resetToDefaults(); setAdvancedFilters({}); }}
           extraActions={
-            <Button
-              variant={hasActiveFilters ? "default" : "outline"}
-              size="sm"
-              className="gap-2"
-              onClick={() => setShowAdvancedFilters(true)}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 text-xs font-bold">
-                  {Object.keys(advancedFilters).filter(k => advancedFilters[k as keyof CampaignFilters] !== undefined).length}
-                </span>
-              )}
-            </Button>
+            <>
+              <FYFilterDropdown value={fyFilter} onChange={setFyFilter} />
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowAdvancedFilters(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 text-xs font-bold">
+                    {Object.keys(advancedFilters).filter(k => advancedFilters[k as keyof CampaignFilters] !== undefined).length}
+                  </span>
+                )}
+              </Button>
+            </>
           }
         />
 

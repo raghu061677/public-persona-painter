@@ -2272,6 +2272,7 @@ export default function PlanDetail() {
             onOpenChange={setShowPlanReleaseHoldDialog}
             planId={id}
             planClientId={plan.client_id || ""}
+            allAssetIds={planItems.map(item => item.asset_id)}
             selectedAssetIds={Array.from(selectedItems)}
             onSuccess={fetchPlan}
           />

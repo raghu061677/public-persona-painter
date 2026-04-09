@@ -19,11 +19,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus, Eye, Pencil, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, Shield } from "lucide-react";
-import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
+import { getInvoiceStatusColor, formatINR, getDaysOverdue, getFinancialYear } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { FYFilterDropdown, isDateInFY } from "@/components/invoices/FYFilterDropdown";
 
 // Global List View System
 import { useListView } from "@/hooks/useListView";

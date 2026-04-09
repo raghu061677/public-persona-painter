@@ -376,12 +376,15 @@ export default function PlansList() {
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
     return globalSearchFiltered.filter(plan => {
-      // View mode filter (archive state only)
+      // View mode filter (archive/rejected/deleted state)
       if (viewMode === "current_month" || viewMode === "all_active") {
-        if (plan.is_archived) return false;
+        if (plan.is_archived || plan.status === 'Rejected') return false;
       } else if (viewMode === "archived") {
         if (!plan.is_archived) return false;
+      } else if (viewMode === "rejected") {
+        if (plan.status !== 'Rejected') return false;
       }
+      // "deleted" and "all" handled by fetchPlans query (is_deleted=false by default)
       // "all" shows everything
 
       // Date period filter on created_at

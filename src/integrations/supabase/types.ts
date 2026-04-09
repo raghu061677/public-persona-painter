@@ -10883,6 +10883,8 @@ export type Database = {
           converted_to_campaign_id: string | null
           created_at: string | null
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           duration_days: number
           duration_mode: string | null
           end_date: string
@@ -10894,6 +10896,7 @@ export type Database = {
           igst_amount: number | null
           igst_percent: number | null
           is_archived: boolean
+          is_deleted: boolean
           manual_discount_amount: number | null
           manual_discount_reason: string | null
           months_count: number | null
@@ -10904,6 +10907,9 @@ export type Database = {
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
           quotation_validity_days: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           secondary_owner_ids: string[] | null
           sgst_amount: number | null
           sgst_percent: number | null
@@ -10930,6 +10936,8 @@ export type Database = {
           converted_to_campaign_id?: string | null
           created_at?: string | null
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           duration_days: number
           duration_mode?: string | null
           end_date: string
@@ -10941,6 +10949,7 @@ export type Database = {
           igst_amount?: number | null
           igst_percent?: number | null
           is_archived?: boolean
+          is_deleted?: boolean
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           months_count?: number | null
@@ -10951,6 +10960,9 @@ export type Database = {
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           quotation_validity_days?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null
@@ -10977,6 +10989,8 @@ export type Database = {
           converted_to_campaign_id?: string | null
           created_at?: string | null
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           duration_days?: number
           duration_mode?: string | null
           end_date?: string
@@ -10988,6 +11002,7 @@ export type Database = {
           igst_amount?: number | null
           igst_percent?: number | null
           is_archived?: boolean
+          is_deleted?: boolean
           manual_discount_amount?: number | null
           manual_discount_reason?: string | null
           months_count?: number | null
@@ -10998,6 +11013,9 @@ export type Database = {
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           quotation_validity_days?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null

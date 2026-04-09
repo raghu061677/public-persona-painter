@@ -374,22 +374,25 @@ export default function PlansList() {
 
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
     return globalSearchFiltered.filter(plan => {
-      // View mode filter
-      if (viewMode === "current_month") {
-        if (plan.is_archived) return false;
-        const planDate = new Date(plan.created_at);
-        if (planDate < currentMonthStart || planDate > currentMonthEnd) return false;
-      } else if (viewMode === "all_active") {
+      // View mode filter (archive state only)
+      if (viewMode === "current_month" || viewMode === "all_active") {
         if (plan.is_archived) return false;
       } else if (viewMode === "archived") {
         if (!plan.is_archived) return false;
       }
       // "all" shows everything
+
+      // Date period filter on created_at
+      if (datePeriodRange) {
+        const planDate = plan.created_at?.substring(0, 10);
+        if (!planDate || planDate < datePeriodRange.from || planDate > datePeriodRange.to) return false;
+      }
+
+      // FY filter
+      if (fyFilter && fyFilter !== 'all') {
+        if (!isDateInFY(plan.created_at, fyFilter)) return false;
+      }
       
       // Search filter
       if (searchTerm) {
@@ -407,7 +410,7 @@ export default function PlansList() {
       
       return true;
     });
-  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus]);
+  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus, datePeriodRange, fyFilter]);
 
   // Apply sorting
   const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);

@@ -58,6 +58,7 @@ export default function InvoicesList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);
+  const [fyFilter, setFyFilter] = useState<string>(() => getFinancialYear());
 
   // Apply executive summary drill-down filters on first load
   useEffect(() => {

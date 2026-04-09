@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceData } from './templates/types';
 import { renderInvoicePDF, INVOICE_TEMPLATES, getTemplateConfig } from './templates/registry';
+import { prorateInvoiceLineItems } from './prorateLineItems';
 
 // Re-export for external use
 export { INVOICE_TEMPLATES, getTemplateConfig };
@@ -300,11 +301,15 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     logoBase64 = logoUrl;
   }
 
+  // Prorate line items so line totals match invoice sub_total
+  const invoiceSubTotal = parseFloat(invoice.sub_total) || 0;
+  const proratedItems = prorateInvoiceLineItems(enrichedItems, invoiceSubTotal);
+
   const data: InvoiceData = {
     invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount },
     client,
     campaign,
-    items: enrichedItems,
+    items: proratedItems,
     company: companyData,
     orgSettings: orgSettings,
     logoBase64: logoBase64 || undefined,

@@ -102,8 +102,12 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
   const totalMounting = items.reduce((s, i) => s + i.mountingCost, 0);
   const subTotal = items.reduce((s, i) => s + i.amount, 0);
   const gstTotal = Number(plan.gst_amount || 0);
-  const cgst = Math.round(gstTotal / 2);
-  const sgst = gstTotal - cgst;
+  const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
+  let cgst = 0, sgst = 0;
+  if (!isInterState) {
+    cgst = Math.round(gstTotal / 2);
+    sgst = gstTotal - cgst;
+  }
   const grandTotal = Number(plan.grand_total || 0);
 
   const companyAddress = [
@@ -354,10 +358,16 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const totalPrinting = (planItems || []).reduce((sum: number, i: any) => sum + Number(i.printing_charges || 0), 0);
   const totalMounting = (planItems || []).reduce((sum: number, i: any) => sum + Number(i.mounting_charges || 0), 0);
   
-  // Get GST breakdown (CGST + SGST each 9%)
+  // Determine inter-state vs intra-state tax
+  const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
   const gstTotal = Number(plan.gst_amount || 0);
-  const cgst = Math.round(gstTotal / 2);
-  const sgst = gstTotal - cgst; // Handle odd amounts
+  let cgst = 0, sgst = 0, igst = 0;
+  if (isInterState) {
+    igst = gstTotal;
+  } else {
+    cgst = Math.round(gstTotal / 2);
+    sgst = gstTotal - cgst;
+  }
   const totalInr = Number(plan.grand_total || 0);
   const untaxedAmount = Math.max(0, totalInr - gstTotal);
 
@@ -389,6 +399,8 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     untaxedAmount,
     cgst,
     sgst,
+    igst,
+    isInterState,
     totalInr,
     terms: options.termsAndConditions,
     paymentTerms: resolvedPaymentTerms,

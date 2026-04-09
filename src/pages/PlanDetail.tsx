@@ -236,6 +236,62 @@ export default function PlanDetail() {
     checkExistingCampaign();
   }, [id]);
 
+  // Realtime subscription for plan status changes
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`plan-detail-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'plans', filter: `id=eq.${id}` },
+        () => {
+          fetchPlan();
+          loadPendingApprovals();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'plan_approvals', filter: `plan_id=eq.${id}` },
+        () => {
+          loadPendingApprovals();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
+  // Auto-reconciliation: fix plans stuck in 'Sent' with no pending approvals
+  useEffect(() => {
+    if (!plan || !id) return;
+    if (plan.status?.toLowerCase() !== 'sent') return;
+
+    const reconcile = async () => {
+      const { data: allApprovals } = await supabase
+        .from('plan_approvals')
+        .select('status')
+        .eq('plan_id', id);
+
+      if (!allApprovals || allApprovals.length === 0) return; // no workflow rows yet
+
+      const hasPending = allApprovals.some(a => a.status === 'pending');
+      if (hasPending) return; // still has real pending approvals
+
+      const hasRejected = allApprovals.some(a => a.status === 'rejected');
+      const allApproved = allApprovals.every(a => a.status === 'approved');
+
+      let newStatus: string | null = null;
+      if (hasRejected) newStatus = 'Rejected';
+      else if (allApproved) newStatus = 'Approved';
+
+      if (newStatus) {
+        console.log(`Auto-reconciling plan ${id}: Sent → ${newStatus}`);
+        await supabase.from('plans').update({ status: newStatus as any }).eq('id', id);
+        fetchPlan();
+      }
+    };
+    reconcile();
+  }, [plan?.status, id]);
+
   const checkExistingCampaign = async () => {
     if (!id) return;
     const { data } = await supabase
@@ -1395,11 +1451,17 @@ export default function PlanDetail() {
               </Button>
             )}
 
-            {/* Show Waiting for Approval indicator when status is Sent */}
-            {plan.status?.toLowerCase() === 'sent' && (
+            {/* Show Waiting for Approval indicator when status is Sent AND real pending approvals exist */}
+            {plan.status?.toLowerCase() === 'sent' && pendingApprovalsCount > 0 && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
                 <Activity className="h-3 w-3 mr-1" />
                 Waiting for Approval
+              </Badge>
+            )}
+            {plan.status?.toLowerCase() === 'sent' && pendingApprovalsCount === 0 && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 cursor-pointer" onClick={() => { fetchPlan(); loadPendingApprovals(); }}>
+                <Activity className="h-3 w-3 mr-1" />
+                Syncing… Click to refresh
               </Badge>
             )}
 

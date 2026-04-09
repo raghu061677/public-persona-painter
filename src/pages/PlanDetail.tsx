@@ -1360,16 +1360,22 @@ export default function PlanDetail() {
         )}
 
         {['rejected'].includes(plan.status?.toLowerCase()) && (
-          <Card className="mb-6 border-red-500 bg-red-50 dark:bg-red-950/20">
+          <Card className="mb-6 border-destructive bg-red-50 dark:bg-red-950/20">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Ban className="h-5 w-5 text-red-600" />
-                <div>
+              <div className="flex items-start gap-3">
+                <Ban className="h-5 w-5 text-destructive mt-0.5" />
+                <div className="flex-1">
                   <p className="font-semibold text-red-900 dark:text-red-100">
                     This Plan has been Rejected
                   </p>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                    Editing is disabled for rejected plans
+                  {plan.rejection_reason && (
+                    <p className="text-sm text-red-800 dark:text-red-200 mt-1 font-medium">
+                      Reason: {plan.rejection_reason}
+                    </p>
+                  )}
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    {plan.rejected_at && `Rejected on ${new Date(plan.rejected_at).toLocaleString()}`}
+                    {' · '}Editing is disabled for rejected plans
                   </p>
                 </div>
               </div>

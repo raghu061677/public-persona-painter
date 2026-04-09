@@ -302,8 +302,8 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   }
 
   // Prorate line items so line totals match invoice sub_total
-  const invoiceSubTotal = parseFloat(invoice.sub_total) || 0;
-  const proratedItems = prorateInvoiceLineItems(enrichedItems, invoiceSubTotal);
+  const invoiceSubTotal: number = parseFloat(String(invoice.sub_total)) || 0;
+  const proratedItems: any[] = prorateInvoiceLineItems(enrichedItems, invoiceSubTotal);
 
   const data: InvoiceData = {
     invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount },

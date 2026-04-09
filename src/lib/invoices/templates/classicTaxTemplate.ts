@@ -429,19 +429,19 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
 
-    // Unit Price (Commercials)
-    // INVARIANT: Finalized invoice items are immutable snapshots.
-    // Priority: rent_amount → rate → amount (stored JSONB) → fallback to display_rate/negotiated_rate
-    const baseRate = item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
-    const printingCost = item.printing_charges || item.printing_cost || 0;
-    const mountingCost = item.mounting_charges || item.mounting_cost || 0;
+    // Unit Price (Commercials) - show monthly rate for display
+    // Use prorated_line_total for the SUBTOTAL column
+    const baseRate = item.display_rent ?? item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
+    const printingCost = item.display_printing ?? item.printing_charges || item.printing_cost || 0;
+    const mountingCost = item.display_mounting ?? item.mounting_charges || item.mounting_cost || 0;
     const commercials = [
       `Display: ${formatCurrency(baseRate)}`,
       `Printing: ${formatCurrency(printingCost)}`,
       `Installation: ${formatCurrency(mountingCost)}`,
     ].join('\n');
 
-    const itemTotal = baseRate + printingCost + mountingCost;
+    // Use prorated_line_total if available, else fallback
+    const itemTotal = item.prorated_line_total ?? (baseRate + printingCost + mountingCost);
 
     return [
       (index + 1).toString(),

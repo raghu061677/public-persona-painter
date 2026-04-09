@@ -358,34 +358,20 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
     // INVARIANT: Finalized invoice items are immutable snapshots.
-    // Pricing must come from stored JSONB values, never from live campaign/media asset data.
-    // Priority: rent_amount → rate → amount (all stored in JSONB) → fallback to display_rate/negotiated_rate
-    const baseRate = item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
-    const printingCost = item.printing_charges || item.printing_cost || 0;
-    const mountingCost = item.mounting_charges || item.mounting_cost || 0;
-    const itemTotal = baseRate + printingCost + mountingCost;
+    // Use prorated amounts for line totals (calculated in generateInvoicePDF.ts)
+    const baseRate = item.display_rent ?? item.rent_amount || item.rate || item.amount || item.unit_price || item.display_rate || item.negotiated_rate || 0;
+    const printingCost = item.display_printing ?? item.printing_charges || item.printing_cost || 0;
+    const mountingCost = item.display_mounting ?? item.mounting_charges || item.mounting_cost || 0;
+    // Use prorated_line_total if available (from prorateInvoiceLineItems), else fallback
+    const itemTotal = item.prorated_line_total ?? (baseRate + printingCost + mountingCost);
     
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
     unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
     unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
     const unitPriceDisplay = unitPriceLines.join('\n');
 
-    const taxableForItem = itemTotal;
-    
-    if (!hsnSummary[hsnSac]) {
-      hsnSummary[hsnSac] = { taxable: 0, cgstRate: 0, cgstAmount: 0, sgstRate: 0, sgstAmount: 0, igstRate: 0, igstAmount: 0 };
-    }
-    hsnSummary[hsnSac].taxable += taxableForItem;
-    
-    if (isInterState) {
-      hsnSummary[hsnSac].igstRate = gstPercent;
-      hsnSummary[hsnSac].igstAmount += taxableForItem * (gstPercent / 100);
-    } else {
-      hsnSummary[hsnSac].cgstRate = gstPercent / 2;
-      hsnSummary[hsnSac].sgstRate = gstPercent / 2;
-      hsnSummary[hsnSac].cgstAmount += taxableForItem * (gstPercent / 2 / 100);
-      hsnSummary[hsnSac].sgstAmount += taxableForItem * (gstPercent / 2 / 100);
-    }
+    // HSN summary uses invoice header sub_total, not per-item calculation
+    // So we skip per-item HSN aggregation here - it will be done from invoice header below
 
     return [
       (index + 1).toString(),
@@ -396,6 +382,26 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       formatCurrency(itemTotal),
     ];
   });
+
+  // Build HSN summary from invoice header values (not from item totals)
+  const invoiceSubtotalForHSN = parseFloat(data.invoice.sub_total) || 0;
+  if (isInterState) {
+    hsnSummary[HSN_SAC_CODE] = {
+      taxable: invoiceSubtotalForHSN,
+      cgstRate: 0, cgstAmount: 0, sgstRate: 0, sgstAmount: 0,
+      igstRate: gstPercent,
+      igstAmount: invoiceSubtotalForHSN * (gstPercent / 100),
+    };
+  } else {
+    hsnSummary[HSN_SAC_CODE] = {
+      taxable: invoiceSubtotalForHSN,
+      cgstRate: gstPercent / 2,
+      cgstAmount: invoiceSubtotalForHSN * (gstPercent / 2 / 100),
+      sgstRate: gstPercent / 2,
+      sgstAmount: invoiceSubtotalForHSN * (gstPercent / 2 / 100),
+      igstRate: 0, igstAmount: 0,
+    };
+  }
 
   autoTable(doc, {
     startY: yPos,

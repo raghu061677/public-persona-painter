@@ -285,7 +285,7 @@ export default function PlanDetail() {
 
       if (newStatus) {
         console.log(`Auto-reconciling plan ${id}: Sent → ${newStatus}`);
-        await supabase.from('plans').update({ status: newStatus }).eq('id', id);
+        await supabase.from('plans').update({ status: newStatus as any }).eq('id', id);
         fetchPlan();
       }
     };

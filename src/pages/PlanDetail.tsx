@@ -873,24 +873,41 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Update status to 'Sent' to indicate waiting for approval
+      // Create approval workflow FIRST (before changing status)
+      const { error: workflowError } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+      if (workflowError) {
+        console.error("Approval workflow creation failed:", workflowError);
+        toast({
+          title: "Approval Setup Failed",
+          description: workflowError.message || "Could not create approval workflow. Please check approval rules configuration.",
+          variant: "destructive",
+        });
+        return; // Do NOT change plan status if workflow creation failed
+      }
+
+      // Verify approval rows were actually created
+      const { count } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact", head: true })
+        .eq("plan_id", id)
+        .eq("status", "pending");
+
+      if (!count || count === 0) {
+        toast({
+          title: "Approval Setup Failed",
+          description: "No approval levels were configured. Please check approval rules.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // NOW update status to 'Sent' since workflow is confirmed
       const { error } = await supabase
         .from("plans")
         .update({ status: "Sent" })
         .eq("id", id);
 
       if (error) throw error;
-      
-      // Create approval workflow
-      const { error: workflowError } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
-      if (workflowError) {
-        console.error("Approval workflow creation failed:", workflowError);
-        toast({
-          title: "Warning",
-          description: "Plan status updated but approval workflow could not be created. Please contact admin.",
-          variant: "destructive",
-        });
-      }
 
       toast({
         title: "Success",
@@ -922,16 +939,21 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get pending approval for current user
+      // Get user's effective roles to find their eligible pending approval
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
       const { data: approvals } = await supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
+        .in("required_role", roles as any)
+        .order("approval_level")
         .limit(1);
 
       if (!approvals || approvals.length === 0) {
-        throw new Error("No pending approval found");
+        throw new Error("No pending approval found for your role");
       }
 
       const result = await supabase.rpc("process_plan_approval", {
@@ -968,16 +990,21 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get pending approval for current user
+      // Get user's effective roles to find their eligible pending approval
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
       const { data: approvals } = await supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
+        .in("required_role", roles as any)
+        .order("approval_level")
         .limit(1);
 
       if (!approvals || approvals.length === 0) {
-        throw new Error("No pending approval found");
+        throw new Error("No pending approval found for your role");
       }
 
       await supabase.rpc("process_plan_approval", {
@@ -1364,8 +1391,8 @@ export default function PlanDetail() {
               </Badge>
             )}
 
-            {/* Approve/Reject - Sent Status with Pending Approvals */}
-            {plan.status?.toLowerCase() === 'sent' && isAdmin && pendingApprovalsCount > 0 && (
+            {/* Approve/Reject - Sent Status with Pending Approvals (visible to any user with approval role, not just isAdmin) */}
+            {plan.status?.toLowerCase() === 'sent' && pendingApprovalsCount > 0 && (
               <>
                 <Button
                   onClick={() => setShowApproveDialog(true)}

@@ -722,11 +722,12 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
     docSummaryY += tRowH;
   });
 
-  // LEFT: Bank Details bordered box (height matches summary)
-  const bankBoxHeight = docSummaryY - boxY;
+  // LEFT: Bank Details bordered box (height matches summary, with minimum for bank content)
+  const bankContentH2 = 12 + (5 * 4.5) + 5; // title + 5 lines + padding
+  const bankBoxHeight2 = Math.max(docSummaryY - boxY, bankContentH2);
   doc.setDrawColor(209, 213, 219);
   doc.setLineWidth(0.3);
-  doc.rect(leftMargin, boxY, bankColW, bankBoxHeight, 'S');
+  doc.rect(leftMargin, boxY, bankColW, bankBoxHeight2, 'S');
 
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
@@ -735,7 +736,7 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
 
   let bkY = boxY + 12;
   doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(17, 24, 39);
   doc.text(`Bank: ${BANK_DETAILS.bankName}`, leftMargin + 4, bkY);
   bkY += 4.5;

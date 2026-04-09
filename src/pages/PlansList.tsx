@@ -363,6 +363,19 @@ export default function PlansList() {
       const scopedPlans = planScopeFilter(plansWithSqft);
       setPlans(scopedPlans);
       setGlobalSearchFiltered(scopedPlans);
+
+      // Fetch deleted plans count (and data if on deleted tab)
+      const deletedQuery = supabase
+        .from('plans')
+        .select('id, plan_name, client_name, status, created_at, deleted_at, deleted_by, total_amount', { count: 'exact' })
+        .eq('is_deleted', true);
+      if (!isPlatformAdmin) {
+        deletedQuery.eq('company_id', userCompanyId);
+      }
+      const { data: deletedData, count: dCount } = await deletedQuery;
+      setDeletedCount(dCount || 0);
+      setDeletedPlans(deletedData || []);
+
       setLoading(false);
     } catch (error: any) {
       console.error('Error in fetchPlans:', error);

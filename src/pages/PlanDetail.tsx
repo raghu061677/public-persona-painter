@@ -1959,8 +1959,28 @@ export default function PlanDetail() {
 
         {/* Plan Items */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
+            {planItems.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPlanHoldDialog(true)}
+                >
+                  <Ban className="h-4 w-4 mr-1" />
+                  Block Assets
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPlanReleaseHoldDialog(true)}
+                >
+                  <Activity className="h-4 w-4 mr-1" />
+                  Release Holds
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <PlanAssetsTable

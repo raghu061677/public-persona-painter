@@ -64,6 +64,11 @@ import { useLayoutSettings } from "@/hooks/use-layout-settings";
 import { SortableTableHead, useSortableData, SortConfig } from "@/components/common/SortableTableHead";
 import { Input } from "@/components/ui/input";
 import { PlansSummaryBar } from "@/components/plans/PlansSummaryBar";
+import { PlanFilterPills } from "@/components/plans/PlanFilterPills";
+import { DatePeriodFilter, getPeriodRange, type PeriodKey, type DatePeriodValue } from "@/components/common/DatePeriodFilter";
+import { FYFilterDropdown, isDateInFY } from "@/components/invoices/FYFilterDropdown";
+import { SlidersHorizontal } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import {
   Command,
   CommandEmpty,
@@ -112,6 +117,10 @@ export default function PlansList() {
   });
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [datePeriod, setDatePeriod] = useState<PeriodKey>("current_month");
+  const [datePeriodRange, setDatePeriodRange] = useState<DatePeriodValue | undefined>(getPeriodRange("current_month"));
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [fyFilter, setFyFilter] = useState<string>("all");
   
   // Layout settings with persistence
   const { getSetting, updateSetting, isReady: layoutReady } = useLayoutSettings('plans');

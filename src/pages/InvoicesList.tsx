@@ -561,9 +561,16 @@ export default function InvoicesList() {
         {/* Summary Bar */}
         <InvoicesSummaryBar invoices={filteredInvoices} />
 
-        {/* Search */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+        {/* Search + FY Filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <FYFilterDropdown
+            value={fyFilter}
+            onChange={setFyFilter}
+            availableFYs={invoices.map(inv => {
+              try { return getFinancialYear(new Date(inv.invoice_date)); } catch { return ''; }
+            }).filter(Boolean)}
+          />
+          <div className="relative flex-1 max-w-md min-w-[200px]">
             <input
               type="text"
               placeholder="Search by client, campaign, invoice ID, or due date..."

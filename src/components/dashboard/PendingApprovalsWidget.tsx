@@ -76,18 +76,14 @@ export function PendingApprovalsWidget() {
       return;
     }
 
-    // Get user roles
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
+    // Use centralized effective-role resolution
+    const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+    const roles = await getEffectiveApprovalRoles(user.id);
 
-    if (!userRoles || userRoles.length === 0) {
+    if (roles.length === 0) {
       setLoading(false);
       return;
     }
-
-    const roles = userRoles.map(ur => ur.role);
 
     const { data, error } = await supabase
       .from("plan_approvals")
@@ -103,7 +99,7 @@ export function PendingApprovalsWidget() {
         )
       `)
       .eq("status", "pending")
-      .in("required_role", roles)
+      .in("required_role", roles as any)
       .order("created_at", { ascending: false });
 
     if (!error && data) {

@@ -49,22 +49,9 @@ export function ResponsiveSidebar() {
 
   const fetchPendingApprovalsCount = async () => {
     try {
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user?.id);
-
-      if (!userRoles || userRoles.length === 0) return;
-
-      const roles = userRoles.map(ur => ur.role);
-
-      const { count } = await supabase
-        .from("plan_approvals")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending")
-        .in("required_role", roles);
-
-      setPendingApprovalsCount(count || 0);
+      const { getPendingApprovalCount } = await import("@/utils/approvalRoles");
+      const count = await getPendingApprovalCount(user?.id || '');
+      setPendingApprovalsCount(count);
     } catch (error) {
       console.error("Error fetching pending approvals count:", error);
     }

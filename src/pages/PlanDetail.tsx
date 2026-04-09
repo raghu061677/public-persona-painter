@@ -60,6 +60,8 @@ import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
 import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimeline";
+import { PlanHoldDialog } from "@/components/plans/PlanHoldDialog";
+import { PlanReleaseHoldDialog } from "@/components/plans/PlanReleaseHoldDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageCustomization } from "@/components/ui/page-customization";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
@@ -98,6 +100,8 @@ export default function PlanDetail() {
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
   const [showROWarningDialog, setShowROWarningDialog] = useState(false);
+  const [showPlanHoldDialog, setShowPlanHoldDialog] = useState(false);
+  const [showPlanReleaseHoldDialog, setShowPlanReleaseHoldDialog] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -127,11 +131,19 @@ export default function PlanDetail() {
 
   const loadPendingApprovals = async () => {
     if (!id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get user's effective roles to check if THEY have pending approvals for this plan
+    const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+    const roles = await getEffectiveApprovalRoles(user.id);
+
     const { data, error } = await supabase
       .from("plan_approvals")
       .select("*", { count: "exact" })
       .eq("plan_id", id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .in("required_role", roles as any);
 
     if (!error && data) {
       setPendingApprovalsCount(data.length);
@@ -873,24 +885,41 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Update status to 'Sent' to indicate waiting for approval
+      // Create approval workflow FIRST (before changing status)
+      const { error: workflowError } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+      if (workflowError) {
+        console.error("Approval workflow creation failed:", workflowError);
+        toast({
+          title: "Approval Setup Failed",
+          description: workflowError.message || "Could not create approval workflow. Please check approval rules configuration.",
+          variant: "destructive",
+        });
+        return; // Do NOT change plan status if workflow creation failed
+      }
+
+      // Verify approval rows were actually created
+      const { count } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact", head: true })
+        .eq("plan_id", id)
+        .eq("status", "pending");
+
+      if (!count || count === 0) {
+        toast({
+          title: "Approval Setup Failed",
+          description: "No approval levels were configured. Please check approval rules.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // NOW update status to 'Sent' since workflow is confirmed
       const { error } = await supabase
         .from("plans")
         .update({ status: "Sent" })
         .eq("id", id);
 
       if (error) throw error;
-      
-      // Create approval workflow
-      const { error: workflowError } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
-      if (workflowError) {
-        console.error("Approval workflow creation failed:", workflowError);
-        toast({
-          title: "Warning",
-          description: "Plan status updated but approval workflow could not be created. Please contact admin.",
-          variant: "destructive",
-        });
-      }
 
       toast({
         title: "Success",
@@ -922,16 +951,21 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get pending approval for current user
+      // Get user's effective roles to find their eligible pending approval
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
       const { data: approvals } = await supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
+        .in("required_role", roles as any)
+        .order("approval_level")
         .limit(1);
 
       if (!approvals || approvals.length === 0) {
-        throw new Error("No pending approval found");
+        throw new Error("No pending approval found for your role");
       }
 
       const result = await supabase.rpc("process_plan_approval", {
@@ -968,16 +1002,21 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get pending approval for current user
+      // Get user's effective roles to find their eligible pending approval
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
       const { data: approvals } = await supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
+        .in("required_role", roles as any)
+        .order("approval_level")
         .limit(1);
 
       if (!approvals || approvals.length === 0) {
-        throw new Error("No pending approval found");
+        throw new Error("No pending approval found for your role");
       }
 
       await supabase.rpc("process_plan_approval", {
@@ -1364,8 +1403,8 @@ export default function PlanDetail() {
               </Badge>
             )}
 
-            {/* Approve/Reject - Sent Status with Pending Approvals */}
-            {plan.status?.toLowerCase() === 'sent' && isAdmin && pendingApprovalsCount > 0 && (
+            {/* Approve/Reject - Sent Status with Pending Approvals (visible to any user with approval role, not just isAdmin) */}
+            {plan.status?.toLowerCase() === 'sent' && pendingApprovalsCount > 0 && (
               <>
                 <Button
                   onClick={() => setShowApproveDialog(true)}
@@ -1920,8 +1959,28 @@ export default function PlanDetail() {
 
         {/* Plan Items */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
+            {planItems.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPlanHoldDialog(true)}
+                >
+                  <Ban className="h-4 w-4 mr-1" />
+                  Block Assets
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPlanReleaseHoldDialog(true)}
+                >
+                  <Activity className="h-4 w-4 mr-1" />
+                  Release Holds
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <PlanAssetsTable
@@ -1952,7 +2011,7 @@ export default function PlanDetail() {
         )}
 
         {/* Approval History Timeline */}
-        {(['pending', 'approved', 'rejected', 'converted'].includes(plan.status?.toLowerCase())) && (
+        {(['sent', 'pending', 'approved', 'rejected', 'converted'].includes(plan.status?.toLowerCase())) && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Approval History</CardTitle>
@@ -2189,6 +2248,35 @@ export default function PlanDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Plan Hold Dialog */}
+        {plan && id && (
+          <PlanHoldDialog
+            open={showPlanHoldDialog}
+            onOpenChange={setShowPlanHoldDialog}
+            planId={id}
+            planClientId={plan.client_id || ""}
+            planClientName={plan.client_name || ""}
+            planStartDate={new Date(plan.start_date)}
+            planEndDate={new Date(plan.end_date)}
+            allAssetIds={planItems.map(item => item.asset_id)}
+            selectedAssetIds={Array.from(selectedItems)}
+            onSuccess={fetchPlan}
+          />
+        )}
+
+        {/* Plan Release Hold Dialog */}
+        {plan && id && (
+          <PlanReleaseHoldDialog
+            open={showPlanReleaseHoldDialog}
+            onOpenChange={setShowPlanReleaseHoldDialog}
+            planId={id}
+            planClientId={plan.client_id || ""}
+            allAssetIds={planItems.map(item => item.asset_id)}
+            selectedAssetIds={Array.from(selectedItems)}
+            onSuccess={fetchPlan}
+          />
+        )}
       </div>
     </div>
     {EmailConfirmDialog}

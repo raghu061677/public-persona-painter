@@ -613,28 +613,56 @@ export default function PlansList() {
 
   const handleBulkStatusUpdate = async (status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted") => {
     try {
-      const { error } = await supabase
-        .from('plans')
-        .update({ status })
-        .in('id', Array.from(selectedPlans));
-
-      if (error) throw error;
-
-      // If status is being changed to "Sent", create approval workflows
+      // If status is being changed to "Sent", create approval workflows FIRST
       if (status === "Sent") {
         const planIds = Array.from(selectedPlans);
+        const failedPlans: string[] = [];
         for (const planId of planIds) {
           try {
-            await supabase.rpc("create_plan_approval_workflow", { p_plan_id: planId });
+            const { error } = await supabase.rpc("create_plan_approval_workflow", { p_plan_id: planId });
+            if (error) {
+              failedPlans.push(planId);
+              console.error(`Approval workflow failed for ${planId}:`, error.message);
+            }
           } catch (workflowError) {
-            console.log(`Approval workflow creation skipped for plan ${planId}:`, workflowError);
+            failedPlans.push(planId);
+            console.error(`Approval workflow exception for ${planId}:`, workflowError);
           }
         }
+
+        if (failedPlans.length > 0) {
+          toast({
+            title: "Approval Setup Failed",
+            description: `Could not create approval workflow for: ${failedPlans.join(', ')}. Check approval rules configuration.`,
+            variant: "destructive",
+          });
+          // Only update status for plans that succeeded
+          const successPlans = planIds.filter(p => !failedPlans.includes(p));
+          if (successPlans.length === 0) return;
+
+          const { error } = await supabase
+            .from('plans')
+            .update({ status })
+            .in('id', successPlans);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('plans')
+            .update({ status })
+            .in('id', planIds);
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from('plans')
+          .update({ status })
+          .in('id', Array.from(selectedPlans));
+        if (error) throw error;
       }
 
       toast({
         title: "Success",
-        description: `${selectedPlans.size} plan(s) updated to ${status}${status === "Sent" ? " and submitted for approval" : ""}`,
+        description: `Plan(s) updated to ${status}${status === "Sent" ? " and submitted for approval" : ""}`,
       });
 
       setSelectedPlans(new Set());

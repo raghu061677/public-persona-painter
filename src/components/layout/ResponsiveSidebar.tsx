@@ -44,6 +44,9 @@ export function ResponsiveSidebar() {
   useEffect(() => {
     if (user && company) {
       fetchPendingApprovalsCount();
+      // Refresh every 30 seconds
+      const interval = setInterval(fetchPendingApprovalsCount, 30000);
+      return () => clearInterval(interval);
     }
   }, [user, company]);
 

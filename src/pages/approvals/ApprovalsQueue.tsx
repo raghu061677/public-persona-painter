@@ -58,6 +58,21 @@ export default function ApprovalsQueue() {
     }
   }, [user, company]);
 
+  // Realtime subscription for approval changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('approvals-queue-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'plan_approvals' },
+        () => {
+          if (user && company) fetchPendingApprovals();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, company]);
+
   useEffect(() => {
     applyFilters();
   }, [approvals, levelFilter, valueFilter]);

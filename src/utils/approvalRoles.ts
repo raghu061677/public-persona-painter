@@ -56,7 +56,7 @@ export async function getPendingApprovalCount(userId: string): Promise<number> {
     .from("plan_approvals")
     .select("*", { count: "exact", head: true })
     .eq("status", "pending")
-    .in("required_role", roles);
+    .in("required_role", roles as any);
 
   return count || 0;
 }

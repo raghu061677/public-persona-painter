@@ -1,0 +1,1 @@
+UPDATE invoices SET tax_type = 'igst', gst_mode = 'IGST', igst_percent = 18, igst_amount = gst_amount, cgst_percent = 0, sgst_percent = 0, cgst_amount = 0, sgst_amount = 0 WHERE id = 'INV/2026-27/0012';

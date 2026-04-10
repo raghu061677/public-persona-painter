@@ -453,12 +453,17 @@ export default function ReportAssetRevenueV2() {
       if (error) throw error;
 
       setBookingHistory(
-        (data || []).map((b) => {
-          const monthlyRate = b.negotiated_rate || b.card_rate || 0;
+        (data || []).map((b: any) => {
           const sDate = new Date(b.booking_start_date || b.campaigns?.start_date || "");
           const eDate = new Date(b.booking_end_date || b.campaigns?.end_date || "");
           const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          const proRataValue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+
+          // Use pre-calculated rent_amount (prorated), fallback to monthly proration
+          let proRataValue = Number(b.rent_amount ?? 0);
+          if (proRataValue <= 0) {
+            const monthlyRate = Number(b.negotiated_rate) || Number(b.card_rate) || 0;
+            proRataValue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+          }
 
           return {
             campaign_id: b.campaign_id,

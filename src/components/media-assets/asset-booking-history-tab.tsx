@@ -65,19 +65,24 @@ function getDateRange(filter: DateFilter): { start: Date; end: Date } | null {
 }
 
 /**
- * Compute actual booked revenue for a campaign asset.
- * Priority: total_price > (rent_amount / 30 * activeDays) > (negotiated_rate / 30 * activeDays) > (card_rate / 30 * activeDays)
- * total_price is the pre-computed campaign-level total for this asset.
+ * Compute actual booked RENT revenue for a single campaign_asset record.
+ *
+ * Priority (prorated rent only — never use total_price which includes printing/mounting):
+ *   1. rent_amount — already prorated at campaign creation time
+ *   2. Fallback: (negotiated_rate || card_rate) / 30 * activeDays
+ *
+ * This intentionally excludes printing & mounting so the revenue figure
+ * reflects display rent earned from the asset, matching campaign billing.
  */
 function computeBookingRevenue(booking: any, activeDays: number): number {
-  // total_price is the final computed amount for this asset in this campaign
-  if (booking.total_price != null && Number(booking.total_price) > 0) {
-    return Number(booking.total_price);
-  }
-  // Fall back to rate-based calculation
-  const monthlyRate = Number(booking.rent_amount) || Number(booking.negotiated_rate) || Number(booking.card_rate) || 0;
-  if (monthlyRate <= 0) return 0;
-  return (monthlyRate / 30) * activeDays;
+  // rent_amount is the pre-calculated prorated display rent for this booking period
+  const rentAmount = Number(booking.rent_amount ?? 0);
+  if (rentAmount > 0) return rentAmount;
+
+  // Fallback: prorate from monthly rate
+  const monthlyRate = Number(booking.negotiated_rate) || Number(booking.card_rate) || 0;
+  if (monthlyRate <= 0 || activeDays <= 0) return 0;
+  return Math.round(((monthlyRate / 30) * activeDays) * 100) / 100;
 }
 
 export function AssetBookingHistoryTab({ assetId }: AssetBookingHistoryTabProps) {
@@ -193,7 +198,7 @@ export function AssetBookingHistoryTab({ assetId }: AssetBookingHistoryTabProps)
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="text-xs max-w-[220px]">
-                        Revenue based on negotiated/booked campaign amount, not card rate
+                        Prorated display rent for this asset across all bookings
                       </p>
                     </TooltipContent>
                   </Tooltip>

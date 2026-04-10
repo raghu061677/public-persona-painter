@@ -191,6 +191,7 @@ export default function ReportAssetRevenueV2() {
           card_rate,
           negotiated_rate,
           total_price,
+          rent_amount,
           start_date,
           end_date,
           booking_start_date,
@@ -252,12 +253,15 @@ export default function ReportAssetRevenueV2() {
         const assetId = asset.asset_id;
         const existing = assetMap.get(assetId);
 
-        // Calculate pro-rata revenue: (monthly_rate / 30) * booked_days
-        const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+        // Use pre-calculated rent_amount (prorated), fallback to monthly proration
         const startDate = parseLocal(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
         const endDate = parseLocal(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
         const bookedDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-        const proRataRevenue = Math.round(((monthlyRate / 30) * bookedDays) * 100) / 100;
+        let proRataRevenue = Number((asset as any).rent_amount ?? 0);
+        if (proRataRevenue <= 0) {
+          const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+          proRataRevenue = Math.round(((monthlyRate / 30) * bookedDays) * 100) / 100;
+        }
         const ma = mediaAssetMap.get(assetId);
 
         if (existing) {
@@ -382,11 +386,14 @@ export default function ReportAssetRevenueV2() {
         prevFiltered.forEach((asset) => {
           const assetId = asset.asset_id;
           const existing = prevAssetMap.get(assetId);
-          const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
           const sDate = parseLocal(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
           const eDate = parseLocal(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
           const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          const revenue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+          let revenue = Number((asset as any).rent_amount ?? 0);
+          if (revenue <= 0) {
+            const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+            revenue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+          }
 
           if (existing) {
             existing.total_bookings += 1;
@@ -433,11 +440,8 @@ export default function ReportAssetRevenueV2() {
       const { data, error } = await supabase
         .from("campaign_assets")
         .select(`
-          campaign_id,
-          total_price,
-          negotiated_rate,
-          card_rate,
-          booking_start_date,
+          campaign_id, total_price, negotiated_rate, card_rate,
+          rent_amount, booking_start_date,
           booking_end_date,
           campaigns!campaign_assets_campaign_id_fkey (
             campaign_name,
@@ -453,12 +457,17 @@ export default function ReportAssetRevenueV2() {
       if (error) throw error;
 
       setBookingHistory(
-        (data || []).map((b) => {
-          const monthlyRate = b.negotiated_rate || b.card_rate || 0;
+        (data || []).map((b: any) => {
           const sDate = new Date(b.booking_start_date || b.campaigns?.start_date || "");
           const eDate = new Date(b.booking_end_date || b.campaigns?.end_date || "");
           const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          const proRataValue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+
+          // Use pre-calculated rent_amount (prorated), fallback to monthly proration
+          let proRataValue = Number(b.rent_amount ?? 0);
+          if (proRataValue <= 0) {
+            const monthlyRate = Number(b.negotiated_rate) || Number(b.card_rate) || 0;
+            proRataValue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+          }
 
           return {
             campaign_id: b.campaign_id,

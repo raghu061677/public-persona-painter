@@ -52,7 +52,7 @@ export default function CampaignBudget() {
         const { data: assetsData } = await supabase
           .from("campaign_assets")
           .select(`
-            asset_id, location, area, card_rate, negotiated_rate,
+            asset_id, location, area, card_rate, negotiated_rate, rent_amount,
             printing_charges, mounting_charges,
             booking_start_date, booking_end_date,
             start_date, end_date,
@@ -94,8 +94,12 @@ export default function CampaignBudget() {
               ? Math.ceil((new Date(assetEnd).getTime() - new Date(assetStart).getTime()) / (1000 * 60 * 60 * 24)) + 1
               : 30;
 
-            const monthlyRate = asset.negotiated_rate ?? asset.card_rate ?? 0;
-            const plannedRent = (monthlyRate / 30) * assetDuration;
+            // Use pre-calculated rent_amount (prorated) when available
+            let plannedRent = Number((asset as any).rent_amount ?? 0);
+            if (plannedRent <= 0) {
+              const monthlyRate = asset.negotiated_rate ?? asset.card_rate ?? 0;
+              plannedRent = (monthlyRate / 30) * assetDuration;
+            }
             const plannedCost = plannedRent + (asset.printing_charges || 0) + (asset.mounting_charges || 0);
             return { asset, plannedCost };
           });

@@ -37,6 +37,7 @@ interface CampaignBillingTabProps {
     company_id?: string;
     manual_discount_amount?: number;
     manual_discount_reason?: string;
+    tax_type?: string;
   };
   campaignAssets: any[];
   displayCost: number;

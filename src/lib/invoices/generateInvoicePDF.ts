@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { InvoiceData } from './templates/types';
 import { renderInvoicePDF, INVOICE_TEMPLATES, getTemplateConfig } from './templates/registry';
 import { prorateInvoiceLineItems } from './prorateLineItems';
+import { fetchProofGalleryData } from './templates/invoiceWithProofTemplate';
 
 // Re-export for external use
 export { INVOICE_TEMPLATES, getTemplateConfig };
@@ -23,7 +24,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
-export async function generateInvoicePDF(invoiceId: string, templateKey?: string): Promise<Blob> {
+export async function generateInvoicePDF(invoiceId: string, templateKey?: string, options?: { attachProofGallery?: boolean }): Promise<Blob> {
   // Fetch invoice details
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')

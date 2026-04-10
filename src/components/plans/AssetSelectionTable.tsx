@@ -609,9 +609,11 @@ export function AssetSelectionTable({
                                   </Badge>
                             </BookingHoverCard>
                           ) : (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800">
-                              Booked
-                            </Badge>
+                            <BookingHoverCard summary={getStatus(asset.id)}>
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800 cursor-help">
+                                Booked
+                              </Badge>
+                            </BookingHoverCard>
                           )}
                         </TableCell>
                       );

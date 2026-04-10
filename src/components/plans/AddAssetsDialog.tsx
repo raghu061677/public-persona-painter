@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Shield, Calendar } from "lucide-react";
+import { BookingHoverCard } from "./BookingHoverCard";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";
@@ -298,33 +299,12 @@ export function AddAssetsDialog({
                         </TableCell>
                         <TableCell>
                           {!isAvailable ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Badge variant="outline" className={`${badge?.className} text-[10px] gap-1`}>
-                                    {result.availability_status === 'HELD' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
-                                    {badge?.label || result.availability_status}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="left" className="max-w-xs">
-                                  <div className="space-y-1 text-xs">
-                                    <p className="font-medium">
-                                      {result.booking_type === 'CAMPAIGN' ? 'Campaign' : result.booking_type === 'HOLD' ? 'Hold' : 'Booking'}:
-                                      {' '}{result.blocking_entity_name || result.blocking_entity_id || 'Unknown'}
-                                    </p>
-                                    {result.client_name && <p>Client: {result.client_name}</p>}
-                                    {result.booking_start && result.booking_end && (
-                                      <p>{result.booking_start} → {result.booking_end}</p>
-                                    )}
-                                    {result.next_available_date && (
-                                      <p className="text-primary font-medium">
-                                        Available from: {result.next_available_date}
-                                      </p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                          <BookingHoverCard summary={result}>
+                            <Badge variant="outline" className={`${badge?.className} text-[10px] gap-1 cursor-help`}>
+                              {result.availability_status === 'HELD' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                              {badge?.label || result.availability_status}
+                            </Badge>
+                          </BookingHoverCard>
                           ) : (
                             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">
                               Available

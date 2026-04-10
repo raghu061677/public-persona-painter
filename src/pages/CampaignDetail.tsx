@@ -838,6 +838,7 @@ export default function CampaignDetail() {
                   company_id: campaign.company_id,
                   manual_discount_amount: campaign.manual_discount_amount,
                   manual_discount_reason: campaign.manual_discount_reason,
+                  tax_type: campaign.tax_type,
                 }}
                 campaignAssets={activeAssets}
                 displayCost={roundedDisplayCost}

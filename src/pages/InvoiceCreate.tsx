@@ -148,7 +148,7 @@ export default function InvoiceCreate() {
         .select('*, media_assets(id, media_asset_code, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft)')
         .eq('campaign_id', selectedCampaignId);
 
-      const items = (campaignItems || []).map((item, index) => {
+      const items = (campaignItems || []).map((item: any, index) => {
         const printingCost = Number(item.printing_charge || 0);
         const mountingCost = Number(item.mounting_charge || 0);
         const explicitRent = item.rent_amount ?? item.rate;

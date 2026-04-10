@@ -43,10 +43,12 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     const readableCode = item.media_code || item.display_name || item.location || item.asset_name || `Site ${index + 1}`;
     
     // Calculate pro-rata rent + printing + mounting for unit price (matching campaign billing)
+    // CRITICAL: Prefer pre-calculated rent_amount over raw negotiated_rate
+    const rentAmount = Number(item.rent_amount ?? item.rate ?? item.amount ?? 0);
     const monthlyRate = Number(item.negotiated_rate || item.card_rate || 0);
     const printingCharge = Number(item.printing_charges || item.printing_cost || 0);
     const mountingCharge = Number(item.mounting_charges || item.mounting_cost || 0);
-    const proRataRent = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+    const proRataRent = rentAmount > 0 ? rentAmount : Math.round(((monthlyRate / 30) * days) * 100) / 100;
     const unitPriceTotal = Math.round((proRataRent + printingCharge + mountingCharge) * 100) / 100;
     
     return {

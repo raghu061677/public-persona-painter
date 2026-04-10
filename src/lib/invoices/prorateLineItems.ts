@@ -1,10 +1,11 @@
 /**
  * Prorated Line Items Utility
  * 
- * Invoice items JSONB stores full monthly rates (e.g., ₹80,000) as rent_amount,
- * but the invoice sub_total reflects the actual prorated billing amount for the period.
+ * Invoice items can contain either the already-billed prorated rent_amount OR
+ * a legacy monthly snapshot. This utility normalizes both cases so PDFs and
+ * previews always show the billed prorated rent for the invoice period.
  * This utility calculates each item's prorated line total so that:
- * - The "Display" price shows the monthly rate (informational)
+ * - The "Display" price shows the billed prorated rent
  * - The "Line Total" shows the actual billed amount for the billing period
  * - All line totals sum exactly to the invoice sub_total
  */
@@ -12,7 +13,7 @@
 export interface ProratedItem {
   /** The original item with all fields preserved */
   [key: string]: any;
-  /** The monthly/full rate for display in PRICING column */
+  /** The billed/prorated rent for display in PRICING column */
   display_rent: number;
   /** Printing charges (unchanged) */
   display_printing: number;
@@ -31,33 +32,47 @@ export function prorateInvoiceLineItems(items: any[], invoiceSubTotal: number): 
 
   // Step 1: Calculate raw prorated amounts for each item
   const enriched = items.map((item: any) => {
-    const monthlyRate = item.rent_amount ?? item.rate ?? item.amount ?? 0;
-    const printingCharges = item.printing_charges ?? item.printing_cost ?? 0;
-    const mountingCharges = item.mounting_charges ?? item.mounting_cost ?? 0;
+    const printingCharges = Number(item.printing_charges ?? item.printing_cost ?? 0);
+    const mountingCharges = Number(item.mounting_charges ?? item.mounting_cost ?? 0);
+    const explicitRent = item.rent_amount ?? item.rate;
+    const amountDerivedRent = item.amount != null
+      ? Math.max(0, Number(item.amount) - printingCharges - mountingCharges)
+      : null;
+    const storedRent = Number(explicitRent ?? amountDerivedRent ?? 0);
 
     const startDate = item.booking_start_date || item.start_date;
     const endDate = item.booking_end_date || item.end_date;
 
-    let billingDays = 0;
-    if (startDate && endDate) {
+    let billingDays = Number(item.booked_days ?? item.billable_days ?? 0);
+    if ((!billingDays || billingDays < 0) && startDate && endDate) {
       const s = new Date(startDate);
       const e = new Date(endDate);
       billingDays = Math.max(1, Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     }
 
-    // Calculate prorated rent:
-    // If billing period < 30 days and we have dates, prorate using daily rate
-    let proratedRent = monthlyRate;
-    if (billingDays > 0 && billingDays < 30) {
-      const dailyRate = item.daily_rate || (monthlyRate / 30);
-      proratedRent = dailyRate * billingDays;
+    const explicitDailyRate = Number(item.daily_rate ?? 0);
+    const monthlyReference = Number(item.display_rate ?? item.negotiated_rate ?? 0);
+
+    // Detect whether the stored rent is already prorated.
+    const looksAlreadyProrated = billingDays > 0 && billingDays < 30 && (
+      (explicitDailyRate > 0 && Math.abs(storedRent - (explicitDailyRate * billingDays)) <= 1) ||
+      (monthlyReference > 0 && storedRent < monthlyReference)
+    );
+
+    let proratedRent = storedRent;
+    if (billingDays > 0 && billingDays < 30 && !looksAlreadyProrated) {
+      const billingBase = monthlyReference > 0 ? monthlyReference : storedRent;
+      const derivedDailyRate = explicitDailyRate > 0 ? explicitDailyRate : (billingBase / 30);
+      proratedRent = derivedDailyRate * billingDays;
     }
+
+    proratedRent = Math.round(proratedRent * 100) / 100;
 
     const rawLineTotal = proratedRent + printingCharges + mountingCharges;
 
     return {
       ...item,
-      display_rent: monthlyRate,
+      display_rent: proratedRent,
       display_printing: printingCharges,
       display_mounting: mountingCharges,
       prorated_rent: proratedRent,

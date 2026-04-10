@@ -98,9 +98,13 @@
             items = campAssets.map((ca: any, idx: number) => {
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
               const ma: any = maMap.get(ca.asset_id) || {};
-              const rentAmt = existing.rent_amount ?? existing.rate ?? existing.amount ?? ca.rent_amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-              const printAmt = ca.printing_charges || ca.printing_cost || 0;
-              const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
+              const printAmt = Number(existing.printing_charges ?? existing.printing_cost ?? ca.printing_charges ?? ca.printing_cost ?? 0);
+              const mountAmt = Number(existing.mounting_charges ?? existing.mounting_cost ?? ca.mounting_charges ?? ca.mounting_cost ?? 0);
+              const explicitRent = existing.rent_amount ?? existing.rate;
+              const derivedRentFromAmount = existing.amount != null
+                ? Math.max(0, Number(existing.amount) - printAmt - mountAmt)
+                : null;
+              const rentAmt = Number(explicitRent ?? derivedRentFromAmount ?? ca.rent_amount ?? 0);
               const lineTotal = rentAmt + printAmt + mountAmt;
               return {
                 ...existing,
@@ -173,12 +177,15 @@
             // campaign_assets/media_assets are only used to backfill MISSING metadata
             // (location, dimensions, etc.), NEVER to override financial values.
             // Pricing priority: item.rent_amount → item.rate → item.amount → campaign_assets fallback
-            const storedPrice = item.rent_amount ?? item.rate ?? item.amount;
-            const rentAmount = storedPrice != null ? storedPrice : (ca?.rent_amount ?? 0);
-            const printingCharges = item.printing_charges != null ? item.printing_charges : (ca?.printing_charges ?? 0);
-            const mountingCharges = item.mounting_charges != null ? item.mounting_charges : (ca?.mounting_charges ?? 0);
+            const printingCharges = Number(item.printing_charges ?? item.printing_cost ?? ca?.printing_charges ?? 0);
+            const mountingCharges = Number(item.mounting_charges ?? item.mounting_cost ?? ca?.mounting_charges ?? 0);
+            const explicitRent = item.rent_amount ?? item.rate;
+            const derivedRentFromAmount = item.amount != null
+              ? Math.max(0, Number(item.amount) - printingCharges - mountingCharges)
+              : null;
+            const rentAmount = Number(explicitRent ?? derivedRentFromAmount ?? ca?.rent_amount ?? 0);
             // Recalculate line total from components — never trust pre-computed totals from external sources
-            const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
+            const lineTotal = rentAmount + printingCharges + mountingCharges;
 
             return {
               ...item,

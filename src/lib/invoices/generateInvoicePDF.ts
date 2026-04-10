@@ -102,9 +102,13 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         // CRITICAL: Prefer existing invoice JSONB item pricing (immutable snapshot)
         // over campaign_assets totals which may store campaign-level rates
         const existing: any = (enrichedItems && enrichedItems[idx]) || {};
-        const rentAmt = existing.rent_amount ?? existing.rate ?? existing.amount ?? ca.rent_amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-        const printAmt = existing.printing_charges ?? ca.printing_charges ?? ca.printing_cost ?? 0;
-        const mountAmt = existing.mounting_charges ?? ca.mounting_charges ?? ca.mounting_cost ?? 0;
+        const printAmt = Number(existing.printing_charges ?? existing.printing_cost ?? ca.printing_charges ?? ca.printing_cost ?? 0);
+        const mountAmt = Number(existing.mounting_charges ?? existing.mounting_cost ?? ca.mounting_charges ?? ca.mounting_cost ?? 0);
+        const explicitRent = existing.rent_amount ?? existing.rate;
+        const derivedRentFromAmount = existing.amount != null
+          ? Math.max(0, Number(existing.amount) - printAmt - mountAmt)
+          : null;
+        const rentAmt = Number(explicitRent ?? derivedRentFromAmount ?? ca.rent_amount ?? 0);
         const lineTotal = rentAmt + printAmt + mountAmt;
         // Use null instead of '-' so downstream hydration from media_assets can fill gaps
         const validOrNull = (v: any) => (v && v !== '-' && v !== 'N/A') ? v : null;
@@ -242,12 +246,15 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       // campaign_assets/media_assets are only used to backfill MISSING metadata
       // (location, dimensions, etc.), NEVER to override financial values.
       // campaign_assets.rent_amount stores the FULL campaign-level rate, not prorated monthly.
-      const storedPrice = item.rent_amount ?? item.rate ?? item.amount;
-      const rentAmount = storedPrice != null ? storedPrice : (campaignAsset?.rent_amount ?? 0);
-      const printingCharges = item.printing_charges != null ? item.printing_charges : (campaignAsset?.printing_charges ?? 0);
-      const mountingCharges = item.mounting_charges != null ? item.mounting_charges : (campaignAsset?.mounting_charges ?? 0);
+      const printingCharges = Number(item.printing_charges ?? item.printing_cost ?? campaignAsset?.printing_charges ?? 0);
+      const mountingCharges = Number(item.mounting_charges ?? item.mounting_cost ?? campaignAsset?.mounting_charges ?? 0);
+      const explicitRent = item.rent_amount ?? item.rate;
+      const derivedRentFromAmount = item.amount != null
+        ? Math.max(0, Number(item.amount) - printingCharges - mountingCharges)
+        : null;
+      const rentAmount = Number(explicitRent ?? derivedRentFromAmount ?? campaignAsset?.rent_amount ?? 0);
       // Recalculate line total from components — never trust pre-computed totals from external sources
-      const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
+      const lineTotal = rentAmount + printingCharges + mountingCharges;
 
       return {
         ...item,

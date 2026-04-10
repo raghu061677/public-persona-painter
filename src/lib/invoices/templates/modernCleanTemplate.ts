@@ -317,9 +317,8 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
      if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
      const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
-    // Pricing breakdown - use prorated amounts for line totals
-    // Display the monthly rate in PRICING column, but prorated total in SUBTOTAL
-    const baseRate = (item.display_rent != null ? item.display_rent : null) ?? item.rent_amount ?? item.rate ?? item.amount ?? item.unit_price ?? item.display_rate ?? item.negotiated_rate ?? 0;
+    // Always show billed prorated rent, never the monthly negotiated rate.
+    const baseRate = item.prorated_rent ?? item.display_rent ?? item.rent_amount ?? item.rate ?? item.amount ?? 0;
     const printingCost = (item.display_printing != null ? item.display_printing : null) ?? item.printing_charges ?? item.printing_cost ?? 0;
     const mountingCost = (item.display_mounting != null ? item.display_mounting : null) ?? item.mounting_charges ?? item.mounting_cost ?? 0;
     // Use prorated_line_total if available (from prorateInvoiceLineItems), else fallback

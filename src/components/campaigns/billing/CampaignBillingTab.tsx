@@ -768,7 +768,7 @@ export function CampaignBillingTab({
             gst_percent: totals.gstRate,
           }),
           ...((campaign as any).tax_type ? { tax_type: (campaign as any).tax_type } : {}),
-        } as Campaign}
+        } as any}
         campaignAssets={campaignAssets}
         open={showAssetLevelDialog}
         onOpenChange={setShowAssetLevelDialog}

@@ -304,7 +304,7 @@ async function mergePDFs(blob1: Blob, blob2: Blob): Promise<Blob> {
     pages2.forEach(p => mergedPdf.addPage(p));
 
     const mergedBytes = await mergedPdf.save();
-    return new Blob([mergedBytes], { type: 'application/pdf' });
+    return new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
   } catch (e) {
     console.error('PDF merge failed, returning invoice only:', e);
     return blob1;

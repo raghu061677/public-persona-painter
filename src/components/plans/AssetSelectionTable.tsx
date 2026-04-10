@@ -602,23 +602,12 @@ export function AssetSelectionTable({
                               Available Now
                             </Badge>
                           ) : availability.availableFrom ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
+                            <BookingHoverCard summary={getStatus(asset.id)}>
                                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 cursor-help">
                                     <Clock className="h-3 w-3 mr-1" />
                                     {format(availability.availableFrom, "dd MMM yyyy")}
                                   </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-sm">
-                                    Currently booked for: <strong>{availability.sourceNumber || 'Campaign'}</strong>
-                                    <br />
-                                    Client: {availability.clientName || 'Unknown'}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            </BookingHoverCard>
                           ) : (
                             <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800">
                               Booked

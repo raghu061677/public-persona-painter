@@ -42,7 +42,8 @@ Deno.serve(withAuth(async (req) => {
       campaign_assets(
         id, asset_id, media_type, city, area, location, direction,
         illumination_type, dimensions, total_sqft, card_rate,
-        negotiated_rate, printing_charges, mounting_charges,
+        negotiated_rate, rent_amount, daily_rate, booked_days,
+        printing_charges, mounting_charges,
         booking_start_date, booking_end_date
       )
     `)

@@ -148,7 +148,20 @@ export default function InvoiceCreate() {
         .select('*, media_assets(id, media_asset_code, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft)')
         .eq('campaign_id', selectedCampaignId);
 
-      const items = (campaignItems || []).map((item, index) => {
+      const items = (campaignItems || []).map((item: any, index) => {
+        const printingCost = Number(item.printing_charge || 0);
+        const mountingCost = Number(item.mounting_charge || 0);
+        const explicitRent = item.rent_amount ?? item.rate;
+        const derivedRentFromAmount = item.amount != null
+          ? Math.max(0, Number(item.amount) - printingCost - mountingCost)
+          : null;
+        const rentAmt = Number(explicitRent ?? derivedRentFromAmount ?? item.negotiated_rate ?? item.card_rate ?? 0);
+        const startDate = item.start_date;
+        const endDate = item.end_date;
+        const bookedDays = startDate && endDate
+          ? Math.max(1, Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+          : (item.quantity || 1);
+        const lineTotal = rentAmt + printingCost + mountingCost;
         const displayAssetCode = item.media_assets?.media_asset_code || null;
         return {
           sno: index + 1,
@@ -166,18 +179,25 @@ export default function InvoiceCreate() {
           illumination_type: item.media_assets?.illumination_type || 'NonLit',
           dimensions: item.media_assets?.dimensions || 'N/A',
           total_sqft: item.media_assets?.total_sqft || '',
-          start_date: item.start_date,
-          end_date: item.end_date,
+          start_date: startDate,
+          end_date: endDate,
+          booking_start_date: startDate,
+          booking_end_date: endDate,
           booking_period: item.start_date && item.end_date 
             ? `${new Date(item.start_date).toLocaleDateString('en-IN')} - ${new Date(item.end_date).toLocaleDateString('en-IN')}`
             : '',
-          quantity: item.quantity || 1,
-          rate: item.negotiated_rate || item.card_rate,
-          unit_price: item.negotiated_rate || item.card_rate,
-          display_rate: item.negotiated_rate || item.card_rate,
-          mounting_cost: item.mounting_charge || 0,
-          printing_cost: item.printing_charge || 0,
-          amount: item.final_price || (item.negotiated_rate || item.card_rate) * (item.quantity || 1),
+          quantity: 1,
+          booked_days: bookedDays,
+          rate: rentAmt,
+          rent_amount: rentAmt,
+          unit_price: rentAmt,
+          display_rate: rentAmt,
+          mounting_cost: mountingCost,
+          printing_cost: printingCost,
+          mounting_charges: mountingCost,
+          printing_charges: printingCost,
+          amount: lineTotal,
+          total: lineTotal,
         };
       });
 

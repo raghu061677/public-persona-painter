@@ -221,7 +221,12 @@
           }
         }
 
-        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount }, client, company, campaign, items });
+        // Prorate line items so Display/Line Total match the invoice sub_total
+        // This reconciles old invoices where JSONB stored monthly rates instead of prorated values
+        const invoiceSubTotal = parseFloat(String(invoice.sub_total)) || 0;
+        const proratedItems = invoiceSubTotal > 0 ? prorateInvoiceLineItems(items, invoiceSubTotal) : items;
+
+        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount }, client, company, campaign, items: proratedItems });
       } catch (error) {
         console.error('Error fetching invoice data:', error);
       } finally {

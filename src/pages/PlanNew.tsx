@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { addDays } from "date-fns";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -218,7 +219,7 @@ export default function PlanNew() {
     }
   };
 
-  const toggleAssetSelection = (assetId: string, asset: any) => {
+  const toggleAssetSelection = async (assetId: string, asset: any) => {
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -231,9 +232,77 @@ export default function PlanNew() {
       const monthlyCardRate = asset.card_rate || 0;
       
       // Initialize with plan-level dates for per-asset duration
-      const planStart = formatForSupabase(toDateOnly(formData.start_date));
-      const planEnd = formatForSupabase(toDateOnly(formData.end_date));
-      const bookedDays = formData.duration_days;
+      let planStart = formatForSupabase(toDateOnly(formData.start_date));
+      let planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      let bookedDays = formData.duration_days;
+      let availabilityNote = 'Available Now';
+
+      // Check if this asset has a running campaign and auto-set start date
+      try {
+        const { data: activeBookings } = await supabase
+          .from('campaign_assets')
+          .select('booking_end_date, end_date, effective_end_date, campaigns!inner(status, is_deleted, campaign_name)')
+          .eq('asset_id', assetId)
+          .eq('is_removed', false)
+          .in('campaigns.status', ['Running', 'Planned', 'InProgress', 'Upcoming'])
+          .eq('campaigns.is_deleted', false)
+          .order('booking_end_date', { ascending: false })
+          .limit(5);
+
+        if (activeBookings && activeBookings.length > 0) {
+          // Find the latest end date among all active bookings
+          let latestEndStr = '';
+          activeBookings.forEach((b: any) => {
+            const endStr = b.effective_end_date || b.booking_end_date || b.end_date || '';
+            if (endStr > latestEndStr) latestEndStr = endStr;
+          });
+
+          if (latestEndStr) {
+            const endDate = new Date(latestEndStr + 'T00:00:00');
+            const nextAvail = addDays(endDate, 1);
+            if (nextAvail > new Date(formData.start_date)) {
+              planStart = formatForSupabase(toDateOnly(nextAvail));
+              // Keep same duration (days), compute new end date
+              const newEnd = addDays(nextAvail, formData.duration_days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              bookedDays = formData.duration_days;
+              const campName = (activeBookings[0] as any).campaigns?.campaign_name || 'Campaign';
+              availabilityNote = `Shifted — booked until ${latestEndStr} (${campName})`;
+              toast({
+                title: "Start Date Adjusted",
+                description: `Asset is booked until ${latestEndStr}. Start date set to ${planStart}.`,
+              });
+            }
+          }
+        }
+
+        // Also check active holds
+        const { data: activeHolds } = await supabase
+          .from('asset_holds')
+          .select('end_date, client_name, hold_type')
+          .eq('asset_id', assetId)
+          .eq('status', 'ACTIVE')
+          .order('end_date', { ascending: false })
+          .limit(1);
+
+        if (activeHolds && activeHolds.length > 0) {
+          const holdEnd = activeHolds[0].end_date;
+          if (holdEnd && holdEnd >= planStart) {
+            const holdEndDate = new Date(holdEnd + 'T00:00:00');
+            const holdNextAvail = addDays(holdEndDate, 1);
+            const holdNextStr = formatForSupabase(toDateOnly(holdNextAvail));
+            if (holdNextStr > planStart) {
+              planStart = holdNextStr;
+              const newEnd = addDays(holdNextAvail, formData.duration_days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              availabilityNote = `On Hold until ${holdEnd} (${activeHolds[0].client_name || 'Hold'})`;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking active bookings:', err);
+      }
+      
       const dailyRate = monthlyCardRate / BILLING_CYCLE_DAYS;
       const rentAmount = dailyRate * bookedDays;
       
@@ -243,13 +312,14 @@ export default function PlanNew() {
           negotiated_price: monthlyCardRate,  // Store monthly rate
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
-          // Per-asset duration fields initialized from plan
+          // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
           booked_days: bookedDays,
           billing_mode: 'PRORATA_30',
           daily_rate: dailyRate,
           rent_amount: rentAmount,
+          availability_note: availabilityNote,
         }
       }));
     }

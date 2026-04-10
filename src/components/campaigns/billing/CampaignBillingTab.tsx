@@ -37,6 +37,7 @@ interface CampaignBillingTabProps {
     company_id?: string;
     manual_discount_amount?: number;
     manual_discount_reason?: string;
+    tax_type?: string;
   };
   campaignAssets: any[];
   displayCost: number;
@@ -757,15 +758,18 @@ export function CampaignBillingTab({
       {/* Asset-Level Monthly Invoice Generator */}
       <MonthlyInvoiceGenerator
         campaign={{
-          id: campaign.id,
-          campaign_name: campaign.campaign_name,
-          client_id: campaign.client_id,
-          client_name: campaign.client_name,
-          start_date: campaign.start_date,
-          end_date: campaign.end_date,
-          company_id: campaign.company_id,
-          gst_percent: totals.gstRate,
-        }}
+          ...({
+            id: campaign.id,
+            campaign_name: campaign.campaign_name,
+            client_id: campaign.client_id,
+            client_name: campaign.client_name,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            company_id: campaign.company_id,
+            gst_percent: totals.gstRate,
+          }),
+          ...((campaign as any).tax_type ? { tax_type: (campaign as any).tax_type } : {}),
+        } as any}
         campaignAssets={campaignAssets}
         open={showAssetLevelDialog}
         onOpenChange={setShowAssetLevelDialog}

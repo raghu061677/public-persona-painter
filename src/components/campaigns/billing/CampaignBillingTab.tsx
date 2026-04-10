@@ -757,16 +757,18 @@ export function CampaignBillingTab({
       {/* Asset-Level Monthly Invoice Generator */}
       <MonthlyInvoiceGenerator
         campaign={{
-          id: campaign.id,
-          campaign_name: campaign.campaign_name,
-          client_id: campaign.client_id,
-          client_name: campaign.client_name,
-          start_date: campaign.start_date,
-          end_date: campaign.end_date,
-          company_id: campaign.company_id,
-          gst_percent: totals.gstRate,
-          tax_type: (campaign as any).tax_type,
-        }}
+          ...({
+            id: campaign.id,
+            campaign_name: campaign.campaign_name,
+            client_id: campaign.client_id,
+            client_name: campaign.client_name,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            company_id: campaign.company_id,
+            gst_percent: totals.gstRate,
+          }),
+          ...((campaign as any).tax_type ? { tax_type: (campaign as any).tax_type } : {}),
+        } as Campaign}
         campaignAssets={campaignAssets}
         open={showAssetLevelDialog}
         onOpenChange={setShowAssetLevelDialog}

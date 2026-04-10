@@ -3,6 +3,7 @@ import { TemplateConfig, TemplateRenderer, InvoiceData } from './types';
 import { renderDefaultTemplate } from './defaultTemplate';
 import { renderModernCleanTemplate } from './modernCleanTemplate';
 import { renderClassicTaxTemplate } from './classicTaxTemplate';
+import { renderInvoiceWithProofTemplate } from './invoiceWithProofTemplate';
 
 // Template configurations
 export const INVOICE_TEMPLATES: TemplateConfig[] = [
@@ -24,6 +25,12 @@ export const INVOICE_TEMPLATES: TemplateConfig[] = [
     description: 'Conservative, audit-friendly format with boxed sections',
     version: 1,
   },
+  {
+    key: 'invoice_with_proof',
+    name: 'Invoice With Proof Gallery',
+    description: 'Invoice + campaign proof gallery pages appended',
+    version: 1,
+  },
 ];
 
 // Template renderer map
@@ -31,6 +38,7 @@ const templateRenderers: Record<string, TemplateRenderer> = {
   'default_existing': renderDefaultTemplate,
   'modern_clean': renderModernCleanTemplate,
   'classic_tax_invoice': renderClassicTaxTemplate,
+  'invoice_with_proof': renderInvoiceWithProofTemplate,
 };
 
 /**

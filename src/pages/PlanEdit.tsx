@@ -296,10 +296,13 @@ export default function PlanEdit() {
           if (campaignEndDate) {
             const endDate = new Date(campaignEndDate);
             const newStart = addDays(endDate, 1);
-            // Only adjust if the campaign end is after plan start
             if (newStart > new Date(formData.start_date)) {
               planStart = formatForSupabase(toDateOnly(newStart));
-              assetDays = calculateDurationDays(newStart, new Date(formData.end_date));
+              // Keep same duration, compute new end date
+              const newEnd = addDays(newStart, days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              assetDays = days;
+              availabilityNote = `Shifted — booked until ${campaignEndDate}`;
               toast({
                 title: "Start Date Adjusted",
                 description: `Asset is booked until ${campaignEndDate}. Start date set to ${planStart}.`,
@@ -307,9 +310,30 @@ export default function PlanEdit() {
             }
           }
         }
-      } catch (err) {
-        console.error('Error checking active bookings:', err);
-      }
+
+        // Also check active holds
+        const { data: activeHolds } = await supabase
+          .from('asset_holds')
+          .select('end_date, client_name')
+          .eq('asset_id', assetId)
+          .eq('status', 'ACTIVE')
+          .order('end_date', { ascending: false })
+          .limit(1);
+
+        if (activeHolds && activeHolds.length > 0) {
+          const holdEnd = activeHolds[0].end_date;
+          if (holdEnd && holdEnd >= planStart) {
+            const holdEndDate = new Date(holdEnd + 'T00:00:00');
+            const holdNext = addDays(holdEndDate, 1);
+            const holdNextStr = formatForSupabase(toDateOnly(holdNext));
+            if (holdNextStr > planStart) {
+              planStart = holdNextStr;
+              const newEnd = addDays(holdNext, days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              availabilityNote = `On Hold until ${holdEnd}`;
+            }
+          }
+        }
       
       const dailyRate = cardRate / BILLING_CYCLE_DAYS;
       const rentAmount = dailyRate * assetDays;

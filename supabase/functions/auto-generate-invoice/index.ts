@@ -107,7 +107,11 @@ Deno.serve(withAuth(async (req) => {
       : 0;
 
     const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
-    const rentAmount = Math.round((monthlyRate / BILLING_CYCLE_DAYS) * billableDays * 100) / 100;
+    // Use pre-calculated rent_amount if available (prorated), else compute from monthly rate
+    const preCalculatedRent = asset.rent_amount != null ? Number(asset.rent_amount) : null;
+    const rentAmount = preCalculatedRent != null && preCalculatedRent > 0
+      ? Math.round(preCalculatedRent * 100) / 100
+      : Math.round((monthlyRate / BILLING_CYCLE_DAYS) * billableDays * 100) / 100;
     const printing = Number(asset.printing_charges) || 0;
     const mounting = Number(asset.mounting_charges) || 0;
     const lineTotal = Math.round((rentAmount + printing + mounting) * 100) / 100;

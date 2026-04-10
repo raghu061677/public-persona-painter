@@ -277,10 +277,10 @@ export default function PlanEdit() {
       let planStart = formatForSupabase(toDateOnly(formData.start_date));
       let planEnd = formatForSupabase(toDateOnly(formData.end_date));
       let assetDays = days;
+      let availabilityNote = 'Available Now';
       
       // Check if this asset has a running campaign and auto-set start date
       try {
-        // Only check NON-REMOVED active bookings (dropped assets must not block)
         const { data: activeBookings } = await supabase
           .from('campaign_assets')
           .select('booking_end_date, end_date, campaigns!inner(status, is_deleted)')
@@ -298,7 +298,6 @@ export default function PlanEdit() {
             const newStart = addDays(endDate, 1);
             if (newStart > new Date(formData.start_date)) {
               planStart = formatForSupabase(toDateOnly(newStart));
-              // Keep same duration, compute new end date
               const newEnd = addDays(newStart, days - 1);
               planEnd = formatForSupabase(toDateOnly(newEnd));
               assetDays = days;
@@ -334,6 +333,9 @@ export default function PlanEdit() {
             }
           }
         }
+      } catch (err) {
+        console.error('Error checking active bookings:', err);
+      }
       
       const dailyRate = cardRate / BILLING_CYCLE_DAYS;
       const rentAmount = dailyRate * assetDays;
@@ -352,13 +354,13 @@ export default function PlanEdit() {
           printing_rate: 0,
           mounting_rate: 0,
           mounting_mode: 'fixed',
-          // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
           booked_days: assetDays,
           billing_mode: 'PRORATA_30',
           daily_rate: dailyRate,
           rent_amount: rentAmount,
+          availability_note: availabilityNote,
         }
       }));
     }

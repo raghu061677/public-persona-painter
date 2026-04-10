@@ -313,7 +313,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   const invoiceSubTotal: number = parseFloat(String(invoice.sub_total)) || 0;
   const proratedItems: any[] = prorateInvoiceLineItems(enrichedItems, invoiceSubTotal);
 
-  const data: InvoiceData = {
+  const data: InvoiceData & { __proofGalleryAssets?: any[] } = {
     invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount },
     client,
     campaign,
@@ -325,6 +325,17 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
 
   // Use template from invoice or passed parameter
   const effectiveTemplate = templateKey || invoice.pdf_template_key || 'default_existing';
+
+  // If proof gallery template and attach option is enabled, fetch proof data
+  if (effectiveTemplate === 'invoice_with_proof' && options?.attachProofGallery !== false && invoice.campaign_id) {
+    try {
+      const proofBlocks = await fetchProofGalleryData(invoice.campaign_id, proratedItems);
+      data.__proofGalleryAssets = proofBlocks;
+    } catch (e) {
+      console.error('Failed to fetch proof gallery data:', e);
+      // Continue without proof - invoice still generates
+    }
+  }
   
   return renderInvoicePDF(data, effectiveTemplate);
 }

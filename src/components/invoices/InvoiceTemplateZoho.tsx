@@ -98,7 +98,7 @@
             items = campAssets.map((ca: any, idx: number) => {
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
               const ma: any = maMap.get(ca.asset_id) || {};
-              const rentAmt = existing.rent_amount || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
+              const rentAmt = existing.rent_amount ?? existing.rate ?? existing.amount ?? ca.rent_amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
               const printAmt = ca.printing_charges || ca.printing_cost || 0;
               const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
               const lineTotal = rentAmt + printAmt + mountAmt;

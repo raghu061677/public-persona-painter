@@ -220,7 +220,8 @@ export function CampaignBillingTab({
       // Build per-asset detailed items
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
         // Prioritize pre-calculated rent_amount (prorated for actual booked days) over raw monthly rate
-        const rentAmt = ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
+        // CRITICAL: Use nullish coalescing (??) so rent_amount=0 is respected, never fall back to negotiated_rate
+        const rentAmt = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
         const printAmt = ca.printing_charges || ca.printing_cost || 0;
         const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
         const lineTotal = rentAmt + printAmt + mountAmt;

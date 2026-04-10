@@ -886,52 +886,61 @@ export function SelectedAssetsTable({
                     {/* Per-Asset Dates Column */}
                     {isColumnVisible('asset_dates') && (
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Popover modal={true}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "h-8 w-24 text-xs justify-start text-left font-normal",
-                                  !pricing.start_date && "text-muted-foreground"
-                                )}
-                              >
-                                {format(assetStartDate, "dd/MM/yy")}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
-                              <Calendar
-                                mode="single"
-                                selected={assetStartDate}
-                                onSelect={(date) => handleAssetDateChange('start_date', date)}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <span className="text-muted-foreground text-xs">-</span>
-                          <Popover modal={true}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "h-8 w-24 text-xs justify-start text-left font-normal",
-                                  !pricing.end_date && "text-muted-foreground"
-                                )}
-                              >
-                                {format(assetEndDate, "dd/MM/yy")}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
-                              <Calendar
-                                mode="single"
-                                selected={assetEndDate}
-                                onSelect={(date) => handleAssetDateChange('end_date', date)}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Popover modal={true}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className={cn(
+                                    "h-8 w-24 text-xs justify-start text-left font-normal",
+                                    !pricing.start_date && "text-muted-foreground"
+                                  )}
+                                >
+                                  {format(assetStartDate, "dd/MM/yy")}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
+                                <Calendar
+                                  mode="single"
+                                  selected={assetStartDate}
+                                  onSelect={(date) => handleAssetDateChange('start_date', date)}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <span className="text-muted-foreground text-xs">-</span>
+                            <Popover modal={true}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className={cn(
+                                    "h-8 w-24 text-xs justify-start text-left font-normal",
+                                    !pricing.end_date && "text-muted-foreground"
+                                  )}
+                                >
+                                  {format(assetEndDate, "dd/MM/yy")}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
+                                <Calendar
+                                  mode="single"
+                                  selected={assetEndDate}
+                                  onSelect={(date) => handleAssetDateChange('end_date', date)}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          {/* Availability status badge */}
+                          {pricing.availability_note && pricing.availability_note !== 'Available Now' && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                              <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
+                              {pricing.availability_note}
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                     )}

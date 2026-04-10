@@ -277,10 +277,10 @@ export default function PlanEdit() {
       let planStart = formatForSupabase(toDateOnly(formData.start_date));
       let planEnd = formatForSupabase(toDateOnly(formData.end_date));
       let assetDays = days;
+      let availabilityNote = 'Available Now';
       
       // Check if this asset has a running campaign and auto-set start date
       try {
-        // Only check NON-REMOVED active bookings (dropped assets must not block)
         const { data: activeBookings } = await supabase
           .from('campaign_assets')
           .select('booking_end_date, end_date, campaigns!inner(status, is_deleted)')
@@ -296,14 +296,40 @@ export default function PlanEdit() {
           if (campaignEndDate) {
             const endDate = new Date(campaignEndDate);
             const newStart = addDays(endDate, 1);
-            // Only adjust if the campaign end is after plan start
             if (newStart > new Date(formData.start_date)) {
               planStart = formatForSupabase(toDateOnly(newStart));
-              assetDays = calculateDurationDays(newStart, new Date(formData.end_date));
+              const newEnd = addDays(newStart, days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              assetDays = days;
+              availabilityNote = `Shifted — booked until ${campaignEndDate}`;
               toast({
                 title: "Start Date Adjusted",
                 description: `Asset is booked until ${campaignEndDate}. Start date set to ${planStart}.`,
               });
+            }
+          }
+        }
+
+        // Also check active holds
+        const { data: activeHolds } = await supabase
+          .from('asset_holds')
+          .select('end_date, client_name')
+          .eq('asset_id', assetId)
+          .eq('status', 'ACTIVE')
+          .order('end_date', { ascending: false })
+          .limit(1);
+
+        if (activeHolds && activeHolds.length > 0) {
+          const holdEnd = activeHolds[0].end_date;
+          if (holdEnd && holdEnd >= planStart) {
+            const holdEndDate = new Date(holdEnd + 'T00:00:00');
+            const holdNext = addDays(holdEndDate, 1);
+            const holdNextStr = formatForSupabase(toDateOnly(holdNext));
+            if (holdNextStr > planStart) {
+              planStart = holdNextStr;
+              const newEnd = addDays(holdNext, days - 1);
+              planEnd = formatForSupabase(toDateOnly(newEnd));
+              availabilityNote = `On Hold until ${holdEnd}`;
             }
           }
         }
@@ -328,38 +354,108 @@ export default function PlanEdit() {
           printing_rate: 0,
           mounting_rate: 0,
           mounting_mode: 'fixed',
-          // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
           booked_days: assetDays,
           billing_mode: 'PRORATA_30',
           daily_rate: dailyRate,
           rent_amount: rentAmount,
+          availability_note: availabilityNote,
         }
       }));
     }
     setSelectedAssets(newSelected);
   };
 
-  const handleMultiSelect = (assetIds: string[], assets: any[]) => {
+  const handleMultiSelect = async (assetIds: string[], assets: any[]) => {
     const newSelected = new Set(selectedAssets);
     const newPricing = { ...assetPricing };
     const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
 
-    // Plan-level dates for initialization
     const planStart = formatForSupabase(toDateOnly(formData.start_date));
     const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+
+    // Batch fetch active bookings for all assets
+    let bookingsMap = new Map<string, string>();
+    let holdsMap = new Map<string, string>();
+    try {
+      const ids = assets.map(a => a.id);
+      const { data: activeBookings } = await supabase
+        .from('campaign_assets')
+        .select('asset_id, booking_end_date, end_date, effective_end_date, campaigns!inner(status, is_deleted)')
+        .in('asset_id', ids)
+        .eq('is_removed', false)
+        .in('campaigns.status', ['Running', 'Planned', 'InProgress', 'Upcoming'])
+        .eq('campaigns.is_deleted', false);
+
+      (activeBookings || []).forEach((b: any) => {
+        const endStr = b.effective_end_date || b.booking_end_date || b.end_date || '';
+        const current = bookingsMap.get(b.asset_id) || '';
+        if (endStr > current) bookingsMap.set(b.asset_id, endStr);
+      });
+
+      const { data: activeHolds } = await supabase
+        .from('asset_holds')
+        .select('asset_id, end_date')
+        .in('asset_id', ids)
+        .eq('status', 'ACTIVE');
+
+      (activeHolds || []).forEach((h: any) => {
+        const current = holdsMap.get(h.asset_id) || '';
+        if (h.end_date > current) holdsMap.set(h.asset_id, h.end_date);
+      });
+    } catch (err) {
+      console.error('Error batch-checking availability:', err);
+    }
+
+    let shiftedCount = 0;
 
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const cardRate = asset.card_rate || 0;
       const baseRate = asset.base_rate || 0;
       
-      const proRata = calcProRata(cardRate, days);
+      let assetStart = planStart;
+      let assetEnd = planEnd;
+      let assetDays = days;
+      let availabilityNote = 'Available Now';
+
+      // Check campaign bookings
+      const latestBookingEnd = bookingsMap.get(asset.id);
+      if (latestBookingEnd && latestBookingEnd >= planStart) {
+        const endDate = new Date(latestBookingEnd + 'T00:00:00');
+        const nextAvail = addDays(endDate, 1);
+        const nextAvailStr = formatForSupabase(toDateOnly(nextAvail));
+        if (nextAvailStr > assetStart) {
+          assetStart = nextAvailStr;
+          const newEnd = addDays(nextAvail, days - 1);
+          assetEnd = formatForSupabase(toDateOnly(newEnd));
+          assetDays = days;
+          availabilityNote = `Shifted — booked until ${latestBookingEnd}`;
+          shiftedCount++;
+        }
+      }
+
+      // Check holds
+      const latestHoldEnd = holdsMap.get(asset.id);
+      if (latestHoldEnd && latestHoldEnd >= assetStart) {
+        const holdEndDate = new Date(latestHoldEnd + 'T00:00:00');
+        const holdNext = addDays(holdEndDate, 1);
+        const holdNextStr = formatForSupabase(toDateOnly(holdNext));
+        if (holdNextStr > assetStart) {
+          assetStart = holdNextStr;
+          const newEnd = addDays(holdNext, days - 1);
+          assetEnd = formatForSupabase(toDateOnly(newEnd));
+          availabilityNote = `On Hold until ${latestHoldEnd}`;
+          shiftedCount++;
+        }
+      }
+
+      const proRata = calcProRata(cardRate, assetDays);
       const discount = calcDiscount(cardRate, cardRate);
       const profit = calcProfit(baseRate, cardRate);
       const dailyRate = cardRate / BILLING_CYCLE_DAYS;
-      const rentAmount = dailyRate * days;
+      const rentAmount = dailyRate * assetDays;
       
       newPricing[asset.id] = {
         negotiated_price: cardRate,
@@ -372,24 +468,24 @@ export default function PlanEdit() {
         mounting_charges: asset.mounting_charges || 0,
         printing_rate: 0,
         mounting_rate: 0,
-        mounting_mode: 'fixed', // Plan items always use direct per-asset mounting
-        // Per-asset duration fields initialized from plan
-        start_date: planStart,
-        end_date: planEnd,
-        booked_days: days,
+        mounting_mode: 'fixed',
+        start_date: assetStart,
+        end_date: assetEnd,
+        booked_days: assetDays,
         billing_mode: 'PRORATA_30',
         daily_rate: dailyRate,
         rent_amount: rentAmount,
+        availability_note: availabilityNote,
       };
     });
 
     setSelectedAssets(newSelected);
     setAssetPricing(newPricing);
 
-    toast({
-      title: "Success",
-      description: `Added ${assets.length} asset${assets.length > 1 ? 's' : ''} to plan`,
-    });
+    const desc = shiftedCount > 0 
+      ? `Added ${assets.length} asset(s). ${shiftedCount} had dates shifted due to existing bookings.`
+      : `Added ${assets.length} asset${assets.length > 1 ? 's' : ''} to plan`;
+    toast({ title: "Success", description: desc });
   };
 
   const removeAsset = (assetId: string) => {

@@ -319,11 +319,12 @@
            </thead>
            <tbody>
             {items.map((item: any, index: number) => {
-                const rentAmount = item.rent_amount ?? item.rate ?? item.amount ?? 0;
-                const printingCharges = item.printing_charges || item.printing_cost || 0;
-                const mountingCharges = item.mounting_charges || item.mounting_cost || 0;
-                // Always recalculate from components to ensure consistency
-                const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
+                // Use prorated values from prorateInvoiceLineItems when available
+                const rentAmount = item.prorated_rent ?? item.rent_amount ?? item.rate ?? item.amount ?? 0;
+                const printingCharges = item.display_printing ?? item.printing_charges ?? item.printing_cost ?? 0;
+                const mountingCharges = item.display_mounting ?? item.mounting_charges ?? item.mounting_cost ?? 0;
+                // Use prorated line total if available, else recalculate
+                const lineTotal = item.prorated_line_total ?? ((rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0));
 
                 // Detect discount/adjustment lines: negative amount or no real asset association
                 const isDiscountLine = (lineTotal < 0) || (rentAmount < 0) ||

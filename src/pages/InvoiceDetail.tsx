@@ -347,7 +347,7 @@ export default function InvoiceDetail() {
             <Badge className={getInvoiceStatusColor(invoice.status)}>
               {invoice.status}
             </Badge>
-            <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
+            <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} campaignId={invoice.campaign_id} />
             <ActionGuard module="finance" action="edit">
             {isAdmin && isFinalized && (
               <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.id} />

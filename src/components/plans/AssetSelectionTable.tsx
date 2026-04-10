@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BookingHoverCard } from "./BookingHoverCard";
 import { format, addDays, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";

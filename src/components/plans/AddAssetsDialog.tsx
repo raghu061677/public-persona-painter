@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Shield, Calendar } from "lucide-react";
+import { BookingHoverCard } from "./BookingHoverCard";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";

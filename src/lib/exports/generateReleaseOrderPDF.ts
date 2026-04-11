@@ -42,6 +42,8 @@ export interface ROData {
   totalMounting: number;
   cgst: number;
   sgst: number;
+  igst?: number;
+  isInterState?: boolean;
   grandTotal: number;
 
   // Terms
@@ -522,10 +524,17 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
     { label: 'Printing Charges', value: data.totalPrinting },
     { label: 'Mounting Charges', value: data.totalMounting },
     { label: 'Taxable Amount', value: taxableAmount, bold: true },
-    { label: 'CGST @ 9%', value: data.cgst },
-    { label: 'SGST @ 9%', value: data.sgst },
-    { label: 'GRAND TOTAL', value: data.grandTotal, bold: true, highlight: true },
   ];
+
+  if (data.isInterState) {
+    summaryRows.push({ label: 'IGST @ 18%', value: data.igst || 0 });
+  } else {
+    summaryRows.push(
+      { label: 'CGST @ 9%', value: data.cgst },
+      { label: 'SGST @ 9%', value: data.sgst },
+    );
+  }
+  summaryRows.push({ label: 'GRAND TOTAL', value: data.grandTotal, bold: true, highlight: true });
 
   summaryRows.forEach((row) => {
     // Add spacing before Total row

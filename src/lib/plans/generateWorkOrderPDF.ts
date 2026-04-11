@@ -321,9 +321,16 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   const totalPrinting = planItems?.reduce((s, item) => s + (item.printing_charges || item.printing_cost || 0), 0) || 0;
   const totalMounting = planItems?.reduce((s, item) => s + (item.mounting_charges || item.installation_cost || 0), 0) || 0;
   const subTotal = displayCost + totalPrinting + totalMounting;
-  const cgst = subTotal * 0.09;
-  const sgst = subTotal * 0.09;
-  const grandTotal = subTotal + cgst + sgst;
+  
+  const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
+  let cgst = 0, sgst = 0, igst = 0;
+  if (isInterState) {
+    igst = subTotal * 0.18;
+  } else {
+    cgst = subTotal * 0.09;
+    sgst = subTotal * 0.09;
+  }
+  const grandTotal = subTotal + cgst + sgst + igst;
 
   // Check page break for summary + terms + signatures
   if (y + 120 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
@@ -355,11 +362,15 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   ];
   if (totalPrinting > 0) summaryRows.push(['Printing Cost', formatCurrencyForPDF(totalPrinting)]);
   if (totalMounting > 0) summaryRows.push(['Mounting Cost', formatCurrencyForPDF(totalMounting)]);
-  summaryRows.push(
-    ['Taxable Amount', formatCurrencyForPDF(subTotal)],
-    ['CGST @ 9%', formatCurrencyForPDF(cgst)],
-    ['SGST @ 9%', formatCurrencyForPDF(sgst)],
-  );
+  summaryRows.push(['Taxable Amount', formatCurrencyForPDF(subTotal)]);
+  if (isInterState) {
+    summaryRows.push(['IGST @ 18%', formatCurrencyForPDF(igst)]);
+  } else {
+    summaryRows.push(
+      ['CGST @ 9%', formatCurrencyForPDF(cgst)],
+      ['SGST @ 9%', formatCurrencyForPDF(sgst)],
+    );
+  }
 
   autoTable(doc, {
     startY: y - 2,

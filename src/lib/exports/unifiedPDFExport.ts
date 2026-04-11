@@ -103,8 +103,10 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
   const subTotal = items.reduce((s, i) => s + i.amount, 0);
   const gstTotal = Number(plan.gst_amount || 0);
   const isInterState = (plan.tax_type === 'igst' || plan.tax_type === 'IGST');
-  let cgst = 0, sgst = 0;
-  if (!isInterState) {
+  let cgst = 0, sgst = 0, igst = 0;
+  if (isInterState) {
+    igst = gstTotal;
+  } else {
     cgst = Math.round(gstTotal / 2);
     sgst = gstTotal - cgst;
   }
@@ -149,6 +151,8 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
     totalMounting,
     cgst,
     sgst,
+    igst,
+    isInterState,
     grandTotal,
     terms: options.termsAndConditions,
   };

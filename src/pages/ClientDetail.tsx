@@ -43,6 +43,7 @@ import { ClientContactsManager } from "@/components/clients/ClientContactsManage
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
+import { ClientRegistrations } from "@/components/clients/ClientRegistrations";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 

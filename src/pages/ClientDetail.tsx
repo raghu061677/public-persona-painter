@@ -456,6 +456,7 @@ export default function ClientDetail() {
                 <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
                 {canSeeSensitive && <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>}
                 {canSeeSensitive && <TabsTrigger value="ledger">Ledger</TabsTrigger>}
+                <TabsTrigger value="registrations">GST Registrations</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
                 {canSeeSensitive && <TabsTrigger value="portal">Portal Access</TabsTrigger>}
                 {canSeeSensitive && <TabsTrigger value="activity">Activity Log</TabsTrigger>}

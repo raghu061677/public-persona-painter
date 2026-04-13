@@ -1,144 +1,41 @@
 
 
-## Global Filter UI Pattern — Summary & Implementation Plan
+## Audit Findings
 
-### Current State Analysis
+### Asset: MNS-HYD-BQS-0073 (internal ID: HYD-BQS-0070, Miyapur)
 
-**Invoices List** (`InvoicesList.tsx`, 790 lines)
-- Header buttons row (Export, Filters, Number Review, Legacy Close, New Invoice)
-- Stats cards (4 cards: Total, Paid, Outstanding, Overdue)
-- `InvoiceQuickChips` — type/status/period chip rows + preset chips
-- `InvoiceFilterPills` — removable active filter pills
-- `InvoicesSummaryBar` — summary metrics
-- Separate `FYFilterDropdown` + raw `<input>` search bar below everything
-- Advanced filters via `Sheet` (drawer) — `InvoiceAdvancedFilters`
-- **No `ListToolbar`** — uses its own custom layout
-- **Issues**: FY dropdown and search are below the quick chips/pills/summary instead of at top; duplicate filter entry points; search is a raw `<input>` not matching other pages
+**Database reality:**
+1. **GRT Jewellers (Renewal)** — `is_removed: true`, effective dates Apr 1-2 only, campaign status "Running" but asset was **dropped**
+2. **Hilife-April 10-12** — effective dates Apr 5-12, campaign status "Completed"
+3. Asset is genuinely **vacant from Apr 13** onwards
 
-**Campaigns List** (`CampaignsList.tsx`, 761 lines)
-- Header with action buttons
-- `ListToolbar` with search, saved views, columns, export — **FY dropdown and Filters button injected via `extraActions`**
-- `CampaignQuickChips` — status/timeframe/preset chips
-- `CampaignFilterPills` — removable pills
-- Health alerts bar
-- Invoice status filter tabs (another row of chips)
-- Advanced filters via `Sheet` — `CampaignAdvancedFilters`
-- **Decent structure** but has two separate chip rows (quick chips + invoice status tabs)
+**Vacant Media Report** — correctly shows this asset as available from 13/04/2026.
 
-**Plans List** (`PlansList.tsx`, 1431 lines)
-- Header with Templates + Add Plan buttons
-- `ListToolbar` with search, saved views, columns, export
-- `PlansSummaryBar`
-- View mode tabs card (Current Month / All Active / Archived / All)
-- **Second search + filter card** with `Popover` suggestions, `EnhancedFilterToggle` containing `TableFilters` and `FilterPresets`
-- **Issues**: Duplicate search bars (one in ListToolbar, another in the filter card); no date range filter; no FY filter; only a status dropdown inside collapsible filter panel
+**Booked Media Report** — **incorrectly** shows the GRT Jewellers row because:
+- It does NOT filter out `is_removed = true` (dropped assets)
+- It does NOT use `effective_start_date` / `effective_end_date` (authoritative dates) — instead uses `booking_start_date` which shows full Apr 1-30 range
+- Result: a dropped asset appears as "Running" for the full month
 
-### Key Problems to Fix
+### Root Causes (2 bugs in `ReportBookedMedia.tsx`)
 
-1. **Plans page has two search bars** — ListToolbar has one, then the Card below has another independent search with suggestions
-2. **Invoices page has no ListToolbar** — uses custom layout, FY/search are buried below chips
-3. **No date range filter on Plans** — user specifically wants creation-date-based filtering (Current Month, Last Month, Last 3 Months, This FY, Last FY, Custom)
-4. **Inconsistent filter placement** — each page arranges filters differently
-5. **Plans view mode tabs partially overlap** with the requested date filter (Current Month tab duplicates Current Month date filter)
+| Bug | Current Behavior | Correct Behavior |
+|-----|-----------------|------------------|
+| **1. No `is_removed` filter** | All campaign_assets rows shown, including dropped ones | Exclude `is_removed = true` rows from the report |
+| **2. Wrong date priority** | Uses `booking_start_date` / `booking_end_date` first | Must use `effective_start_date` / `effective_end_date` first (per `resolveAssetBookingWindow` hierarchy) |
 
-### Design: Unified Filter Row Pattern
+### Files to Edit
 
-Instead of creating a heavy new component, the approach is to **standardize the layout order** across all three pages using existing components and a small new `DatePeriodFilter` dropdown:
+**`src/pages/ReportBookedMedia.tsx`** — the only file needing changes:
+1. Add `.eq("is_removed", false)` to the Supabase query (line ~183) to exclude dropped assets
+2. Add `effective_start_date, effective_end_date` to the select fields
+3. Update date resolution (line ~222-223) to follow the authoritative hierarchy: `effective_start_date` > `booking_start_date` > `start_date` > `campaign.start_date`
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ PAGE HEADER                          [Actions] [+ New]          │
-├─────────────────────────────────────────────────────────────────┤
-│ ListToolbar: [Search] [Saved Views] [Columns] [Export] [Reset]  │
-│              + extraActions: [FY ▼] [Period ▼] [Filters badge]  │
-├─────────────────────────────────────────────────────────────────┤
-│ QuickChips (status/type chips)                                  │
-├─────────────────────────────────────────────────────────────────┤
-│ FilterPills: [Status: Running ×] [FY: 2025-26 ×] [Reset All]   │
-├─────────────────────────────────────────────────────────────────┤
-│ SummaryBar / Stats                                              │
-├─────────────────────────────────────────────────────────────────┤
-│ TABLE                                                           │
-└─────────────────────────────────────────────────────────────────┘
-```
+### No other files affected
+- Vacant Media Report: already correct
+- No schema changes needed
+- No finance/export/template changes
 
-### Implementation Plan
-
-#### Step 1: Create `DatePeriodFilter` component
-**New file**: `src/components/common/DatePeriodFilter.tsx`
-
-A small dropdown that offers:
-- Current Month (default for Plans)
-- Last Month
-- Last 3 Months
-- This Financial Year
-- Last Financial Year
-- Custom Range (shows from/to date pickers)
-
-Returns `{ from: string; to: string } | undefined`. Reusable on any page.
-
-#### Step 2: Upgrade Plans List page
-**File**: `src/pages/PlansList.tsx`
-
-- **Remove the duplicate search Card** (lines 820-946) — the search input with Popover suggestions and `EnhancedFilterToggle` with `TableFilters`/`FilterPresets`
-- **Consolidate search into ListToolbar only** — keep suggestion logic if possible, but single search entry point
-- **Add `DatePeriodFilter` and `FYFilterDropdown` as `extraActions` in ListToolbar** — matching Campaigns pattern
-- **Keep view mode tabs** (Current Month / All Active / Archived / All) but make them work alongside the date filter: when a date period is selected, it overrides the "Current Month" tab behavior; the tabs become purely about active/archived status
-- **Refactor view mode**: Split into two concerns:
-  - **Archive toggle**: All Active / Archived / All (keeps existing tab UI)
-  - **Date period**: Current Month / Last Month / Last 3 Months / FY / Custom (new dropdown)
-- **Add `PlanFilterPills`** to show active filters as removable chips
-- **Wire filters to existing `filteredPlans` useMemo**
-- **Preserve**: ListToolbar saved views, column chooser, export, sort, bulk actions
-
-#### Step 3: Upgrade Invoices List page
-**File**: `src/pages/InvoicesList.tsx`
-
-- **Add `ListToolbar`** at the standard position (after header, before stats) — replacing the current scattered layout
-- **Move FY dropdown and Filters button into ListToolbar `extraActions`**
-- **Remove the standalone search input** (lines 573-584) — use ListToolbar search instead
-- **Keep**: `InvoiceQuickChips`, `InvoiceFilterPills`, `InvoicesSummaryBar`, stats cards, `InvoiceAdvancedFilters` sheet
-- **Reorder layout**: Header → ListToolbar (with FY + Filters in extraActions) → Stats → QuickChips → FilterPills → SummaryBar → Table
-- **Keep all existing filter logic intact** — just move UI elements
-
-#### Step 4: Clean up Campaigns List page
-**File**: `src/pages/CampaignsList.tsx`
-
-- Already well-structured with ListToolbar
-- **Consolidate invoice status tabs into QuickChips** or keep as a secondary filter row but with consistent styling
-- **Add `DatePeriodFilter` to `extraActions`** alongside existing FY dropdown if useful
-- **Minor**: Ensure `CampaignFilterPills` shows FY filter as a pill when non-default
-
-#### Step 5: Add consistent `FilterPills` for Plans
-**New file**: `src/components/plans/PlanFilterPills.tsx`
-
-Shows removable pills for active plan filters (status, date period, search term). Same pattern as `InvoiceFilterPills` and `CampaignFilterPills`.
-
-### Files Changed
-
-| File | Action | Risk |
-|------|--------|------|
-| `src/components/common/DatePeriodFilter.tsx` | Create | None — new file |
-| `src/components/plans/PlanFilterPills.tsx` | Create | None — new file |
-| `src/pages/PlansList.tsx` | Edit — remove duplicate search card, add DatePeriodFilter/FY to ListToolbar extraActions, add PlanFilterPills, refactor viewMode tabs to separate archive vs date concerns | Medium — large file, careful merge |
-| `src/pages/InvoicesList.tsx` | Edit — add ListToolbar, move FY/search into it, reorder sections | Medium — reorder but keep logic |
-| `src/pages/CampaignsList.tsx` | Minor edit — add DatePeriodFilter, ensure pills show FY | Low |
-
-### What stays untouched
-- All filter logic (useMemo pipelines) — just rewired to same state
-- Advanced filter Sheets (InvoiceAdvancedFilters, CampaignAdvancedFilters)
-- Quick chips components
-- Summary bars
-- Sort logic
-- Export logic
-- ListToolbar component itself
-- Database schema
-- Finance logic
-
-### Safety constraints
-- No schema changes
-- No new database queries
-- All changes are UI layout reorganization + one new dropdown component
-- Existing filter state variables preserved
-- Export continues to respect filtered data
+### Scope
+- Single file edit in `ReportBookedMedia.tsx`
+- Fixes all assets globally, not just this one
 

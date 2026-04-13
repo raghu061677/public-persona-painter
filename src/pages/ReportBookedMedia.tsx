@@ -222,8 +222,8 @@ export default function ReportBookedMedia() {
 
       const rows: BookedMediaRow[] = (caData || []).map((r: any) => {
         const campaign = r.campaigns;
-        const startDate = r.booking_start_date || r.start_date || campaign.start_date;
-        const endDate = r.booking_end_date || r.end_date || campaign.end_date;
+        const startDate = r.effective_start_date || r.booking_start_date || r.start_date || campaign.start_date;
+        const endDate = r.effective_end_date || r.booking_end_date || r.end_date || campaign.end_date;
         const maExtra = assetExtraMap.get(r.asset_id);
 
         return {

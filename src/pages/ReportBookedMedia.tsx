@@ -183,12 +183,15 @@ export default function ReportBookedMedia() {
         .select(`
           asset_id, city, area, location, direction, dimensions, total_sqft,
           media_type, card_rate, status, start_date, end_date,
-          booking_start_date, booking_end_date, illumination_type,
+          booking_start_date, booking_end_date,
+          effective_start_date, effective_end_date,
+          illumination_type,
           latitude, longitude,
-          campaign_id,
+          campaign_id, is_removed,
           campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
         `)
-        .eq("campaigns.company_id", company.id);
+        .eq("campaigns.company_id", company.id)
+        .eq("is_removed", false);
 
       if (caError) throw caError;
 
@@ -219,8 +222,8 @@ export default function ReportBookedMedia() {
 
       const rows: BookedMediaRow[] = (caData || []).map((r: any) => {
         const campaign = r.campaigns;
-        const startDate = r.booking_start_date || r.start_date || campaign.start_date;
-        const endDate = r.booking_end_date || r.end_date || campaign.end_date;
+        const startDate = r.effective_start_date || r.booking_start_date || r.start_date || campaign.start_date;
+        const endDate = r.effective_end_date || r.booking_end_date || r.end_date || campaign.end_date;
         const maExtra = assetExtraMap.get(r.asset_id);
 
         return {

@@ -43,6 +43,7 @@ import { ClientContactsManager } from "@/components/clients/ClientContactsManage
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
+import { ClientRegistrations } from "@/components/clients/ClientRegistrations";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
@@ -455,6 +456,7 @@ export default function ClientDetail() {
                 <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
                 {canSeeSensitive && <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>}
                 {canSeeSensitive && <TabsTrigger value="ledger">Ledger</TabsTrigger>}
+                <TabsTrigger value="registrations">GST Registrations</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
                 {canSeeSensitive && <TabsTrigger value="portal">Portal Access</TabsTrigger>}
                 {canSeeSensitive && <TabsTrigger value="activity">Activity Log</TabsTrigger>}
@@ -934,6 +936,15 @@ export default function ClientDetail() {
         {/* Client Ledger Tab */}
         <TabsContent value="ledger">
           <ClientLedger clientId={id!} clientName={client?.name || ''} />
+        </TabsContent>
+
+        {/* GST Registrations Tab */}
+        <TabsContent value="registrations">
+          <ClientRegistrations
+            clientId={client.id}
+            companyId={client.company_id || ""}
+            canEdit={isOwner}
+          />
         </TabsContent>
 
         {/* Documents Tab */}

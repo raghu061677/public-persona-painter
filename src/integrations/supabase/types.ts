@@ -2962,6 +2962,7 @@ export type Database = {
           client_po_date: string | null
           client_po_document_url: string | null
           client_po_number: string | null
+          client_registration_id: string | null
           company_id: string | null
           created_at: string | null
           created_by: string
@@ -3018,6 +3019,7 @@ export type Database = {
           client_po_date?: string | null
           client_po_document_url?: string | null
           client_po_number?: string | null
+          client_registration_id?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by: string
@@ -3074,6 +3076,7 @@ export type Database = {
           client_po_date?: string | null
           client_po_document_url?: string | null
           client_po_number?: string | null
+          client_registration_id?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string
@@ -3119,6 +3122,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaigns_client_registration_id_fkey"
+            columns: ["client_registration_id"]
+            isOneToOne: false
+            referencedRelation: "client_registrations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaigns_company_id_fkey"
             columns: ["company_id"]
@@ -3485,6 +3495,8 @@ export type Database = {
           billing_address_line1: string | null
           billing_address_line2: string | null
           billing_city: string | null
+          billing_country: string
+          billing_district: string | null
           billing_pincode: string | null
           billing_state: string | null
           client_id: string
@@ -3492,21 +3504,32 @@ export type Database = {
           created_at: string
           gstin: string | null
           id: string
+          is_active: boolean
           is_default: boolean
           label: string
+          legal_name: string | null
+          notes: string | null
+          place_of_supply_state: string | null
+          place_of_supply_state_code: string | null
+          registration_type: string
           shipping_address_line1: string | null
           shipping_address_line2: string | null
           shipping_city: string | null
+          shipping_country: string
+          shipping_district: string | null
           shipping_pincode: string | null
           shipping_state: string | null
           state: string | null
           state_code: string | null
+          trade_name: string | null
           updated_at: string
         }
         Insert: {
           billing_address_line1?: string | null
           billing_address_line2?: string | null
           billing_city?: string | null
+          billing_country?: string
+          billing_district?: string | null
           billing_pincode?: string | null
           billing_state?: string | null
           client_id: string
@@ -3514,21 +3537,32 @@ export type Database = {
           created_at?: string
           gstin?: string | null
           id?: string
+          is_active?: boolean
           is_default?: boolean
           label?: string
+          legal_name?: string | null
+          notes?: string | null
+          place_of_supply_state?: string | null
+          place_of_supply_state_code?: string | null
+          registration_type?: string
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
+          shipping_country?: string
+          shipping_district?: string | null
           shipping_pincode?: string | null
           shipping_state?: string | null
           state?: string | null
           state_code?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Update: {
           billing_address_line1?: string | null
           billing_address_line2?: string | null
           billing_city?: string | null
+          billing_country?: string
+          billing_district?: string | null
           billing_pincode?: string | null
           billing_state?: string | null
           client_id?: string
@@ -3536,15 +3570,24 @@ export type Database = {
           created_at?: string
           gstin?: string | null
           id?: string
+          is_active?: boolean
           is_default?: boolean
           label?: string
+          legal_name?: string | null
+          notes?: string | null
+          place_of_supply_state?: string | null
+          place_of_supply_state_code?: string | null
+          registration_type?: string
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
+          shipping_country?: string
+          shipping_district?: string | null
           shipping_pincode?: string | null
           shipping_state?: string | null
           state?: string | null
           state_code?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7412,6 +7455,7 @@ export type Database = {
           client_name_snapshot: string | null
           client_po_date: string | null
           client_po_number: string | null
+          client_registration_id: string | null
           company_id: string | null
           created_at: string | null
           created_by: string
@@ -7446,6 +7490,12 @@ export type Database = {
           pdf_template_version: number | null
           place_of_supply: string | null
           reference_plan_id: string | null
+          registration_billing_address_snapshot: Json | null
+          registration_gstin_snapshot: string | null
+          registration_label_snapshot: string | null
+          registration_shipping_address_snapshot: Json | null
+          registration_state_code_snapshot: string | null
+          registration_state_snapshot: string | null
           reverse_charge_applicable: boolean
           round_off_amount: number
           sales_person: string | null
@@ -7480,6 +7530,7 @@ export type Database = {
           client_name_snapshot?: string | null
           client_po_date?: string | null
           client_po_number?: string | null
+          client_registration_id?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by: string
@@ -7514,6 +7565,12 @@ export type Database = {
           pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
+          registration_billing_address_snapshot?: Json | null
+          registration_gstin_snapshot?: string | null
+          registration_label_snapshot?: string | null
+          registration_shipping_address_snapshot?: Json | null
+          registration_state_code_snapshot?: string | null
+          registration_state_snapshot?: string | null
           reverse_charge_applicable?: boolean
           round_off_amount?: number
           sales_person?: string | null
@@ -7548,6 +7605,7 @@ export type Database = {
           client_name_snapshot?: string | null
           client_po_date?: string | null
           client_po_number?: string | null
+          client_registration_id?: string | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string
@@ -7582,6 +7640,12 @@ export type Database = {
           pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
+          registration_billing_address_snapshot?: Json | null
+          registration_gstin_snapshot?: string | null
+          registration_label_snapshot?: string | null
+          registration_shipping_address_snapshot?: Json | null
+          registration_state_code_snapshot?: string | null
+          registration_state_snapshot?: string | null
           reverse_charge_applicable?: boolean
           round_off_amount?: number
           sales_person?: string | null
@@ -7656,6 +7720,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_registration_id_fkey"
+            columns: ["client_registration_id"]
+            isOneToOne: false
+            referencedRelation: "client_registrations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "invoices_company_id_fkey"
@@ -10976,6 +11047,7 @@ export type Database = {
           cgst_percent: number | null
           client_id: string
           client_name: string
+          client_registration_id: string | null
           company_id: string
           converted_at: string | null
           converted_to_campaign_id: string | null
@@ -11029,6 +11101,7 @@ export type Database = {
           cgst_percent?: number | null
           client_id: string
           client_name: string
+          client_registration_id?: string | null
           company_id: string
           converted_at?: string | null
           converted_to_campaign_id?: string | null
@@ -11082,6 +11155,7 @@ export type Database = {
           cgst_percent?: number | null
           client_id?: string
           client_name?: string
+          client_registration_id?: string | null
           company_id?: string
           converted_at?: string | null
           converted_to_campaign_id?: string | null
@@ -11163,6 +11237,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "plans_client_registration_id_fkey"
+            columns: ["client_registration_id"]
+            isOneToOne: false
+            referencedRelation: "client_registrations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "plans_company_id_fkey"

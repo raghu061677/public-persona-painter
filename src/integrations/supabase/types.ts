@@ -3480,6 +3480,104 @@ export type Database = {
           },
         ]
       }
+      client_registrations: {
+        Row: {
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          billing_city: string | null
+          billing_pincode: string | null
+          billing_state: string | null
+          client_id: string
+          company_id: string
+          created_at: string
+          gstin: string | null
+          id: string
+          is_default: boolean
+          label: string
+          shipping_address_line1: string | null
+          shipping_address_line2: string | null
+          shipping_city: string | null
+          shipping_pincode: string | null
+          shipping_state: string | null
+          state: string | null
+          state_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_pincode?: string | null
+          billing_state?: string | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          gstin?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_pincode?: string | null
+          shipping_state?: string | null
+          state?: string | null
+          state_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_pincode?: string | null
+          billing_state?: string | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          gstin?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_pincode?: string | null
+          shipping_state?: string | null
+          state?: string | null
+          state_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_registrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_registrations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_risk_scores: {
         Row: {
           avg_delay_days: number

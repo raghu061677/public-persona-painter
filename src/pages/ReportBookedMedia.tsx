@@ -183,12 +183,15 @@ export default function ReportBookedMedia() {
         .select(`
           asset_id, city, area, location, direction, dimensions, total_sqft,
           media_type, card_rate, status, start_date, end_date,
-          booking_start_date, booking_end_date, illumination_type,
+          booking_start_date, booking_end_date,
+          effective_start_date, effective_end_date,
+          illumination_type,
           latitude, longitude,
-          campaign_id,
+          campaign_id, is_removed,
           campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
         `)
-        .eq("campaigns.company_id", company.id);
+        .eq("campaigns.company_id", company.id)
+        .eq("is_removed", false);
 
       if (caError) throw caError;
 

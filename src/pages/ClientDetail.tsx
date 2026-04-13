@@ -938,6 +938,15 @@ export default function ClientDetail() {
           <ClientLedger clientId={id!} clientName={client?.name || ''} />
         </TabsContent>
 
+        {/* GST Registrations Tab */}
+        <TabsContent value="registrations">
+          <ClientRegistrations
+            clientId={client.id}
+            companyId={client.company_id || ""}
+            canEdit={isOwner}
+          />
+        </TabsContent>
+
         {/* Documents Tab */}
         <TabsContent value="documents">
           <ClientDocuments clientId={id!} clientName={client?.name || ''} />

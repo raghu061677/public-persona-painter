@@ -258,17 +258,18 @@
     const paidAmount = parseFloat(String(invoice.paid_amount)) || 0;
     const totalTdsAmount = invoice.total_tds_amount || 0;
     const lastPaymentDate = invoice.last_payment_date;
-    const clientName = client?.name || 'Client';
-   // Build complete billing address with all parts
-   const billingAddressParts = [
-     client?.billing_address_line1 || client?.address || '',
-     client?.billing_address_line2 || '',
-     [client?.billing_city || client?.city || '', client?.billing_state || client?.state || ''].filter(Boolean).join(', '),
-     client?.billing_pincode || client?.pincode || '',
-     'India'
-   ].filter(Boolean);
-   const clientAddress = billingAddressParts.join('\n');
-   const clientGstin = client?.gstin || client?.gst_number || '';
+    // --- Phase 4D: Registration-aware address resolution ---
+    const { resolveBillTo, resolveShipTo, resolveGstin: resolveGstinHelper, resolvePlaceOfSupply: resolvePosHelper } = await import('@/lib/invoices/templates/registrationAddressHelper');
+    const billTo = resolveBillTo({ invoice, client });
+    const shipToResult = resolveShipTo({ invoice, client }, billTo);
+    const shipTo = shipToResult.address;
+
+    const clientName = billTo.name;
+    const clientAddress = [billTo.address1, billTo.address2, [billTo.city, billTo.state].filter(Boolean).join(', '), billTo.pincode, 'India'].filter(Boolean).join('\n');
+    const clientGstin = billTo.gstin;
+    const shipToAddress = [shipTo.address1, shipTo.address2, [shipTo.city, shipTo.state].filter(Boolean).join(', '), shipTo.pincode, 'India'].filter(Boolean).join('\n');
+    const shipToGstin = shipTo.gstin;
+    const placeOfSupply = resolvePosHelper(invoice) || client?.billing_state || 'Telangana';
  
    return (
      <div className="bg-white text-black p-6 space-y-4 max-w-4xl mx-auto print:p-0 font-sans text-sm">
@@ -294,20 +295,20 @@
            <div className="flex"><span className="w-24">Due Date</span><span className="font-bold">: {formatDate(invoice.due_date)}</span></div>
          </div>
          <div className="space-y-1">
-           <div className="flex"><span className="w-28">Place Of Supply</span><span className="font-bold">: {client?.billing_state || 'Telangana'} (36)</span></div>
+           <div className="flex"><span className="w-28">Place Of Supply</span><span className="font-bold">: {placeOfSupply} (36)</span></div>
            <div className="flex"><span className="w-28">Sales person</span><span className="font-bold">: {invoice.sales_person || 'Raghunath Gajula'}</span></div>
          </div>
        </div>
  
        <div className="grid grid-cols-2 gap-4 text-xs">
-         <div className="border border-border">
-           <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Bill To</div>
-           <div className="p-3"><p className="font-bold">{clientName}</p><p className="whitespace-pre-line text-muted-foreground">{clientAddress}</p>{clientGstin && <p className="font-semibold mt-1">GSTIN: {clientGstin}</p>}</div>
-         </div>
-         <div className="border border-border">
-           <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Ship To</div>
-           <div className="p-3"><p className="font-bold">{clientName}</p><p className="whitespace-pre-line text-muted-foreground">{clientAddress}</p>{clientGstin && <p className="font-semibold mt-1">GSTIN: {clientGstin}</p>}</div>
-         </div>
+          <div className="border border-border">
+            <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Bill To</div>
+            <div className="p-3"><p className="font-bold">{clientName}</p><p className="whitespace-pre-line text-muted-foreground">{clientAddress}</p>{clientGstin && <p className="font-semibold mt-1">GSTIN: {clientGstin}</p>}</div>
+          </div>
+          <div className="border border-border">
+            <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Ship To</div>
+            <div className="p-3"><p className="font-bold">{shipTo.name}</p><p className="whitespace-pre-line text-muted-foreground">{shipToAddress}</p>{shipToGstin && <p className="font-semibold mt-1">GSTIN: {shipToGstin}</p>}</div>
+          </div>
        </div>
  
        {campaign && <div className="text-xs font-bold text-primary">Campaign: {campaign.campaign_name} ({formatDate(campaign.start_date)} to {formatDate(campaign.end_date)})</div>}

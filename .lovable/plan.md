@@ -1,62 +1,46 @@
 
 
-## Plan: Fix Duplicate Key Constraint Error on Monthly Invoice Re-generation
+## Plan: Ensure Invoice FY Determination Uses Only Invoice Date
 
-### Problem
-Campaign CAM-202604-0016 has a **Cancelled** invoice (`INV/2026-27/0012`) for `billing_month = '2026-04'`. When trying to generate a new invoice for the same month, the unique constraint `idx_invoices_unique_monthly_billing` blocks the insert because it doesn't exclude cancelled/void invoices.
+### Current State (Audit Results)
 
-### Root Cause
-The database unique index:
-```sql
-CREATE UNIQUE INDEX idx_invoices_unique_monthly_billing 
-ON public.invoices (company_id, campaign_id, billing_month) 
-WHERE (campaign_id IS NOT NULL AND billing_month IS NOT NULL AND company_id IS NOT NULL)
-```
-...does **not** filter out `Cancelled` or `Void` status invoices. So a cancelled invoice still "occupies" the unique slot.
+After thorough investigation, the core FY logic is **already correct**:
 
-### Fix (2 changes)
+- **DB RPCs** (`finalize_invoice_number`, `preview_next_invoice_number`): Both derive FY from `invoice_date` using month >= 4 logic. Correct.
+- **`getFinancialYear()` utility** (`src/utils/finance.ts`): Uses `getMonth() >= 3` (April+). Correct.
+- **Invoice List FY filter**: Filters by `invoice_date`, not `due_date`. Correct.
+- **Invoice Detail page**: Passes `invoice_date` to preview RPC. Correct.
+- **`InvoiceMetadataEditor`**: On save → `onUpdate` → refetch → re-preview with new date. Correct.
 
-**1. Database Migration — Update the unique index to exclude cancelled/void invoices**
+### What Needs Fixing
 
-```sql
-DROP INDEX IF EXISTS idx_invoices_unique_monthly_billing;
+**1. Add visible FY label on Invoice Detail page** — Currently the page shows no explicit FY label, so users can't confirm which FY the invoice belongs to. Add a clear "FY 2025-26" badge next to the invoice number/preview.
 
-CREATE UNIQUE INDEX idx_invoices_unique_monthly_billing 
-ON public.invoices (company_id, campaign_id, billing_month) 
-WHERE (
-  campaign_id IS NOT NULL 
-  AND billing_month IS NOT NULL 
-  AND company_id IS NOT NULL 
-  AND status NOT IN ('Cancelled', 'Void')
-);
-```
+**2. Refresh preview number immediately when invoice date changes** — Currently requires a full save+refetch cycle. Add immediate preview refresh when the date field changes in `InvoiceMetadataEditor`.
 
-This is safe — it only loosens the constraint to allow re-generation after cancellation.
+**3. Hardcoded FY boundary in AssetCycleBillingPreview** — The smart date logic uses `new Date(2026, 3, 1)` which is hardcoded to 2026. Replace with dynamic FY boundary calculation using `getFinancialYear()`.
 
-**2. `src/components/campaigns/billing/CampaignBillingTab.tsx` — Fix app-level duplicate check**
+### Files to Change
 
-Update the `existingInvoice` check (around line 354) to exclude `Cancelled` and `Void` statuses, so the app doesn't try to update a cancelled invoice:
+| File | Change |
+|------|--------|
+| `src/pages/InvoiceDetail.tsx` | Add FY label badge derived from `invoice.invoice_date` using `getFinancialYear()`. Expose `fetchPreviewNumber` so metadata editor can trigger immediate refresh. |
+| `src/components/invoices/InvoiceMetadataEditor.tsx` | Accept optional `onInvoiceDateChange` callback; call it on date change to trigger preview refresh before save. |
+| `src/components/campaigns/billing/AssetCycleBillingPreview.tsx` | Replace hardcoded `new Date(2026, 3, 1)` with dynamic FY start calculation. |
 
-```typescript
-const existingInvoice = existingInvoices
-  .filter(inv => !['Cancelled', 'Void'].includes(inv.status))
-  .find(inv => {
-    if (inv.billing_month) {
-      return inv.billing_month === period.monthKey;
-    }
-    const invStart = inv.invoice_period_start;
-    const periodStartStr = format(period.periodStart, 'yyyy-MM-dd');
-    return invStart === periodStartStr;
-  });
-```
+### What Remains Backward Compatible
 
-### What Stays Unchanged
-- No existing invoice data modified
-- Asset Cycle Billing untouched
-- Single Invoice mode untouched
-- No finance calculations changed
+- No DB migration needed — RPCs already correct
+- No changes to finalized invoice numbers
+- No changes to stored totals/tax values
+- No changes to `getFinancialYear()` utility
+- Invoice List FY filtering unchanged (already uses `invoice_date`)
+- `due_date` is never used for FY determination anywhere
 
-### Files Changed
-- Database migration (new index definition)
-- `src/components/campaigns/billing/CampaignBillingTab.tsx` (duplicate check filter)
+### Verification Points
+
+- Invoice Date = 2026-03-31 → FY badge shows "2025-26", preview shows `INV/2025-26/XXXX`
+- Invoice Date = 2026-04-01 → FY badge shows "2026-27", preview shows `INV/2026-27/XXXX`
+- Changing only Due Date does not change FY badge or preview number
+- Changing Invoice Date across FY boundary updates preview immediately
 

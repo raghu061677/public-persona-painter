@@ -34,6 +34,7 @@ import { InvoiceMetadataEditor } from "@/components/invoices/InvoiceMetadataEdit
 import { CreditNotesList } from "@/components/finance/CreditNotesList";
 import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
 import { InvoiceAuditTimeline } from "@/components/invoices/InvoiceAuditTimeline";
+import { InvoiceRegistrationInfo } from "@/components/invoices/InvoiceRegistrationInfo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {

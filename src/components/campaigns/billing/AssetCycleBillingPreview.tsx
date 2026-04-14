@@ -36,6 +36,7 @@ interface CycleInvoice {
   cycle_end_date: string | null;
   total_amount: number;
   status: string;
+  is_draft?: boolean;
 }
 
 interface AssetCycleBillingPreviewProps {

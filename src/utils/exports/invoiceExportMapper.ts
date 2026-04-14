@@ -91,7 +91,7 @@ export function normalizeInvoice(row: any, index: number, companyName?: string):
   const periodEnd = fmtDate(row.invoice_period_end || row.billing_to || row.end_date);
   const displayPeriod = periodStart && periodEnd ? `${periodStart} to ${periodEnd}` : periodStart || periodEnd || "";
 
-  const gstin = row.client_gstin_snapshot || row.client_gst_number || row.client_gstin || row.gstin || "";
+  const gstin = row.registration_gstin_snapshot || row.client_gstin_snapshot || row.client_gst_number || row.client_gstin || row.gstin || "";
 
   let overdueDays = 0;
   let overdueAmount = 0;

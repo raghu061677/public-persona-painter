@@ -16,6 +16,7 @@ import {
   EXPORT_TYPE_FILE_SLUGS,
   EXPORT_TYPE_SHEET_NAMES,
   GST_INVOICEWISE_KEYS,
+  GSTR1_SALES_REGISTER_KEYS,
   OUTSTANDING_DETAIL_KEYS,
   type ExportType,
   type DateBasis,
@@ -208,7 +209,8 @@ async function exportDetailedPdf(
     .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
     .filter(Boolean) as InvoiceExcelColumn[];
 
-  const orientation = columns.length > 8 ? "l" : "p";
+  const isGstr1 = exportType === "gstr1_sales_register";
+  const orientation = isGstr1 ? "l" : (columns.length > 8 ? "l" : "p");
   const doc = new jsPDF({ orientation, unit: "pt", format: "a4" });
   const themeRgb = hexToRgb(branding.themeColor);
   const mL = 36; const mR = 36;
@@ -229,8 +231,8 @@ async function exportDetailedPdf(
   autoTable(doc, {
     startY,
     head, body,
-    styles: { font: "helvetica", fontSize: 8, cellPadding: 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
-    headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+    styles: { font: "helvetica", fontSize: isGstr1 ? 7 : 8, cellPadding: isGstr1 ? 3 : 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
+    headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: isGstr1 ? 7 : 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: mL, right: mR },
     didParseCell: (data) => {
@@ -242,6 +244,16 @@ async function exportDetailedPdf(
   });
 
   renderReconciliationBlock(doc, normalized, branding);
+
+  // GSTR-1 footer note
+  if (isGstr1) {
+    const pageH = doc.internal.pageSize.getHeight();
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFontSize(7);
+    doc.setTextColor(130, 130, 130);
+    doc.text("System Generated Report — For GST Reconciliation Use", pageW / 2, pageH - 28, { align: "center" });
+  }
+
   addPageNumbers(doc, branding);
   return doc;
 }
@@ -329,6 +341,7 @@ export async function exportInvoicePdf(
 
   if (isDetailedExportType(exportType)) {
     const keys = exportType === "gst_invoicewise" ? GST_INVOICEWISE_KEYS
+      : exportType === "gstr1_sales_register" ? GSTR1_SALES_REGISTER_KEYS
       : (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") ? OUTSTANDING_DETAIL_KEYS
       : selectedKeys;
     doc = await exportDetailedPdf(normalized, keys, branding, exportType, periodLabel, basisLabel);

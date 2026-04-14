@@ -124,10 +124,10 @@ export default function ClientLedger() {
         </div>
         {selectedClientId && selectedClient && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => exportClientLedgerExcel(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: selectedClient.gst_number })}>
+            <Button size="sm" variant="outline" onClick={() => exportClientLedgerExcel(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: clientGstQuery.data || selectedClient.gst_number })}>
               <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
             </Button>
-            <Button size="sm" variant="outline" onClick={() => exportClientLedgerPdf(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: selectedClient.gst_number }, company)}>
+            <Button size="sm" variant="outline" onClick={() => exportClientLedgerPdf(filteredEntries, summary, outstanding, { name: selectedClient.name, gstin: clientGstQuery.data || selectedClient.gst_number }, company)}>
               <Download className="h-4 w-4 mr-1.5" /> PDF
             </Button>
           </div>

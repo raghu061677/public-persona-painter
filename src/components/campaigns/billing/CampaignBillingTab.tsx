@@ -16,6 +16,7 @@ import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
+import { getFYRange } from "@/utils/finance";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,7 @@ export function CampaignBillingTab({
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [lockedBillingMode, setLockedBillingMode] = useState<BillingMode | null>(null);
   const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
    
    // Only use actual manual_discount_amount from database - no auto-derivation
@@ -192,16 +194,24 @@ export function CampaignBillingTab({
         setPaymentSummaries({});
       }
       
-      // Auto-detect billing mode based on existing invoices
-      if (data && data.length > 0) {
-        const hasAssetCycle = data.some((inv: any) => inv.billing_mode === 'asset_cycle');
-        const hasSingleInvoice = data.some(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
-        const hasMonthlyInvoices = data.some(inv => inv.is_monthly_split === true);
+      // Auto-detect and lock billing mode based on existing non-cancelled invoices
+      const activeInvoices = (data || []).filter(inv => inv.status !== 'Cancelled');
+      if (activeInvoices.length > 0) {
+        const hasAssetCycle = activeInvoices.some((inv: any) => inv.billing_mode === 'asset_cycle');
+        const hasMonthly = activeInvoices.some((inv: any) => inv.billing_mode === 'calendar_monthly' || inv.is_monthly_split === true);
+        const hasSingle = activeInvoices.some((inv: any) => inv.billing_mode === 'single_invoice' || (!inv.billing_mode && inv.is_monthly_split !== true));
         if (hasAssetCycle) {
           setBillingMode('asset_cycle');
-        } else if (hasSingleInvoice && !hasMonthlyInvoices) {
+          setLockedBillingMode('asset_cycle');
+        } else if (hasMonthly) {
+          setBillingMode('monthly');
+          setLockedBillingMode('monthly');
+        } else if (hasSingle) {
           setBillingMode('single');
+          setLockedBillingMode('single');
         }
+      } else {
+        setLockedBillingMode(null);
       }
     } catch (err) {
       console.error('Error fetching invoices:', err);
@@ -324,14 +334,18 @@ export function CampaignBillingTab({
         });
       }
 
-      // Smart date: backdate to FY 2025-26 if campaign ended before Apr 1, 2026
-      const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
+      // Smart date: backdate to previous FY if campaign ended before current FY start
+      const currentFY = getFYRange(new Date());
       const campaignEnd = new Date(campaign.end_date);
-      const invoiceDate = campaignEnd < fy2627Start
-        ? new Date(2026, 2, 31)  // March 31, 2026
+      const invoiceDate = campaignEnd < currentFY.start
+        ? new Date(currentFY.start.getFullYear(), currentFY.start.getMonth() - 1, new Date(currentFY.start.getFullYear(), currentFY.start.getMonth(), 0).getDate())
         : new Date();
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
+
+      // GST mode
+      const isIGST = gstMode === 'IGST';
+      const gstHalf = totals.gstRate / 2;
 
       // Create invoice
       const { error } = await supabase.from('invoices').insert({
@@ -344,13 +358,24 @@ export function CampaignBillingTab({
         due_date: format(dueDate, 'yyyy-MM-dd'),
         invoice_period_start: campaign.start_date,
         invoice_period_end: campaign.end_date,
+        billing_mode: 'single_invoice',
+        billing_window_key: campaign.start_date,
         is_monthly_split: false,
         sub_total: totals.taxableAmount,
         gst_percent: totals.gstRate,
         gst_amount: totals.gstAmount,
         total_amount: totals.grandTotal,
         balance_due: totals.grandTotal,
+        tax_type: isIGST ? 'igst' : 'cgst_sgst',
+        gst_mode: gstMode,
+        cgst_percent: isIGST ? 0 : gstHalf,
+        sgst_percent: isIGST ? 0 : gstHalf,
+        igst_percent: isIGST ? totals.gstRate : 0,
+        cgst_amount: isIGST ? 0 : totals.gstAmount / 2,
+        sgst_amount: isIGST ? 0 : totals.gstAmount / 2,
+        igst_amount: isIGST ? totals.gstAmount : 0,
         status: 'Draft',
+        is_draft: true,
         items,
         notes: `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,
@@ -509,6 +534,8 @@ export function CampaignBillingTab({
           invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
           invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
           billing_month: period.monthKey,
+          billing_mode: 'calendar_monthly',
+          billing_window_key: period.monthKey,
           is_monthly_split: true,
           sub_total: amounts.subtotal,
           gst_percent: totals.gstRate,
@@ -599,16 +626,25 @@ export function CampaignBillingTab({
       {(
       <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Billing Type</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              Billing Type
+              {lockedBillingMode && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  🔒 Locked — invoices already generated
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup 
               value={billingMode} 
-              onValueChange={(val) => setBillingMode(val as BillingMode)}
+              onValueChange={(val) => {
+                if (!lockedBillingMode) setBillingMode(val as BillingMode);
+              }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
-                <RadioGroupItem value="monthly" id="monthly" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg flex-1 ${lockedBillingMode && lockedBillingMode !== 'monthly' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="monthly" id="monthly" disabled={!!lockedBillingMode && lockedBillingMode !== 'monthly'} />
                 <Label htmlFor="monthly" className="flex-1 cursor-pointer">
                   <div className="font-medium">Calendar Monthly</div>
                   <div className="text-sm text-muted-foreground">
@@ -616,8 +652,8 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
-                <RadioGroupItem value="single" id="single" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg flex-1 ${lockedBillingMode && lockedBillingMode !== 'single' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="single" id="single" disabled={!!lockedBillingMode && lockedBillingMode !== 'single'} />
                 <Label htmlFor="single" className="flex-1 cursor-pointer">
                   <div className="font-medium">Single Invoice</div>
                   <div className="text-sm text-muted-foreground">
@@ -625,8 +661,8 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1 border-dashed">
-                <RadioGroupItem value="asset_cycle" id="asset_cycle" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg border-dashed flex-1 ${lockedBillingMode && lockedBillingMode !== 'asset_cycle' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="asset_cycle" id="asset_cycle" disabled={!!lockedBillingMode && lockedBillingMode !== 'asset_cycle'} />
                 <Label htmlFor="asset_cycle" className="flex-1 cursor-pointer">
                   <div className="font-medium flex items-center gap-2">
                     Asset Cycle Billing

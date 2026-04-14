@@ -7445,6 +7445,7 @@ export type Database = {
           billing_month: string | null
           billing_period_id: string | null
           billing_state_code_snapshot: string | null
+          billing_window_key: string | null
           campaign_id: string | null
           cancelled_at: string | null
           cess_amount: number
@@ -7523,6 +7524,7 @@ export type Database = {
           billing_month?: string | null
           billing_period_id?: string | null
           billing_state_code_snapshot?: string | null
+          billing_window_key?: string | null
           campaign_id?: string | null
           cancelled_at?: string | null
           cess_amount?: number
@@ -7601,6 +7603,7 @@ export type Database = {
           billing_month?: string | null
           billing_period_id?: string | null
           billing_state_code_snapshot?: string | null
+          billing_window_key?: string | null
           campaign_id?: string | null
           cancelled_at?: string | null
           cess_amount?: number
@@ -15062,7 +15065,10 @@ export type Database = {
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_expense_no: { Args: { p_company_id?: string }; Returns: string }
-      generate_invoice_id: { Args: { p_gst_rate?: number }; Returns: string }
+      generate_invoice_id: {
+        Args: { p_gst_rate?: number; p_invoice_date?: string }
+        Returns: string
+      }
       generate_invoice_number:
         | {
             Args: { p_company_id: string; p_invoice_date?: string }

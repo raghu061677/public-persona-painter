@@ -45,6 +45,7 @@ type SortDirection = 'asc' | 'desc';
 export default function InvoicesList() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportMode, setExportMode] = useState<"excel" | "pdf">("excel");
+  const [exportInitialType, setExportInitialType] = useState<"detailed" | "gstr1_sales_register">("detailed");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();
@@ -431,7 +432,7 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setExportMode("excel"); setShowExportDialog(true); }}
+              onClick={() => { setExportMode("excel"); setExportInitialType("detailed"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export Excel
@@ -439,10 +440,19 @@ export default function InvoicesList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setExportMode("pdf"); setShowExportDialog(true); }}
+              onClick={() => { setExportMode("pdf"); setExportInitialType("detailed"); setShowExportDialog(true); }}
               className="gap-1.5"
             >
               Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setExportMode("excel"); setExportInitialType("gstr1_sales_register"); setShowExportDialog(true); }}
+              className="gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+            >
+              <FileText className="h-4 w-4" />
+              Export GSTR-1
             </Button>
             <Button
               variant="outline"

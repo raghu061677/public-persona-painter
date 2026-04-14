@@ -4,7 +4,8 @@
  import { formatDate } from '@/utils/plans';
  import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
  import { getTermsFromCompany } from '@/lib/terms/standardTerms';
- import { prorateInvoiceLineItems } from '@/lib/invoices/prorateLineItems';
+  import { prorateInvoiceLineItems } from '@/lib/invoices/prorateLineItems';
+  import { resolveBillTo, resolveShipTo, resolvePlaceOfSupply as resolvePosHelper } from '@/lib/invoices/templates/registrationAddressHelper';
  
  interface InvoiceTemplateZohoProps {
    invoiceId: string;
@@ -259,7 +260,6 @@
     const totalTdsAmount = invoice.total_tds_amount || 0;
     const lastPaymentDate = invoice.last_payment_date;
     // --- Phase 4D: Registration-aware address resolution ---
-    const { resolveBillTo, resolveShipTo, resolveGstin: resolveGstinHelper, resolvePlaceOfSupply: resolvePosHelper } = await import('@/lib/invoices/templates/registrationAddressHelper');
     const billTo = resolveBillTo({ invoice, client });
     const shipToResult = resolveShipTo({ invoice, client }, billTo);
     const shipTo = shipToResult.address;

@@ -109,7 +109,7 @@ export function BillingSummaryCard({
         {/* Financial Breakdown - Matches Financial Summary exactly */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Display Cost</span>
+            <span className="text-muted-foreground">Final Amount (Before GST)</span>
             <span className="font-medium">{formatCurrency(totals.displayCost)}</span>
           </div>
           
@@ -207,7 +207,7 @@ export function BillingSummaryCard({
                 <span className="font-medium ml-2">{totals.totalMonths}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Monthly Rent:</span>
+                <span className="text-muted-foreground">Monthly Amount:</span>
                 <span className="font-medium ml-2">{formatCurrency(totals.monthlyDisplayRent)}</span>
               </div>
             </div>

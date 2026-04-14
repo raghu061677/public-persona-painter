@@ -101,7 +101,7 @@ export function MonthlyBillingScheduleTable({
               </div>
             </TableHead>
             <TableHead>Period</TableHead>
-            <TableHead className="text-right">Base Rent</TableHead>
+            <TableHead className="text-right">Client Approved Amount</TableHead>
             <TableHead className="text-center">One-Time Charges</TableHead>
             <TableHead className="text-right">GST</TableHead>
             <TableHead className="text-right">Total</TableHead>

@@ -81,6 +81,7 @@ export default function PlanEdit() {
     id: "",
     client_id: "",
     client_name: "",
+    client_registration_id: "" as string,
     plan_name: "",
     plan_type: "Quotation" as "Quotation" | "Proposal" | "Estimate",
     start_date: new Date(),
@@ -96,6 +97,9 @@ export default function PlanEdit() {
     manual_discount_reason: "",
     quotation_validity_days: 7,
   });
+
+  // Client registrations hook
+  const { registrations, defaultRegistration } = useClientRegistrations(formData.client_id || null);
 
   useEffect(() => {
     fetchClients();

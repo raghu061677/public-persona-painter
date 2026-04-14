@@ -565,7 +565,6 @@ export function CampaignBillingTab({
                 <Label htmlFor="asset_cycle" className="flex-1 cursor-pointer">
                   <div className="font-medium flex items-center gap-2">
                     Asset Cycle Billing
-                    <Badge variant="secondary" className="text-[10px]">Preview</Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     30-day cycles per asset using final negotiated price
@@ -758,12 +757,22 @@ export function CampaignBillingTab({
         </Card>
       )}
 
-      {/* Asset Cycle Billing Preview */}
+      {/* Asset Cycle Billing */}
       {billingMode === 'asset_cycle' && (
         <AssetCycleBillingPreview
           campaignAssets={campaignAssets}
           gstPercent={totals.gstRate}
           campaignEndDate={campaign.end_date}
+          campaignId={campaign.id}
+          clientId={campaign.client_id}
+          clientName={campaign.client_name}
+          companyId={campaign.company_id}
+          campaignName={campaign.campaign_name}
+          taxType={campaign.tax_type}
+          onInvoiceGenerated={() => {
+            fetchExistingInvoices();
+            onRefresh?.();
+          }}
         />
       )}
 

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
-import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber } from "@/utils/finance";
+import { formatINR, getInvoiceStatusColor, isDraftInvoiceId, finalizeInvoiceNumber, getFinancialYear } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { InvoicePDFExport } from "@/components/invoices/InvoicePDFExport";
 import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPanel";
@@ -337,6 +337,11 @@ export default function InvoiceDetail() {
                   invoice.id
                 )}
                 {isFinalized && <ShieldCheck className="h-5 w-5 text-green-600" />}
+                {invoice.invoice_date && (
+                  <Badge variant="outline" className="text-xs font-normal ml-2">
+                    FY {getFinancialYear(new Date(invoice.invoice_date))}
+                  </Badge>
+                )}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {isDraft && <span className="text-xs font-mono mr-2">({invoice.id})</span>}
@@ -445,6 +450,11 @@ export default function InvoiceDetail() {
               poDate={invoice.client_po_date || ''}
               dueDate={invoice.due_date || ''}
               onUpdate={fetchInvoice}
+              onInvoiceDateChange={(newDate) => {
+                if (isDraft && invoice.company_id) {
+                  fetchPreviewNumber(invoice.company_id, invoice.gst_percent, newDate);
+                }
+              }}
             />
           </TabsContent>
 

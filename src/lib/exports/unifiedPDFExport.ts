@@ -9,6 +9,7 @@ import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDura
 import { resolveExportSalesperson, resolvePaymentTerms } from '@/lib/utils/exportMetadata';
 
 import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
+import { resolveExportClient } from './resolveExportClient';
 
 interface ExportData {
   plan: any;
@@ -19,12 +20,13 @@ interface ExportData {
 // ============= RELEASE ORDER BRIDGE =============
 
 async function generateROFromPlanData(plan: any, planItems: any[], options: ExportOptions): Promise<Blob> {
-  // Fetch client
-  const { data: clientData } = await supabase
+  // Fetch client (registration-aware)
+  const { data: rawClientData } = await supabase
     .from('clients')
     .select('*')
     .eq('id', plan.client_id)
     .single();
+  const clientData = await resolveExportClient(plan, rawClientData);
 
   // Fetch client contacts
   const { data: clientContacts } = await supabase
@@ -206,12 +208,13 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
 
   // If user selected the photo-rich format, keep the legacy generator (it has QR + images).
   if (options.format === 'with_photos') {
-    // Fetch client details
-    const { data: clientData } = await supabase
+    // Fetch client details (registration-aware)
+    const { data: rawClientData2 } = await supabase
       .from('clients')
       .select('*')
       .eq('id', plan.client_id)
       .single();
+    const clientData = await resolveExportClient(plan, rawClientData2);
 
     // Fetch user details for POC
     const { data: userData } = await supabase
@@ -250,12 +253,13 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     }
   };
 
-  // Fetch client + contacts (for Point of Contact)
-  const { data: clientData } = await supabase
+  // Fetch client + contacts (for Point of Contact) — registration-aware
+  const { data: rawClientData3 } = await supabase
     .from('clients')
     .select('*')
     .eq('id', plan.client_id)
     .single();
+  const clientData = await resolveExportClient(plan, rawClientData3);
 
   const { data: clientContacts } = await supabase
     .from('client_contacts')

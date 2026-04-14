@@ -272,7 +272,9 @@ export default function PlanNew() {
         ...prev,
         client_id: clientId,
         client_name: client.name,
+        client_registration_id: "", // Reset on client change; auto-select will fire via effect
       }));
+      setManualTaxOverride(false);
     }
   };
 

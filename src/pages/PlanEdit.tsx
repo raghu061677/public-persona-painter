@@ -186,6 +186,7 @@ export default function PlanEdit() {
         id: plan.id,
         client_id: plan.client_id,
         client_name: plan.client_name,
+        client_registration_id: (plan as any).client_registration_id || "",
         plan_name: plan.plan_name,
         plan_type: plan.plan_type,
         start_date: new Date(plan.start_date),

@@ -59,6 +59,7 @@ interface InvoiceRecord {
 }
 
 type BillingMode = 'monthly' | 'single' | 'asset_cycle';
+type GSTMode = 'CGST_SGST' | 'IGST';
 
 export function CampaignBillingTab({
   campaign,
@@ -74,6 +75,7 @@ export function CampaignBillingTab({
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
    
    // Only use actual manual_discount_amount from database - no auto-derivation
    const storedDiscount = Number(campaign.manual_discount_amount) || 0;
@@ -83,6 +85,52 @@ export function CampaignBillingTab({
    useEffect(() => {
      setLocalDiscount(storedDiscount);
    }, [storedDiscount]);
+
+  // Determine GST mode (IGST vs CGST+SGST) using 3-tier priority
+  useEffect(() => {
+    (async () => {
+      // Priority 1: campaign's saved tax_type
+      if (campaign.tax_type === 'igst') { setGstMode('IGST'); return; }
+      if (campaign.tax_type === 'cgst_sgst') { setGstMode('CGST_SGST'); return; }
+
+      // Priority 2: registration-aware billing state
+      let billingState = '';
+      const regId = (campaign as any).client_registration_id;
+      if (regId) {
+        const { data: regData } = await supabase
+          .from('client_registrations')
+          .select('billing_state')
+          .eq('id', regId)
+          .maybeSingle();
+        billingState = regData?.billing_state || '';
+      }
+
+      // Priority 3: fallback to client billing_state
+      if (!billingState && campaign.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('billing_state')
+          .eq('id', campaign.client_id)
+          .maybeSingle();
+        billingState = clientData?.billing_state || '';
+      }
+
+      // Compare with company state
+      if (campaign.company_id && billingState) {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('state')
+          .eq('id', campaign.company_id)
+          .maybeSingle();
+        const companyState = companyData?.state || 'Telangana';
+        if (billingState.toLowerCase().trim() !== companyState.toLowerCase().trim()) {
+          setGstMode('IGST');
+        } else {
+          setGstMode('CGST_SGST');
+        }
+      }
+    })();
+  }, [campaign.tax_type, campaign.client_id, campaign.company_id]);
 
   // Use single source of truth calculator
   const totals = computeCampaignTotals({
@@ -445,9 +493,8 @@ export function CampaignBillingTab({
         // Generate draft invoice ID - permanent number assigned on finalization
         const invoiceId = generateDraftInvoiceId();
 
-        // Determine tax type from campaign — IGST for inter-state, CGST+SGST for intra-state
-        const isIGST = campaign.tax_type === 'igst';
-        const gstMode = isIGST ? 'IGST' : 'CGST_SGST';
+        // Use pre-determined GST mode from state (3-tier priority: campaign.tax_type → registration → client state)
+        const isIGST = gstMode === 'IGST';
         const gstHalf = totals.gstRate / 2;
 
         const { error } = await supabase.from('invoices').insert({

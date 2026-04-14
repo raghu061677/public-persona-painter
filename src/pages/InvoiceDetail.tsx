@@ -388,6 +388,9 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
+        {/* Phase 4B: Registration context when available */}
+        <InvoiceRegistrationInfo invoice={invoice} />
+
         <Tabs defaultValue="preview" className="w-full">
           <TabsList>
             <TabsTrigger value="preview">Preview</TabsTrigger>

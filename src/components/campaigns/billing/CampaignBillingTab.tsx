@@ -16,6 +16,7 @@ import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
+import { getFYRange } from "@/utils/finance";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -333,14 +334,18 @@ export function CampaignBillingTab({
         });
       }
 
-      // Smart date: backdate to FY 2025-26 if campaign ended before Apr 1, 2026
-      const fy2627Start = new Date(2026, 3, 1); // April 1, 2026
+      // Smart date: backdate to previous FY if campaign ended before current FY start
+      const currentFY = getFYRange(new Date());
       const campaignEnd = new Date(campaign.end_date);
-      const invoiceDate = campaignEnd < fy2627Start
-        ? new Date(2026, 2, 31)  // March 31, 2026
+      const invoiceDate = campaignEnd < currentFY.start
+        ? new Date(currentFY.start.getFullYear(), currentFY.start.getMonth() - 1, new Date(currentFY.start.getFullYear(), currentFY.start.getMonth(), 0).getDate())
         : new Date();
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
+
+      // GST mode
+      const isIGST = gstMode === 'IGST';
+      const gstHalf = totals.gstRate / 2;
 
       // Create invoice
       const { error } = await supabase.from('invoices').insert({
@@ -353,13 +358,24 @@ export function CampaignBillingTab({
         due_date: format(dueDate, 'yyyy-MM-dd'),
         invoice_period_start: campaign.start_date,
         invoice_period_end: campaign.end_date,
+        billing_mode: 'single_invoice',
+        billing_window_key: campaign.start_date,
         is_monthly_split: false,
         sub_total: totals.taxableAmount,
         gst_percent: totals.gstRate,
         gst_amount: totals.gstAmount,
         total_amount: totals.grandTotal,
         balance_due: totals.grandTotal,
+        tax_type: isIGST ? 'igst' : 'cgst_sgst',
+        gst_mode: gstMode,
+        cgst_percent: isIGST ? 0 : gstHalf,
+        sgst_percent: isIGST ? 0 : gstHalf,
+        igst_percent: isIGST ? totals.gstRate : 0,
+        cgst_amount: isIGST ? 0 : totals.gstAmount / 2,
+        sgst_amount: isIGST ? 0 : totals.gstAmount / 2,
+        igst_amount: isIGST ? totals.gstAmount : 0,
         status: 'Draft',
+        is_draft: true,
         items,
         notes: `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,

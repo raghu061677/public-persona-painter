@@ -108,13 +108,22 @@ export default function PlanEdit() {
     fetchCompanyState();
   }, [id]);
 
-  // Auto-detect tax type when client changes
+  // Auto-select default registration when registrations load (only if not already set)
+  useEffect(() => {
+    if (registrations.length > 0 && !formData.client_registration_id) {
+      const def = registrations.find(r => r.is_default) || registrations[0];
+      if (def) {
+        setFormData(prev => ({ ...prev, client_registration_id: def.id }));
+      }
+    }
+  }, [registrations]);
+
+  // Auto-detect tax type from selected registration vs company state
   useEffect(() => {
     if (!manualTaxOverride && formData.client_id && companyState) {
-      const client = clients.find(c => c.id === formData.client_id);
-      const clientState = client?.billing_state || "";
+      const reg = registrations.find(r => r.id === formData.client_registration_id);
+      const clientState = reg?.billing_state || clients.find(c => c.id === formData.client_id)?.billing_state || "";
       
-      // Normalize state names for comparison (case-insensitive, trimmed)
       const normalizedCompanyState = companyState.toLowerCase().trim();
       const normalizedClientState = clientState.toLowerCase().trim();
       
@@ -125,7 +134,7 @@ export default function PlanEdit() {
         setFormData(prev => ({ ...prev, tax_type: detectedTaxType }));
       }
     }
-  }, [formData.client_id, companyState, clients, manualTaxOverride]);
+  }, [formData.client_id, formData.client_registration_id, companyState, clients, registrations, manualTaxOverride]);
 
   const fetchCompanyState = async () => {
     try {

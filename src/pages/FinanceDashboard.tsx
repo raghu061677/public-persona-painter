@@ -116,7 +116,7 @@ export default function FinanceDashboard() {
       if (!map[key]) {
         map[key] = {
           client_name: inv.client_name || "Unknown",
-          gst_no: (inv as any).clients?.gst_number || "",
+          gst_no: (inv as any).registration_gstin_snapshot || (inv as any).client_gstin_snapshot || (inv as any).clients?.gst_number || "",
           invoice_count: 0,
           total_invoiced: 0,
           paid_amount: 0,

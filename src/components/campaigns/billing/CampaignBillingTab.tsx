@@ -445,6 +445,11 @@ export function CampaignBillingTab({
         // Generate draft invoice ID - permanent number assigned on finalization
         const invoiceId = generateDraftInvoiceId();
 
+        // Determine tax type from campaign — IGST for inter-state, CGST+SGST for intra-state
+        const isIGST = campaign.tax_type === 'igst';
+        const gstMode = isIGST ? 'IGST' : 'CGST_SGST';
+        const gstHalf = totals.gstRate / 2;
+
         const { error } = await supabase.from('invoices').insert({
           id: invoiceId,
           invoice_no: invoiceId,
@@ -463,6 +468,14 @@ export function CampaignBillingTab({
           gst_amount: amounts.gstAmount,
           total_amount: amounts.total,
           balance_due: amounts.total,
+          tax_type: isIGST ? 'igst' : 'cgst_sgst',
+          gst_mode: gstMode,
+          cgst_percent: isIGST ? 0 : gstHalf,
+          sgst_percent: isIGST ? 0 : gstHalf,
+          igst_percent: isIGST ? totals.gstRate : 0,
+          cgst_amount: isIGST ? 0 : amounts.gstAmount / 2,
+          sgst_amount: isIGST ? 0 : amounts.gstAmount / 2,
+          igst_amount: isIGST ? amounts.gstAmount : 0,
           status: 'Draft',
           is_draft: true,
           items,

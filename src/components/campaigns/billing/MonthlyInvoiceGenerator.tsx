@@ -666,6 +666,7 @@ export function MonthlyInvoiceGenerator({
         items,
         notes: `Monthly billing for ${campaign.campaign_name} - ${format(periodStart, 'MMMM yyyy')}`,
         created_by: userData.user.id,
+        ...regSnapshot,
       });
       
       if (invoiceError) throw invoiceError;

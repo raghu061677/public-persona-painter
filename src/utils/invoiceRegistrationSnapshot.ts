@@ -7,16 +7,20 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-function formatAddress(parts: (string | null | undefined)[]): string {
-  return parts.filter(Boolean).join(", ");
+function buildAddressObj(parts: Record<string, string | null | undefined>) {
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(parts)) {
+    if (v) clean[k] = v;
+  }
+  return Object.keys(clean).length > 0 ? clean : null;
 }
 
 interface RegistrationSnapshotFields {
   client_registration_id?: string;
   registration_label_snapshot?: string;
   registration_gstin_snapshot?: string;
-  registration_billing_address_snapshot?: string;
-  registration_shipping_address_snapshot?: string;
+  registration_billing_address_snapshot?: Record<string, string> | null;
+  registration_shipping_address_snapshot?: Record<string, string> | null;
   registration_state_snapshot?: string;
   registration_state_code_snapshot?: string;
 }
@@ -45,7 +49,7 @@ export async function buildRegistrationSnapshot(
   const { data: reg } = await supabase
     .from("client_registrations")
     .select(
-      "id, label, gstin, billing_address_line1, billing_address_line2, billing_city, billing_district, billing_state, billing_state_code, billing_pincode, billing_country, shipping_address_line1, shipping_address_line2, shipping_city, shipping_district, shipping_state, shipping_state_code, shipping_pincode, shipping_country, is_active"
+      "id, label, gstin, billing_address_line1, billing_address_line2, billing_city, billing_district, billing_state, billing_pincode, billing_country, shipping_address_line1, shipping_address_line2, shipping_city, shipping_district, shipping_state, shipping_pincode, shipping_country, state_code"
     )
     .eq("id", regId)
     .maybeSingle();
@@ -56,27 +60,25 @@ export async function buildRegistrationSnapshot(
     client_registration_id: reg.id,
     registration_label_snapshot: reg.label || undefined,
     registration_gstin_snapshot: reg.gstin || undefined,
-    registration_billing_address_snapshot:
-      formatAddress([
-        reg.billing_address_line1,
-        reg.billing_address_line2,
-        reg.billing_city,
-        reg.billing_district,
-        reg.billing_state,
-        reg.billing_pincode,
-        reg.billing_country,
-      ]) || undefined,
-    registration_shipping_address_snapshot:
-      formatAddress([
-        reg.shipping_address_line1,
-        reg.shipping_address_line2,
-        reg.shipping_city,
-        reg.shipping_district,
-        reg.shipping_state,
-        reg.shipping_pincode,
-        reg.shipping_country,
-      ]) || undefined,
+    registration_billing_address_snapshot: buildAddressObj({
+      line1: reg.billing_address_line1,
+      line2: reg.billing_address_line2,
+      city: reg.billing_city,
+      district: reg.billing_district,
+      state: reg.billing_state,
+      pincode: reg.billing_pincode,
+      country: reg.billing_country,
+    }),
+    registration_shipping_address_snapshot: buildAddressObj({
+      line1: reg.shipping_address_line1,
+      line2: reg.shipping_address_line2,
+      city: reg.shipping_city,
+      district: reg.shipping_district,
+      state: reg.shipping_state,
+      pincode: reg.shipping_pincode,
+      country: reg.shipping_country,
+    }),
     registration_state_snapshot: reg.billing_state || undefined,
-    registration_state_code_snapshot: reg.billing_state_code || undefined,
+    registration_state_code_snapshot: reg.state_code || undefined,
   };
 }

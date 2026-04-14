@@ -83,9 +83,26 @@ const deriveTaxable = (row: any): number => {
 export function normalizeInvoice(row: any, index: number, companyName?: string): NormalizedInvoice {
   const taxable = deriveTaxable(row);
   const isInterState = isIgst(row);
-  const igstAmt = isInterState ? (row.igst_amount || row.gst_amount || 0) : 0;
-  const cgstAmt = isInterState ? 0 : (row.cgst_amount || 0);
-  const sgstAmt = isInterState ? 0 : (row.sgst_amount || 0);
+  const totalGst = row.gst_amount || 0;
+
+  // IGST: use igst_amount if present, else full gst_amount for inter-state
+  const igstAmt = isInterState ? (row.igst_amount ?? totalGst) : 0;
+
+  // CGST/SGST: use explicit fields if present, else derive from gst_amount / 2 for intra-state
+  let cgstAmt = 0;
+  let sgstAmt = 0;
+  if (!isInterState) {
+    const hasCgst = row.cgst_amount != null && row.cgst_amount > 0;
+    const hasSgst = row.sgst_amount != null && row.sgst_amount > 0;
+    if (hasCgst || hasSgst) {
+      cgstAmt = row.cgst_amount || 0;
+      sgstAmt = row.sgst_amount || 0;
+    } else if (totalGst > 0) {
+      // Derive from gst_amount when individual components are missing
+      cgstAmt = Math.round((totalGst / 2) * 100) / 100;
+      sgstAmt = Math.round((totalGst / 2) * 100) / 100;
+    }
+  }
 
   const periodStart = fmtDate(row.invoice_period_start || row.billing_from || row.start_date);
   const periodEnd = fmtDate(row.invoice_period_end || row.billing_to || row.end_date);
@@ -775,8 +792,13 @@ export function getGSTR1ValidationFlags(inv: NormalizedInvoice): string[] {
   if (!inv.invoice_date) warnings.push("Missing Invoice Date");
   if (!inv.campaign_display) warnings.push("Missing Campaign/Display Name");
   if (inv.igst > 0 && (inv.cgst > 0 || inv.sgst > 0)) warnings.push("IGST row has CGST/SGST");
-  if ((inv.cgst > 0 || inv.sgst > 0) && inv.igst > 0) warnings.push("CGST/SGST row has IGST");
   if (inv.taxable_value < 0) warnings.push("Negative Taxable Value");
+  // Detect zero CGST/SGST on a taxable intra-state invoice (derived from raw to catch DB issues)
+  const raw = inv.raw;
+  const isInterState = raw.tax_type === "igst" || raw.gst_mode === "igst" || raw.gst_mode === "IGST";
+  if (!isInterState && inv.rate_percent > 0 && inv.taxable_value > 0 && inv.cgst === 0 && inv.sgst === 0 && (raw.gst_amount || 0) === 0) {
+    warnings.push("Zero CGST/SGST on taxable local invoice");
+  }
   const expectedTax = inv.taxable_value * (inv.rate_percent / 100);
   const actualTax = inv.igst + inv.cgst + inv.sgst;
   if (inv.taxable_value > 0 && Math.abs(expectedTax - actualTax) > Math.max(2, inv.taxable_value * 0.005)) {

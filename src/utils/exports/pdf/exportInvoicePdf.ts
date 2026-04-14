@@ -12,6 +12,9 @@ import {
   getPeriodFileSlug,
   getPeriodLabel,
   checkReconciliation,
+  getGSTR1ValidationFlags,
+  getGSTR1ExclusionCounts,
+  normalizeInvoice,
   EXPORT_TYPE_LABELS,
   EXPORT_TYPE_FILE_SLUGS,
   EXPORT_TYPE_SHEET_NAMES,
@@ -64,7 +67,7 @@ async function loadLogoBase64(url: string): Promise<string | null> {
   } catch { return null; }
 }
 
-const fmtINR = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtINR = (n: number) => `Rs. ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // ─── Shared PDF Header ─────────────────────────────────────────────────
 async function renderHeader(
@@ -126,6 +129,100 @@ async function renderHeader(
   return y + 12;
 }
 
+// ─── GSTR-1 Premium Header ────────────────────────────────────────────
+async function renderGSTR1Header(
+  doc: jsPDF,
+  branding: InvoicePdfBranding,
+  normalized: NormalizedInvoice[],
+  periodLabel: string,
+): Promise<number> {
+  const pageW = doc.internal.pageSize.getWidth();
+  const themeRgb = hexToRgb(branding.themeColor);
+  const mL = 36; const mR = 36;
+  const contentW = pageW - mL - mR;
+  let y = 28;
+
+  // ── Top bar accent ──
+  doc.setFillColor(themeRgb[0], themeRgb[1], themeRgb[2]);
+  doc.rect(0, 0, pageW, 6, "F");
+
+  // ── Logo + Company ──
+  let logoOffset = 0;
+  if (branding.logoUrl) {
+    try {
+      const b64 = branding.logoUrl.startsWith("data:") ? branding.logoUrl : await loadLogoBase64(branding.logoUrl);
+      if (b64) { doc.addImage(b64, "PNG", mL, y, 36, 36); logoOffset = 44; }
+    } catch { /* skip */ }
+  }
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(17, 24, 39);
+  doc.text(branding.companyName || "Company", mL + logoOffset, y + 14);
+  if (branding.gstin) {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+    doc.text(`GSTIN: ${branding.gstin}`, mL + logoOffset, y + 26);
+  }
+
+  // ── Right: Report title ──
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+  doc.setTextColor(themeRgb[0], themeRgb[1], themeRgb[2]);
+  doc.text("GSTR-1 Sales Register", pageW - mR, y + 12, { align: "right" });
+
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+  doc.text("GST Filing Report for CA / Auditor", pageW - mR, y + 24, { align: "right" });
+  doc.text(`Period: ${periodLabel || "All"}`, pageW - mR, y + 36, { align: "right" });
+  doc.text(`Generated: ${format(new Date(), "dd-MMM-yyyy HH:mm")}`, pageW - mR, y + 48, { align: "right" });
+
+  y += 56;
+
+  // ── Separator ──
+  doc.setDrawColor(themeRgb[0], themeRgb[1], themeRgb[2]);
+  doc.setLineWidth(1.5);
+  doc.line(mL, y, pageW - mR, y);
+  y += 14;
+
+  // ── Summary KPI Cards ──
+  const totalTaxable = normalized.reduce((s, r) => s + r.taxable_value, 0);
+  const totalIgst = normalized.reduce((s, r) => s + r.igst, 0);
+  const totalCgst = normalized.reduce((s, r) => s + r.cgst, 0);
+  const totalSgst = normalized.reduce((s, r) => s + r.sgst, 0);
+  const totalTax = totalIgst + totalCgst + totalSgst;
+  const grandTotal = normalized.reduce((s, r) => s + r.total_value, 0);
+
+  const cards = [
+    { label: "Invoices", value: String(normalized.length) },
+    { label: "Taxable Value", value: fmtINR(totalTaxable) },
+    { label: "IGST", value: fmtINR(totalIgst) },
+    { label: "CGST", value: fmtINR(totalCgst) },
+    { label: "SGST", value: fmtINR(totalSgst) },
+    { label: "Total Tax", value: fmtINR(totalTax) },
+    { label: "Grand Total", value: fmtINR(grandTotal) },
+  ];
+
+  const cardW = (contentW - (cards.length - 1) * 6) / cards.length;
+  const cardH = 36;
+
+  cards.forEach((card, i) => {
+    const cx = mL + i * (cardW + 6);
+
+    // Card background
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(cx, y, cardW, cardH, 3, 3, "FD");
+
+    // Label
+    doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(100, 116, 139);
+    doc.text(card.label, cx + cardW / 2, y + 12, { align: "center" });
+
+    // Value
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(17, 24, 39);
+    doc.text(card.value, cx + cardW / 2, y + 26, { align: "center" });
+  });
+
+  y += cardH + 14;
+  return y;
+}
+
 // ─── Reconciliation Block ──────────────────────────────────────────────
 function renderReconciliationBlock(doc: jsPDF, data: NormalizedInvoice[], branding: InvoicePdfBranding) {
   const themeRgb = hexToRgb(branding.themeColor);
@@ -182,21 +279,244 @@ function renderReconciliationBlock(doc: jsPDF, data: NormalizedInvoice[], brandi
   });
 }
 
+// ─── GSTR-1 Reconciliation Panel (Premium) ─────────────────────────────
+function renderGSTR1ReconciliationPanel(
+  doc: jsPDF,
+  normalized: NormalizedInvoice[],
+  allRawInvoices: any[],
+  branding: InvoicePdfBranding,
+  companyName: string,
+) {
+  const themeRgb = hexToRgb(branding.themeColor);
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const mL = 36; const mR = 36;
+  const contentW = pageW - mL - mR;
+
+  doc.addPage();
+  let y = 36;
+
+  // ── Section title ──
+  doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+  doc.setTextColor(themeRgb[0], themeRgb[1], themeRgb[2]);
+  doc.text("Reconciliation & Validation Summary", mL, y);
+  y += 6;
+  doc.setDrawColor(themeRgb[0], themeRgb[1], themeRgb[2]);
+  doc.setLineWidth(1);
+  doc.line(mL, y, pageW - mR, y);
+  y += 18;
+
+  // ── Exclusion Counts ──
+  const allNorm = allRawInvoices.map((r, i) => normalizeInvoice(r, i, companyName));
+  const exclusions = getGSTR1ExclusionCounts(allNorm);
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(17, 24, 39);
+  doc.text("Inclusion / Exclusion Breakdown", mL, y);
+  y += 16;
+
+  const exclItems = [
+    ["Included in Report", String(normalized.length), true],
+    ["Excluded: Draft Invoices", String(exclusions.drafts), false],
+    ["Excluded: Cancelled / Void", String(exclusions.cancelled), false],
+    ["Excluded: Zero-GST (Rate <= 0)", String(exclusions.zeroGst), false],
+    ["Excluded: INV-Z Sequence", String(exclusions.invZ), false],
+    ["Excluded: Zero Taxable Value", String(exclusions.zeroTaxable), false],
+  ] as [string, string, boolean][];
+
+  const halfW = contentW / 2;
+
+  exclItems.forEach(([label, value, bold]) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(bold ? 17 : 75, bold ? 24 : 85, bold ? 39 : 99);
+    doc.text(label, mL + 4, y);
+    doc.text(value, mL + halfW - 20, y, { align: "right" });
+    y += 14;
+  });
+
+  y += 10;
+
+  // ── Tax Summary ──
+  const recon = checkReconciliation(normalized);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(17, 24, 39);
+  doc.text("Tax Reconciliation", mL, y);
+  y += 16;
+
+  const taxItems: [string, string][] = [
+    ["Total Taxable Value", fmtINR(recon.taxableTotal)],
+    ["IGST Total", fmtINR(recon.igstTotal)],
+    ["CGST Total", fmtINR(recon.cgstTotal)],
+    ["SGST Total", fmtINR(recon.sgstTotal)],
+    ["Total Tax", fmtINR(recon.totalTax)],
+    ["Grand Total", fmtINR(recon.grossTotal)],
+  ];
+
+  taxItems.forEach(([label, value], i) => {
+    const isBold = i >= 4;
+    doc.setFont("helvetica", isBold ? "bold" : "normal");
+    doc.setFontSize(9); doc.setTextColor(50, 50, 50);
+    doc.text(label, mL + 4, y);
+    doc.text(value, mL + halfW - 20, y, { align: "right" });
+    if (i === 3) {
+      doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5);
+      doc.line(mL + 4, y + 4, mL + halfW - 20, y + 4);
+      y += 6;
+    }
+    y += 14;
+  });
+
+  y += 10;
+
+  // ── Validation Issues ──
+  const validationIssues: { inv: string; warnings: string[] }[] = [];
+  for (const inv of normalized) {
+    const flags = getGSTR1ValidationFlags(inv);
+    if (flags.length > 0) validationIssues.push({ inv: inv.invoice_number, warnings: flags });
+  }
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(17, 24, 39);
+  doc.text(`Validation Issues: ${validationIssues.length}`, mL, y);
+  y += 14;
+
+  if (validationIssues.length > 0) {
+    const issueRows = validationIssues.slice(0, 30).map((iss) => [iss.inv, iss.warnings.join("; ")]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Invoice No", "Validation Warning"]],
+      body: issueRows,
+      styles: { font: "helvetica", fontSize: 8, cellPadding: 4, textColor: [75, 85, 99], lineColor: [229, 231, 235], lineWidth: 0.3 },
+      headStyles: { fillColor: [254, 243, 199], textColor: [146, 64, 14], fontStyle: "bold", fontSize: 8 },
+      margin: { left: mL, right: mR },
+      columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: "auto" } },
+    });
+  } else {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(22, 163, 74);
+    doc.text("No validation issues found.", mL + 4, y);
+  }
+}
+
 // ─── Page numbers & footer ─────────────────────────────────────────────
-function addPageNumbers(doc: jsPDF, branding: InvoicePdfBranding) {
+function addPageNumbers(doc: jsPDF, branding: InvoicePdfBranding, isGstr1 = false) {
   const pageCount = doc.getNumberOfPages();
   const mL = 36; const mR = 36;
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const pH = doc.internal.pageSize.getHeight();
     const pW = doc.internal.pageSize.getWidth();
-    doc.setFontSize(8); doc.setTextColor(130, 130, 130);
-    doc.text(`Page ${i} of ${pageCount}`, pW - mR, pH - 16, { align: "right" });
-    doc.text(branding.companyName || "", mL, pH - 16);
+    doc.setFontSize(7); doc.setTextColor(130, 130, 130);
+    doc.text(`Page ${i} of ${pageCount}`, pW - mR, pH - 14, { align: "right" });
+    doc.text(branding.companyName || "", mL, pH - 14);
+    if (isGstr1) {
+      doc.text("System Generated Report -- For GST Reconciliation Use", pW / 2, pH - 14, { align: "center" });
+    }
   }
 }
 
-// ─── Detailed PDF ──────────────────────────────────────────────────────
+// ─── GSTR-1 Premium PDF ───────────────────────────────────────────────
+async function exportGSTR1Pdf(
+  normalized: NormalizedInvoice[],
+  allRawInvoices: any[],
+  branding: InvoicePdfBranding,
+  periodLabel: string,
+) {
+  const doc = new jsPDF({ orientation: "l", unit: "pt", format: "a4" });
+  const themeRgb = hexToRgb(branding.themeColor);
+  const pageW = doc.internal.pageSize.getWidth();
+  const mL = 36; const mR = 36;
+
+  const startY = await renderGSTR1Header(doc, branding, normalized, periodLabel);
+
+  // ── Column setup with proper widths ──
+  const columns = GSTR1_SALES_REGISTER_KEYS
+    .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
+    .filter(Boolean) as InvoiceExcelColumn[];
+
+  // Custom widths for landscape GSTR-1
+  const gstr1Widths: Record<string, number> = {
+    sno: 28, client_name: 100, client_gstin: 90, campaign_display: 95,
+    bill_from: 58, bill_to: 58, invoice_number: 80, invoice_date: 58,
+    total_value: 62, rate_percent: 32, taxable_value: 62, igst: 52, cgst: 52, sgst: 52,
+  };
+
+  const head = [columns.map((c) => c.label)];
+  const body = normalized.map((row) =>
+    columns.map((col) => {
+      const v = col.getValue(row);
+      if (v === null || v === undefined) return "";
+      if (col.type === "currency" && typeof v === "number")
+        return v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return String(v);
+    })
+  );
+
+  // Totals row
+  const totalsBody = columns.map((col) => {
+    if (col.key === "sno") return "";
+    if (col.key === "client_name") return "TOTAL";
+    if (col.type === "currency") {
+      const sum = normalized.reduce((s, r) => s + ((col.getValue(r) as number) || 0), 0);
+      return sum.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (col.key === "rate_percent") return "";
+    return "";
+  });
+  body.push(totalsBody);
+
+  const colStyles: Record<number, any> = {};
+  columns.forEach((col, i) => {
+    const w = gstr1Widths[col.key] || 60;
+    const style: any = { cellWidth: w };
+    if (col.type === "currency" || col.type === "number") style.halign = "right";
+    if (col.key === "invoice_date" || col.key === "bill_from" || col.key === "bill_to" || col.key === "rate_percent") style.halign = "center";
+    colStyles[i] = style;
+  });
+
+  autoTable(doc, {
+    startY,
+    head,
+    body,
+    styles: {
+      font: "helvetica",
+      fontSize: 7.5,
+      cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+      textColor: [17, 24, 39],
+      lineColor: [229, 231, 235],
+      lineWidth: 0.3,
+      overflow: "linebreak",
+      minCellHeight: 16,
+    },
+    headStyles: {
+      fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7.5,
+      cellPadding: { top: 5, right: 4, bottom: 5, left: 4 },
+      minCellHeight: 20,
+    },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: mL, right: mR, bottom: 40 },
+    columnStyles: colStyles,
+    showHead: "everyPage",
+    didParseCell: (data) => {
+      // Style the totals row (last body row)
+      if (data.section === "body" && data.row.index === body.length - 1) {
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fillColor = [themeRgb[0], themeRgb[1], themeRgb[2]];
+        data.cell.styles.textColor = [255, 255, 255];
+        data.cell.styles.fontSize = 8;
+      }
+    },
+  });
+
+  // ── Reconciliation panel on new page ──
+  renderGSTR1ReconciliationPanel(doc, normalized, allRawInvoices, branding, branding.companyName || "Company");
+
+  addPageNumbers(doc, branding, true);
+  return doc;
+}
+
+// ─── Detailed PDF (non-GSTR1) ──────────────────────────────────────────
 async function exportDetailedPdf(
   normalized: NormalizedInvoice[],
   selectedKeys: string[],
@@ -209,8 +529,7 @@ async function exportDetailedPdf(
     .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
     .filter(Boolean) as InvoiceExcelColumn[];
 
-  const isGstr1 = exportType === "gstr1_sales_register";
-  const orientation = isGstr1 ? "l" : (columns.length > 8 ? "l" : "p");
+  const orientation = columns.length > 8 ? "l" : "p";
   const doc = new jsPDF({ orientation, unit: "pt", format: "a4" });
   const themeRgb = hexToRgb(branding.themeColor);
   const mL = 36; const mR = 36;
@@ -231,10 +550,11 @@ async function exportDetailedPdf(
   autoTable(doc, {
     startY,
     head, body,
-    styles: { font: "helvetica", fontSize: isGstr1 ? 7 : 8, cellPadding: isGstr1 ? 3 : 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
-    headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: isGstr1 ? 7 : 8 },
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 5, textColor: [17, 24, 39], lineColor: [229, 231, 235], lineWidth: 0.5, overflow: "linebreak" },
+    headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: mL, right: mR },
+    showHead: "everyPage",
     didParseCell: (data) => {
       if (data.section === "body") {
         const col = columns[data.column.index];
@@ -244,16 +564,6 @@ async function exportDetailedPdf(
   });
 
   renderReconciliationBlock(doc, normalized, branding);
-
-  // GSTR-1 footer note
-  if (isGstr1) {
-    const pageH = doc.internal.pageSize.getHeight();
-    const pageW = doc.internal.pageSize.getWidth();
-    doc.setFontSize(7);
-    doc.setTextColor(130, 130, 130);
-    doc.text("System Generated Report — For GST Reconciliation Use", pageW / 2, pageH - 28, { align: "center" });
-  }
-
   addPageNumbers(doc, branding);
   return doc;
 }
@@ -298,6 +608,7 @@ async function exportSummaryPdf(
     headStyles: { fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: mL, right: mR },
+    showHead: "everyPage",
     didParseCell: (data) => {
       if (data.section === "body") {
         const col = cols[data.column.index];
@@ -339,9 +650,10 @@ export async function exportInvoicePdf(
 
   let doc: jsPDF;
 
-  if (isDetailedExportType(exportType)) {
+  if (exportType === "gstr1_sales_register") {
+    doc = await exportGSTR1Pdf(normalized, invoices, branding, periodLabel || "All");
+  } else if (isDetailedExportType(exportType)) {
     const keys = exportType === "gst_invoicewise" ? GST_INVOICEWISE_KEYS
-      : exportType === "gstr1_sales_register" ? GSTR1_SALES_REGISTER_KEYS
       : (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") ? OUTSTANDING_DETAIL_KEYS
       : selectedKeys;
     doc = await exportDetailedPdf(normalized, keys, branding, exportType, periodLabel, basisLabel);

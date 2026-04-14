@@ -334,12 +334,8 @@ export function CampaignBillingTab({
         });
       }
 
-      // Smart date: backdate to previous FY if campaign ended before current FY start
-      const currentFY = getFYRange(new Date());
-      const campaignEnd = new Date(campaign.end_date);
-      const invoiceDate = campaignEnd < currentFY.start
-        ? new Date(currentFY.start.getFullYear(), currentFY.start.getMonth() - 1, new Date(currentFY.start.getFullYear(), currentFY.start.getMonth(), 0).getDate())
-        : new Date();
+      // Default invoice date = campaign period start date
+      const invoiceDate = new Date(campaign.start_date);
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
@@ -359,7 +355,7 @@ export function CampaignBillingTab({
         invoice_period_start: campaign.start_date,
         invoice_period_end: campaign.end_date,
         billing_mode: 'single_invoice',
-        billing_window_key: campaign.start_date,
+        billing_window_key: 'campaign_full',
         is_monthly_split: false,
         sub_total: totals.taxableAmount,
         gst_percent: totals.gstRate,

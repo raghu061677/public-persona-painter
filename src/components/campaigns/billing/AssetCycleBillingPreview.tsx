@@ -115,14 +115,14 @@ export function AssetCycleBillingPreview({
       const bStart = format(bucket.periodStart, "yyyy-MM-dd");
       const bEnd = format(bucket.periodEnd, "yyyy-MM-dd");
 
-      // Duplicate prevention
+      // Duplicate prevention using unified billing_window_key
+      const windowKey = `cycle-${bucket.cycleNumber}`;
       const { data: existing } = await supabase
         .from("invoices")
         .select("id")
         .eq("campaign_id", campaignId)
         .eq("billing_mode", "asset_cycle")
-        .eq("cycle_start_date", bStart)
-        .eq("cycle_end_date", bEnd)
+        .eq("billing_window_key", windowKey)
         .neq("status", "Cancelled")
         .limit(1);
 
@@ -191,10 +191,8 @@ export function AssetCycleBillingPreview({
 
       const invoiceId = generateDraftInvoiceId();
 
-      // Smart date logic — dynamic FY boundary
-      const currentFY = getFYRange(new Date());
-      const cycleEnd = new Date(bEnd);
-      const invoiceDate = cycleEnd < currentFY.start ? new Date(currentFY.start.getFullYear(), currentFY.start.getMonth() - 1, new Date(currentFY.start.getFullYear(), currentFY.start.getMonth(), 0).getDate()) : new Date();
+      // Default invoice date = cycle period start date
+      const invoiceDate = new Date(bStart);
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
@@ -214,7 +212,7 @@ export function AssetCycleBillingPreview({
         invoice_period_start: bStart,
         invoice_period_end: bEnd,
         billing_mode: "asset_cycle",
-        billing_window_key: `${bStart}:${bEnd}`,
+        billing_window_key: windowKey,
         cycle_start_date: bStart,
         cycle_end_date: bEnd,
         is_monthly_split: false,

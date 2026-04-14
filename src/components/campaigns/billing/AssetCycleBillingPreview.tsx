@@ -173,7 +173,7 @@ export function AssetCycleBillingPreview({
           quantity: 1,
           rate: asset.cycleAmount,
           rent_amount: asset.cycleAmount,
-          display_rate: asset.monthlyRate,
+          display_rate: asset.finalMonthlyRate,
           printing_charges: 0,
           mounting_charges: 0,
           amount: asset.cycleAmount,

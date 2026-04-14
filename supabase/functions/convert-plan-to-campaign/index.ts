@@ -107,7 +107,7 @@ serve(withAuth(async (req) => {
   // Load plan — MUST belong to user's company
   const { data: plan, error: planError } = await supabase
     .from("plans")
-    .select("id, plan_name, status, company_id, client_id, client_name, start_date, end_date, duration_days, total_amount, gst_percent, gst_amount, grand_total, notes, converted_to_campaign_id")
+    .select("id, plan_name, status, company_id, client_id, client_name, start_date, end_date, duration_days, total_amount, gst_percent, gst_amount, grand_total, notes, converted_to_campaign_id, client_registration_id")
     .eq("id", planId)
     .eq("company_id", companyId)
     .maybeSingle();
@@ -172,12 +172,17 @@ serve(withAuth(async (req) => {
     }
 
     const effectiveGstPercent = (plan.gst_percent !== null && plan.gst_percent !== undefined) ? plan.gst_percent : 0;
-    const { data: inserted, error: insertErr } = await supabase.from("campaigns").insert({
+    const campaignInsertPayload: Record<string, any> = {
       id: campaignId, campaign_code: campaignId, plan_id: plan.id, company_id: companyId, client_id: plan.client_id, client_name: plan.client_name,
       campaign_name: plan.plan_name, status: 'Draft', start_date: plan.start_date, end_date: plan.end_date,
       total_assets: planItems.length, total_amount: plan.total_amount, gst_percent: effectiveGstPercent,
       gst_amount: plan.gst_amount || 0, grand_total: plan.grand_total, notes: plan.notes || "", created_by: ctx.userId, created_from: 'plan',
-    }).select("id").maybeSingle();
+    };
+    // Phase 3B: propagate client_registration_id if present on the plan
+    if (plan.client_registration_id) {
+      campaignInsertPayload.client_registration_id = plan.client_registration_id;
+    }
+    const { data: inserted, error: insertErr } = await supabase.from("campaigns").insert(campaignInsertPayload).select("id").maybeSingle();
 
     if (insertErr) {
       if (insertErr.code === '23505' && attempt < 5) { await new Promise(r => setTimeout(r, 100 * attempt)); continue; }

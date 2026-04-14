@@ -214,6 +214,7 @@ export function AssetCycleBillingPreview({
         invoice_period_start: bStart,
         invoice_period_end: bEnd,
         billing_mode: "asset_cycle",
+        billing_window_key: `${bStart}:${bEnd}`,
         cycle_start_date: bStart,
         cycle_end_date: bEnd,
         is_monthly_split: false,

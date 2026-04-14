@@ -11,13 +11,15 @@ import { GSTHSNTab } from "@/components/gst/GSTHSNTab";
 import { GSTStatewiseTab } from "@/components/gst/GSTStatewiseTab";
 import { GSTValidationTab } from "@/components/gst/GSTValidationTab";
 import { GSTExportsTab } from "@/components/gst/GSTExportsTab";
+import { InvoiceExportDialog } from "@/components/invoices/InvoiceExportDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, FileText, ShieldCheck, AlertTriangle, XCircle, Save } from "lucide-react";
+import { RefreshCw, FileText, FileSpreadsheet, ShieldCheck, AlertTriangle, XCircle, Save } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { GSTExportContext } from "@/lib/gst-exports";
+import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MONTH_NAMES[i + 1] }));
 
@@ -34,6 +36,8 @@ const GSTReports = () => {
   const [filingMonth, setFilingMonth] = useState(defaults.month);
   const [filingYear, setFilingYear] = useState(defaults.year);
   const [activeTab, setActiveTab] = useState("summary");
+  const [showGSTR1Export, setShowGSTR1Export] = useState(false);
+  const [gstr1Invoices, setGstr1Invoices] = useState<any[]>([]);
 
   const filters = useMemo(() => {
     if (!company?.id) return null;
@@ -80,6 +84,7 @@ const GSTReports = () => {
   });
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -93,6 +98,24 @@ const GSTReports = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {readinessBadge()}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+            onClick={async () => {
+              if (!company?.id) return;
+              const { data } = await supabase
+                .from("invoices")
+                .select("*")
+                .eq("company_id", company.id)
+                .order("invoice_date", { ascending: false });
+              setGstr1Invoices(data || []);
+              setShowGSTR1Export(true);
+            }}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Export GSTR-1 Sales Register
+          </Button>
         </div>
       </div>
 
@@ -185,6 +208,21 @@ const GSTReports = () => {
         </div>
       </Tabs>
     </div>
+
+      <InvoiceExportDialog
+        open={showGSTR1Export}
+        onClose={() => setShowGSTR1Export(false)}
+        invoices={gstr1Invoices}
+        companyName={company?.name}
+        companyGstin={company?.gstin || undefined}
+        initialMode="excel"
+        initialExportType="gstr1_sales_register"
+        branding={{
+          companyName: company?.name || "Company",
+          gstin: company?.gstin || undefined,
+        }}
+      />
+    </>
   );
 };
 

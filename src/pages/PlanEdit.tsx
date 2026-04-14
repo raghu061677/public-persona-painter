@@ -41,6 +41,8 @@ import {
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
+import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
+import { useClientRegistrations } from "@/hooks/useClientRegistrations";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";

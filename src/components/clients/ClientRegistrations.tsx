@@ -108,7 +108,12 @@ export function ClientRegistrations({ clientId, companyId, canEdit = true }: Pro
     if (error) {
       toast.error("Failed to load registrations");
     } else {
-      setRegistrations((data as any[]) || []);
+      // Map DB column 'state_code' to local form field 'billing_state_code'
+      const mapped = (data as any[] || []).map((r: any) => ({
+        ...r,
+        billing_state_code: r.state_code ?? r.billing_state_code ?? null,
+      }));
+      setRegistrations(mapped);
     }
     setLoading(false);
   };
@@ -156,7 +161,7 @@ export function ClientRegistrations({ clientId, companyId, canEdit = true }: Pro
         billing_city: form.billing_city?.trim() || null,
         billing_district: form.billing_district?.trim() || null,
         billing_state: form.billing_state || null,
-        billing_state_code: form.billing_state_code || null,
+        state_code: form.billing_state_code || null,
         billing_pincode: form.billing_pincode?.trim() || null,
         billing_country: form.billing_country || "India",
         shipping_address_line1: form.shipping_address_line1?.trim() || null,
@@ -164,7 +169,6 @@ export function ClientRegistrations({ clientId, companyId, canEdit = true }: Pro
         shipping_city: form.shipping_city?.trim() || null,
         shipping_district: form.shipping_district?.trim() || null,
         shipping_state: form.shipping_state || null,
-        shipping_state_code: form.shipping_state_code || null,
         shipping_pincode: form.shipping_pincode?.trim() || null,
         shipping_country: form.shipping_country || "India",
         place_of_supply_state: form.place_of_supply_state || null,

@@ -1,9 +1,11 @@
 /**
- * Asset Cycle Billing Preview (Phase 1 — read-only, no invoice generation)
+ * Asset Cycle Billing — Phase 2: Preview + Invoice Generation
  */
 
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,22 +22,51 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarDays, Info, Clock } from "lucide-react";
+import { CalendarDays, Info, Clock, FileText, Loader2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateAssetCycles, type GroupedCycleBucket } from "@/utils/generateAssetCycles";
+import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
+import { generateDraftInvoiceId } from "@/utils/finance";
+import { toast } from "@/hooks/use-toast";
+
+interface CycleInvoice {
+  id: string;
+  cycle_start_date: string | null;
+  cycle_end_date: string | null;
+  total_amount: number;
+  status: string;
+}
 
 interface AssetCycleBillingPreviewProps {
   campaignAssets: any[];
   gstPercent: number;
   campaignEndDate?: string;
+  campaignId: string;
+  clientId: string;
+  clientName: string;
+  companyId?: string;
+  campaignName: string;
+  taxType?: string;
+  onInvoiceGenerated?: () => void;
 }
 
 export function AssetCycleBillingPreview({
   campaignAssets,
   gstPercent,
   campaignEndDate,
+  campaignId,
+  clientId,
+  clientName,
+  companyId,
+  campaignName,
+  taxType,
+  onInvoiceGenerated,
 }: AssetCycleBillingPreviewProps) {
+  const navigate = useNavigate();
+  const [cycleInvoices, setCycleInvoices] = useState<CycleInvoice[]>([]);
+  const [generatingBucket, setGeneratingBucket] = useState<string | null>(null);
+
   const { groupedBuckets, totalAmount, totalCycles, allCycles } = useMemo(
     () => generateAssetCycles(campaignAssets, campaignEndDate),
     [campaignAssets, campaignEndDate]
@@ -44,6 +75,174 @@ export function AssetCycleBillingPreview({
   const totalGst = totalAmount * (gstPercent / 100);
   const grandTotal = totalAmount + totalGst;
   const uniqueAssets = new Set(allCycles.map((c) => c.campaignAssetId)).size;
+
+  // Fetch existing cycle invoices for this campaign
+  const fetchCycleInvoices = useCallback(async () => {
+    const { data } = await supabase
+      .from("invoices")
+      .select("id, cycle_start_date, cycle_end_date, total_amount, status")
+      .eq("campaign_id", campaignId)
+      .eq("billing_mode", "asset_cycle")
+      .neq("status", "Cancelled");
+    setCycleInvoices((data as CycleInvoice[]) || []);
+  }, [campaignId]);
+
+  useEffect(() => {
+    fetchCycleInvoices();
+  }, [fetchCycleInvoices]);
+
+  // Find matching invoice for a bucket
+  const findInvoiceForBucket = (bucket: GroupedCycleBucket): CycleInvoice | undefined => {
+    const bStart = format(bucket.periodStart, "yyyy-MM-dd");
+    const bEnd = format(bucket.periodEnd, "yyyy-MM-dd");
+    return cycleInvoices.find(
+      (inv) => inv.cycle_start_date === bStart && inv.cycle_end_date === bEnd
+    );
+  };
+
+  // Generate invoice for a single cycle bucket
+  const handleGenerateCycleInvoice = async (bucket: GroupedCycleBucket) => {
+    const bucketKey = `${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`;
+    setGeneratingBucket(bucketKey);
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not authenticated");
+
+      const bStart = format(bucket.periodStart, "yyyy-MM-dd");
+      const bEnd = format(bucket.periodEnd, "yyyy-MM-dd");
+
+      // Duplicate prevention
+      const { data: existing } = await supabase
+        .from("invoices")
+        .select("id")
+        .eq("campaign_id", campaignId)
+        .eq("billing_mode", "asset_cycle")
+        .eq("cycle_start_date", bStart)
+        .eq("cycle_end_date", bEnd)
+        .neq("status", "Cancelled")
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        toast({
+          title: "Already Invoiced",
+          description: `An invoice already exists for cycle ${bStart} → ${bEnd}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Registration snapshot
+      const regSnapshot = await buildRegistrationSnapshot(campaignId);
+
+      // Fetch media_asset_codes
+      const assetIds = bucket.assets.map((a) => a.campaignAssetId).filter(Boolean);
+      const campaignAssetIds = assetIds;
+      // Get asset_id from campaignAssets for media_asset_code lookup
+      const relevantCampaignAssets = campaignAssets.filter((ca) =>
+        bucket.assets.some((ba) => ba.campaignAssetId === ca.id)
+      );
+      const rawAssetIds = relevantCampaignAssets.map((ca) => ca.asset_id).filter(Boolean);
+
+      const { data: maData } = rawAssetIds.length > 0
+        ? await supabase.from("media_assets").select("id, media_asset_code").in("id", rawAssetIds)
+        : { data: [] };
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
+
+      // Build line items
+      const items: any[] = bucket.assets.map((asset, idx) => {
+        const ca = campaignAssets.find((c) => c.id === asset.campaignAssetId);
+        const resolvedCode = ca ? maCodeMap.get(ca.asset_id) || null : null;
+        return {
+          sno: idx + 1,
+          asset_id: ca?.asset_id || null,
+          asset_code: resolvedCode,
+          media_asset_code: resolvedCode,
+          campaign_asset_id: asset.campaignAssetId,
+          description: `${ca?.media_type || "Display"} - ${asset.location || ""}, ${asset.area || ""}, ${ca?.city || ""} [Cycle ${bStart} to ${bEnd}]`,
+          location: asset.location || null,
+          area: asset.area || null,
+          direction: ca?.direction || null,
+          media_type: ca?.media_type || null,
+          illumination_type: ca?.illumination_type || null,
+          dimensions: ca?.dimensions || null,
+          total_sqft: ca?.total_sqft || 0,
+          booking_start_date: bStart,
+          booking_end_date: bEnd,
+          booked_days: bucket.cycleDays,
+          quantity: 1,
+          rate: asset.cycleAmount,
+          rent_amount: asset.cycleAmount,
+          display_rate: asset.finalMonthlyRate,
+          printing_charges: 0,
+          mounting_charges: 0,
+          amount: asset.cycleAmount,
+          total: asset.cycleAmount,
+          hsn_sac: "998361",
+        };
+      });
+
+      const subtotal = bucket.totalAmount;
+      const gstAmount = subtotal * (gstPercent / 100);
+      const total = subtotal + gstAmount;
+
+      const invoiceId = generateDraftInvoiceId();
+
+      // Smart date logic
+      const fy2627Start = new Date(2026, 3, 1);
+      const cycleEnd = new Date(bEnd);
+      const invoiceDate = cycleEnd < fy2627Start ? new Date(2026, 2, 31) : new Date();
+      const dueDate = new Date(invoiceDate);
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      const { error } = await supabase.from("invoices").insert({
+        id: invoiceId,
+        invoice_no: invoiceId,
+        campaign_id: campaignId,
+        client_id: clientId,
+        client_name: clientName,
+        company_id: companyId,
+        invoice_date: format(invoiceDate, "yyyy-MM-dd"),
+        due_date: format(dueDate, "yyyy-MM-dd"),
+        invoice_period_start: bStart,
+        invoice_period_end: bEnd,
+        billing_mode: "asset_cycle",
+        cycle_start_date: bStart,
+        cycle_end_date: bEnd,
+        is_monthly_split: false,
+        sub_total: subtotal,
+        gst_percent: gstPercent,
+        gst_amount: gstAmount,
+        total_amount: total,
+        balance_due: total,
+        status: "Draft",
+        is_draft: true,
+        items,
+        notes: `Asset Cycle Billing for ${campaignName} — Cycle #${bucket.cycleNumber} (${bStart} to ${bEnd})`,
+        created_by: userData.user.id,
+        ...regSnapshot,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invoice Generated",
+        description: `Invoice ${invoiceId} created for Cycle #${bucket.cycleNumber}`,
+      });
+
+      await fetchCycleInvoices();
+      onInvoiceGenerated?.();
+    } catch (err: any) {
+      console.error("Generate cycle invoice error:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to generate cycle invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingBucket(null);
+    }
+  };
 
   if (groupedBuckets.length === 0) {
     return (
@@ -67,7 +266,6 @@ export function AssetCycleBillingPreview({
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
             Asset Cycle Billing Schedule
-            <Badge variant="secondary" className="ml-2">Preview</Badge>
           </h3>
           <p className="text-sm text-muted-foreground">
             30-day cycles per asset • {uniqueAssets} asset{uniqueAssets !== 1 ? "s" : ""} • {totalCycles} billing window{totalCycles !== 1 ? "s" : ""}
@@ -97,16 +295,20 @@ export function AssetCycleBillingPreview({
                 <TableHead className="text-right">GST</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="w-[120px] text-right">Action</TableHead>
+                <TableHead className="w-[140px] text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {groupedBuckets.map((bucket) => {
                 const bucketGst = bucket.totalAmount * (gstPercent / 100);
                 const bucketTotal = bucket.totalAmount + bucketGst;
+                const bucketKey = `${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`;
+                const matchedInvoice = findInvoiceForBucket(bucket);
+                const isInvoiced = !!matchedInvoice;
+                const isGenerating = generatingBucket === bucketKey;
 
                 return (
-                  <TableRow key={`${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`}>
+                  <TableRow key={bucketKey}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-1">
                         #{bucket.cycleNumber}
@@ -163,23 +365,43 @@ export function AssetCycleBillingPreview({
                       {formatCurrency(bucketTotal)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        Not Invoiced
-                      </Badge>
+                      {isInvoiced ? (
+                        <Badge variant="default" className="text-xs">
+                          Invoiced
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          Not Invoiced
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="outline" disabled className="text-xs">
-                              Coming Soon
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Invoice generation will be enabled in Phase 2
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {isInvoiced && matchedInvoice ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(matchedInvoice.id)}`)}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="text-xs"
+                          disabled={isGenerating}
+                          onClick={() => handleGenerateCycleInvoice(bucket)}
+                        >
+                          {isGenerating ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <FileText className="h-3 w-3 mr-1" />
+                          )}
+                          Generate
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -193,9 +415,8 @@ export function AssetCycleBillingPreview({
       <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <span>
-          This is a <strong>preview</strong> of asset-level cycle billing. Cycles are calculated
-          using each asset's final negotiated price divided into 30-day windows. Invoice generation
-          from cycle billing will be available in a future update.
+          Asset cycle billing generates invoices per 30-day window using each asset's final
+          negotiated price. One-time charges (printing/mounting) are not included in cycle invoices.
         </span>
       </div>
     </div>

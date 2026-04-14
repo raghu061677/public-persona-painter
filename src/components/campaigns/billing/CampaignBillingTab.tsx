@@ -106,7 +106,7 @@ export function CampaignBillingTab({
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split')
+        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split, billing_mode')
         .eq('campaign_id', campaign.id)
         .order('invoice_period_start', { ascending: true });
 
@@ -146,9 +146,12 @@ export function CampaignBillingTab({
       
       // Auto-detect billing mode based on existing invoices
       if (data && data.length > 0) {
+        const hasAssetCycle = data.some((inv: any) => inv.billing_mode === 'asset_cycle');
         const hasSingleInvoice = data.some(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
         const hasMonthlyInvoices = data.some(inv => inv.is_monthly_split === true);
-        if (hasSingleInvoice && !hasMonthlyInvoices) {
+        if (hasAssetCycle) {
+          setBillingMode('asset_cycle');
+        } else if (hasSingleInvoice && !hasMonthlyInvoices) {
           setBillingMode('single');
         }
       }
@@ -565,7 +568,6 @@ export function CampaignBillingTab({
                 <Label htmlFor="asset_cycle" className="flex-1 cursor-pointer">
                   <div className="font-medium flex items-center gap-2">
                     Asset Cycle Billing
-                    <Badge variant="secondary" className="text-[10px]">Preview</Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     30-day cycles per asset using final negotiated price
@@ -758,12 +760,22 @@ export function CampaignBillingTab({
         </Card>
       )}
 
-      {/* Asset Cycle Billing Preview */}
+      {/* Asset Cycle Billing */}
       {billingMode === 'asset_cycle' && (
         <AssetCycleBillingPreview
           campaignAssets={campaignAssets}
           gstPercent={totals.gstRate}
           campaignEndDate={campaign.end_date}
+          campaignId={campaign.id}
+          clientId={campaign.client_id}
+          clientName={campaign.client_name}
+          companyId={campaign.company_id}
+          campaignName={campaign.campaign_name}
+          taxType={campaign.tax_type}
+          onInvoiceGenerated={() => {
+            fetchExistingInvoices();
+            onRefresh?.();
+          }}
         />
       )}
 

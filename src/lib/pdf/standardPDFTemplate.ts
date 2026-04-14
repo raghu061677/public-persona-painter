@@ -225,6 +225,10 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       state: data.clientState,
       pincode: data.clientPincode,
       gstin: data.clientGSTIN,
+      shippingAddress: data.clientShippingAddress,
+      shippingCity: data.clientShippingCity,
+      shippingState: data.clientShippingState,
+      shippingPincode: data.clientShippingPincode,
     },
     yPos
   );

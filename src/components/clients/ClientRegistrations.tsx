@@ -108,7 +108,12 @@ export function ClientRegistrations({ clientId, companyId, canEdit = true }: Pro
     if (error) {
       toast.error("Failed to load registrations");
     } else {
-      setRegistrations((data as any[]) || []);
+      // Map DB column 'state_code' to local form field 'billing_state_code'
+      const mapped = (data as any[] || []).map((r: any) => ({
+        ...r,
+        billing_state_code: r.state_code ?? r.billing_state_code ?? null,
+      }));
+      setRegistrations(mapped);
     }
     setLoading(false);
   };

@@ -362,15 +362,9 @@ export default function PlanDetail() {
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      // Check if 'admin' role exists in the array
-      const hasAdminRole = data?.some(r => r.role === 'admin') || false;
-      setIsAdmin(hasAdminRole);
-      console.log('Admin check for user:', user.email, 'Has admin role:', hasAdminRole, 'Roles:', data);
+      const result = await checkIsAdmin(user.id);
+      setIsAdmin(result);
+      console.log('Admin check for user:', user.email, 'Has admin role:', result);
     }
   };
 

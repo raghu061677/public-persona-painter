@@ -131,6 +131,10 @@ Deno.serve(withAuth(async (req) => {
           gstin: clientGstin,
           address: clientAddress,
         },
+        shipTo: {
+          name: clientName,
+          address: shipToAddress,
+        },
         placeOfSupply,
         items: invoice.items || [],
         summary: {

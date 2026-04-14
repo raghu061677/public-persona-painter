@@ -12,6 +12,7 @@ import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
 import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
 import { generateDraftInvoiceId } from "@/utils/finance";
+import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -211,6 +212,9 @@ export function CampaignBillingTab({
       // Generate draft invoice ID - permanent number assigned on finalization
       const invoiceId = generateDraftInvoiceId();
 
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
+
       // Fetch media_asset_code for all campaign assets
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
       const { data: maData } = assetIds.length > 0
@@ -298,6 +302,7 @@ export function CampaignBillingTab({
         items,
         notes: `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,
+        ...regSnapshot,
       });
 
       if (error) throw error;
@@ -333,6 +338,9 @@ export function CampaignBillingTab({
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
+
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
 
       // Calculate amounts using new calculator
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
@@ -454,6 +462,7 @@ export function CampaignBillingTab({
           items,
           notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,
+          ...regSnapshot,
         });
 
         if (error) throw error;

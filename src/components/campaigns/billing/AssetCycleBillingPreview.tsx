@@ -373,6 +373,10 @@ export function AssetCycleBillingPreview({
                         <Badge variant="default" className="text-xs">
                           Invoiced
                         </Badge>
+                      ) : isDraft ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Draft
+                        </Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs">
                           Not Invoiced

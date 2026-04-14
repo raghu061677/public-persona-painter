@@ -62,6 +62,7 @@ export function AssetCycleBillingPreview({
   companyId,
   campaignName,
   taxType,
+  gstMode = 'CGST_SGST',
   onInvoiceGenerated,
 }: AssetCycleBillingPreviewProps) {
   const navigate = useNavigate();

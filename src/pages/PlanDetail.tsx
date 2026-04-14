@@ -374,21 +374,28 @@ export default function PlanDetail() {
           .eq('id', data.client_id)
           .single();
 
-        // If plan has a linked registration, fetch its GSTIN for display
-        let registrationGstin: string | null = null;
+        // If plan has a linked registration, fetch its GSTIN and address for display
+        let registrationData: any = null;
         if (data.client_registration_id) {
           const { data: reg } = await supabase
             .from('client_registrations')
-            .select('gstin')
+            .select('gstin, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode')
             .eq('id', data.client_registration_id)
             .single();
-          registrationGstin = reg?.gstin || null;
+          registrationData = reg || null;
         }
 
-        // Enrich client details with registration-aware GST
+        // Enrich client details with registration-aware GST and address
         const enriched = client ? {
           ...client,
-          gst_number: registrationGstin || client.gst_number,
+          gst_number: registrationData?.gstin || client.gst_number,
+          ...(registrationData?.billing_city || registrationData?.billing_address_line1 ? {
+            billing_address_line1: registrationData.billing_address_line1 || client.billing_address_line1,
+            billing_address_line2: registrationData.billing_address_line2 || client.billing_address_line2,
+            billing_city: registrationData.billing_city || client.billing_city,
+            billing_state: registrationData.billing_state || client.billing_state,
+            billing_pincode: registrationData.billing_pincode || client.billing_pincode,
+          } : {}),
         } : client;
         setClientDetails(enriched);
         // Sync plan's snapshot client_name with live client data

@@ -106,7 +106,7 @@ export function CampaignBillingTab({
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split')
+        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split, billing_mode')
         .eq('campaign_id', campaign.id)
         .order('invoice_period_start', { ascending: true });
 
@@ -146,9 +146,12 @@ export function CampaignBillingTab({
       
       // Auto-detect billing mode based on existing invoices
       if (data && data.length > 0) {
+        const hasAssetCycle = data.some((inv: any) => inv.billing_mode === 'asset_cycle');
         const hasSingleInvoice = data.some(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
         const hasMonthlyInvoices = data.some(inv => inv.is_monthly_split === true);
-        if (hasSingleInvoice && !hasMonthlyInvoices) {
+        if (hasAssetCycle) {
+          setBillingMode('asset_cycle');
+        } else if (hasSingleInvoice && !hasMonthlyInvoices) {
           setBillingMode('single');
         }
       }

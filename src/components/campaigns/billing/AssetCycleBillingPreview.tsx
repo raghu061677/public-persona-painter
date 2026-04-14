@@ -27,7 +27,7 @@ import { format } from "date-fns";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateAssetCycles, type GroupedCycleBucket } from "@/utils/generateAssetCycles";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
-import { getFYRange, generateDraftInvoiceId } from "@/utils/finance";
+import { generateDraftInvoiceId } from "@/utils/finance";
 import { toast } from "@/hooks/use-toast";
 
 interface CycleInvoice {

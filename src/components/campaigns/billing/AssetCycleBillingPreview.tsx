@@ -307,7 +307,8 @@ export function AssetCycleBillingPreview({
                 const bucketTotal = bucket.totalAmount + bucketGst;
                 const bucketKey = `${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`;
                 const matchedInvoice = findInvoiceForBucket(bucket);
-                const isInvoiced = !!matchedInvoice;
+                const isInvoiced = !!matchedInvoice && !matchedInvoice.is_draft;
+                const isDraft = !!matchedInvoice && matchedInvoice.is_draft;
                 const isGenerating = generatingBucket === bucketKey;
 
                 return (

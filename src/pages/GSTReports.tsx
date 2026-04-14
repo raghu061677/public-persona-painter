@@ -11,13 +11,15 @@ import { GSTHSNTab } from "@/components/gst/GSTHSNTab";
 import { GSTStatewiseTab } from "@/components/gst/GSTStatewiseTab";
 import { GSTValidationTab } from "@/components/gst/GSTValidationTab";
 import { GSTExportsTab } from "@/components/gst/GSTExportsTab";
+import { InvoiceExportDialog } from "@/components/invoices/InvoiceExportDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, FileText, ShieldCheck, AlertTriangle, XCircle, Save } from "lucide-react";
+import { RefreshCw, FileText, FileSpreadsheet, ShieldCheck, AlertTriangle, XCircle, Save } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { GSTExportContext } from "@/lib/gst-exports";
+import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MONTH_NAMES[i + 1] }));
 

@@ -806,10 +806,12 @@ export default function InvoicesList() {
       {/* Invoice Export Dialog */}
       <InvoiceExportDialog
         open={showExportDialog}
-        onClose={() => setShowExportDialog(false)}
+        onClose={() => { setShowExportDialog(false); setExportInitialType("detailed"); }}
         invoices={filteredInvoices}
         companyName={company?.name}
+        companyGstin={company?.gstin || undefined}
         initialMode={exportMode}
+        initialExportType={exportInitialType}
         branding={{
           companyName: company?.name || "Company",
           address: [company?.address_line1, company?.address_line2, company?.city, company?.state, company?.pincode].filter(Boolean).join(", ") || undefined,

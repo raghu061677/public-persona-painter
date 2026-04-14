@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  FileSpreadsheet, FileText, AlertTriangle, Info, Bookmark, BookmarkPlus, Trash2, Calendar,
+  FileSpreadsheet, FileText, AlertTriangle, Info, Bookmark, BookmarkPlus, Trash2, Calendar, Search,
 } from "lucide-react";
 import {
   ALL_INVOICE_COLUMNS,
@@ -21,18 +21,23 @@ import {
 import { exportInvoicePdf, type InvoicePdfBranding } from "@/utils/exports/pdf/exportInvoicePdf";
 import {
   normalizeInvoices,
+  normalizeInvoice,
   checkReconciliation,
   filterByPeriod,
   prefilterForExportType,
   isDetailedExportType,
   getPeriodLabel,
+  setGSTR1FilterOptions,
+  getGSTR1ExclusionCounts,
   EXPORT_TYPE_LABELS,
   EXPORT_TYPE_GROUPS,
+  GSTR1_SALES_REGISTER_KEYS,
   type ExportType,
   type DateBasis,
   type PeriodType,
   type PeriodConfig,
   type ExportPreset,
+  type GSTR1FilterOptions,
   loadExportPresets,
   saveExportPresets,
 } from "@/utils/exports/invoiceExportMapper";
@@ -44,8 +49,10 @@ interface InvoiceExportDialogProps {
   onClose: () => void;
   invoices: any[];
   companyName?: string;
+  companyGstin?: string;
   branding?: InvoicePdfBranding;
   initialMode?: "excel" | "pdf";
+  initialExportType?: ExportType;
 }
 
 const DATE_BASIS_OPTIONS: { value: DateBasis; label: string }[] = [
@@ -94,12 +101,14 @@ export function InvoiceExportDialog({
   onClose,
   invoices,
   companyName,
+  companyGstin,
   branding,
   initialMode = "excel",
+  initialExportType,
 }: InvoiceExportDialogProps) {
   const [selected, setSelected] = useState<string[]>(() => loadSavedColumnKeys("detailed"));
   const [exporting, setExporting] = useState(false);
-  const [exportType, setExportType] = useState<ExportType>("detailed");
+  const [exportType, setExportType] = useState<ExportType>(initialExportType || "detailed");
   const [dateBasis, setDateBasis] = useState<DateBasis>("invoice_date");
   const [periodType, setPeriodType] = useState<PeriodType>("current_view");
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0]?.value || "");
@@ -111,12 +120,43 @@ export function InvoiceExportDialog({
   const [presetName, setPresetName] = useState("");
   const [showPresetSave, setShowPresetSave] = useState(false);
 
+  // GSTR-1 specific state
+  const [gstr1Opts, setGstr1Opts] = useState<GSTR1FilterOptions>({
+    includeZeroGst: false,
+    includeInvZ: false,
+    includeZeroTaxable: false,
+    includeDrafts: false,
+    includeCancelled: false,
+    taxTypeFilter: "all",
+    billingModeFilter: "all",
+    gstRateFilter: null,
+    searchTerm: "",
+  });
+
+  const isGstr1 = exportType === "gstr1_sales_register";
+
+  useEffect(() => {
+    if (open) {
+      if (initialExportType) setExportType(initialExportType);
+      setSelected(loadSavedColumnKeys(initialExportType || exportType));
+      setPresets(loadExportPresets());
+      if (initialExportType === "gstr1_sales_register") {
+        setDateBasis("invoice_date");
+      }
+    }
+  }, [open, initialExportType]);
+
   useEffect(() => {
     if (open) {
       setSelected(loadSavedColumnKeys(exportType));
-      setPresets(loadExportPresets());
+      if (exportType === "gstr1_sales_register") setDateBasis("invoice_date");
     }
-  }, [open, exportType]);
+  }, [exportType]);
+
+  // Sync GSTR-1 filter options to the global state used by prefilter
+  useEffect(() => {
+    if (isGstr1) setGSTR1FilterOptions(gstr1Opts);
+  }, [isGstr1, gstr1Opts]);
 
   const period: PeriodConfig = useMemo(() => {
     switch (periodType) {
@@ -130,11 +170,18 @@ export function InvoiceExportDialog({
 
   const periodLabel = useMemo(() => getPeriodLabel(period), [period]);
 
-  // Normalized + period-filtered + type-filtered preview data
-  const { previewData, reconciliation, previewTotals } = useMemo(() => {
-    if (!open) return { previewData: [], reconciliation: { hasWarning: false, mismatchCount: 0, totalRecords: 0, taxableTotal: 0, totalTax: 0, igstTotal: 0, cgstTotal: 0, sgstTotal: 0, grossTotal: 0, paidTotal: 0, creditedTotal: 0, balanceDueTotal: 0, overdueTotal: 0 }, previewTotals: { taxable: 0, gst: 0, grand: 0, balance: 0 } };
+  const { previewData, reconciliation, previewTotals, gstr1Exclusions } = useMemo(() => {
+    const empty = { previewData: [] as any[], reconciliation: { hasWarning: false, mismatchCount: 0, totalRecords: 0, taxableTotal: 0, totalTax: 0, igstTotal: 0, cgstTotal: 0, sgstTotal: 0, grossTotal: 0, paidTotal: 0, creditedTotal: 0, balanceDueTotal: 0, overdueTotal: 0 }, previewTotals: { taxable: 0, gst: 0, grand: 0, balance: 0, igst: 0, cgst: 0, sgst: 0 }, gstr1Exclusions: { drafts: 0, cancelled: 0, zeroGst: 0, invZ: 0, zeroTaxable: 0 } };
+    if (!open) return empty;
     let data = normalizeInvoices(invoices, companyName);
     data = filterByPeriod(data, period, dateBasis);
+
+    // For GSTR-1, compute exclusion counts before prefilter
+    let exclusions = empty.gstr1Exclusions;
+    if (isGstr1) {
+      exclusions = getGSTR1ExclusionCounts(data);
+    }
+
     data = prefilterForExportType(data, exportType);
     const recon = checkReconciliation(data);
     return {
@@ -145,9 +192,13 @@ export function InvoiceExportDialog({
         gst: recon.totalTax,
         grand: recon.grossTotal,
         balance: recon.balanceDueTotal,
+        igst: recon.igstTotal,
+        cgst: recon.cgstTotal,
+        sgst: recon.sgstTotal,
       },
+      gstr1Exclusions: exclusions,
     };
-  }, [open, invoices, companyName, period, dateBasis, exportType]);
+  }, [open, invoices, companyName, period, dateBasis, exportType, gstr1Opts]);
 
   const isDetailed = isDetailedExportType(exportType);
 
@@ -196,7 +247,7 @@ export function InvoiceExportDialog({
   };
 
   const doExport = async (fmt: "excel" | "pdf") => {
-    if (isDetailed && selected.length === 0) {
+    if (isDetailed && selected.length === 0 && !isGstr1) {
       toast({ title: "No Columns", description: "Select at least one column to export." });
       return;
     }
@@ -204,7 +255,7 @@ export function InvoiceExportDialog({
     setExporting(true);
     try {
       if (fmt === "excel") {
-        await exportInvoiceExcel(invoices, selected, companyName, exportType, dateBasis, period);
+        await exportInvoiceExcel(invoices, selected, companyName, exportType, dateBasis, period, companyGstin);
         toast({ title: "Export Complete", description: "Excel file downloaded." });
       } else {
         const pdfBranding: InvoicePdfBranding = branding || { companyName: companyName || "Company" };
@@ -212,7 +263,6 @@ export function InvoiceExportDialog({
         toast({ title: "Export Complete", description: "PDF report downloaded." });
       }
 
-      // Non-blocking audit log
       logExportAudit({
         exportFormat: fmt,
         exportType,
@@ -238,7 +288,8 @@ export function InvoiceExportDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Export Invoices</DialogTitle>
+          <DialogTitle>{isGstr1 ? "GSTR-1 Sales Register" : "Export Invoices"}</DialogTitle>
+          {isGstr1 && <p className="text-xs text-muted-foreground">GST Filing Report for CA / Auditor</p>}
         </DialogHeader>
 
         {/* Presets */}
@@ -264,7 +315,7 @@ export function InvoiceExportDialog({
           </div>
         )}
 
-        {/* Export Type Selector - grouped */}
+        {/* Export Type Selector */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground block">Export Type</label>
           <Select value={exportType} onValueChange={(v) => setExportType(v as ExportType)}>
@@ -288,7 +339,7 @@ export function InvoiceExportDialog({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Date Basis</label>
-            <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as DateBasis)}>
+            <Select value={dateBasis} onValueChange={(v) => !isGstr1 && setDateBasis(v as DateBasis)} disabled={isGstr1}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {DATE_BASIS_OPTIONS.map((o) => (
@@ -296,6 +347,7 @@ export function InvoiceExportDialog({
                 ))}
               </SelectContent>
             </Select>
+            {isGstr1 && <p className="text-[10px] text-muted-foreground mt-0.5">Locked to Invoice Date for GSTR-1</p>}
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Period</label>
@@ -382,13 +434,92 @@ export function InvoiceExportDialog({
           </div>
         )}
 
+        {/* GSTR-1 Specific Filters */}
+        {isGstr1 && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground">GSTR-1 Filters</h4>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoice, client, GSTIN, campaign..."
+                  value={gstr1Opts.searchTerm || ""}
+                  onChange={(e) => setGstr1Opts(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  className="h-9 text-sm pl-8"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Tax Type</label>
+                  <Select value={gstr1Opts.taxTypeFilter || "all"} onValueChange={(v) => setGstr1Opts(prev => ({ ...prev, taxTypeFilter: v as any }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="igst">IGST Only</SelectItem>
+                      <SelectItem value="cgst_sgst">CGST + SGST Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Billing Mode</label>
+                  <Select value={gstr1Opts.billingModeFilter || "all"} onValueChange={(v) => setGstr1Opts(prev => ({ ...prev, billingModeFilter: v as any }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Modes</SelectItem>
+                      <SelectItem value="single_invoice">Single Invoice</SelectItem>
+                      <SelectItem value="calendar_monthly">Calendar Monthly</SelectItem>
+                      <SelectItem value="asset_cycle">Asset Cycle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">GST Rate</label>
+                  <Select value={gstr1Opts.gstRateFilter != null ? String(gstr1Opts.gstRateFilter) : "all"} onValueChange={(v) => setGstr1Opts(prev => ({ ...prev, gstRateFilter: v === "all" ? null : Number(v) }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Rates</SelectItem>
+                      <SelectItem value="5">5%</SelectItem>
+                      <SelectItem value="12">12%</SelectItem>
+                      <SelectItem value="18">18%</SelectItem>
+                      <SelectItem value="28">28%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { key: "includeZeroGst" as const, label: "Include zero-GST invoices" },
+                  { key: "includeInvZ" as const, label: "Include INV-Z invoices" },
+                  { key: "includeZeroTaxable" as const, label: "Include zero taxable value" },
+                  { key: "includeDrafts" as const, label: "Include draft invoices" },
+                  { key: "includeCancelled" as const, label: "Include cancelled/void" },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded px-2 py-1">
+                    <Checkbox
+                      checked={!!gstr1Opts[key]}
+                      onCheckedChange={(checked) => setGstr1Opts(prev => ({ ...prev, [key]: !!checked }))}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         <Separator />
 
-        {/* Summary Preview */}
+        {/* Summary Preview - Enhanced for GSTR-1 */}
         <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
             <Info className="h-3.5 w-3.5" />
-            Export Preview
+            {isGstr1 ? "GSTR-1 Preview" : "Export Preview"}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div><span className="text-muted-foreground">Type:</span>{" "}<span className="font-semibold">{EXPORT_TYPE_LABELS[exportType]}</span></div>
@@ -396,13 +527,22 @@ export function InvoiceExportDialog({
             <div><span className="text-muted-foreground">Taxable:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.taxable)}</span></div>
             <div><span className="text-muted-foreground">Grand Total:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.grand)}</span></div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div><span className="text-muted-foreground">GST:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.gst)}</span></div>
-            <div><span className="text-muted-foreground">Balance Due:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.balance)}</span></div>
-            {periodLabel !== "Current View" && (
-              <div className="col-span-2"><span className="text-muted-foreground">Period:</span>{" "}<span className="font-semibold">{periodLabel}</span></div>
-            )}
-          </div>
+          {isGstr1 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div><span className="text-muted-foreground">IGST:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.igst)}</span></div>
+              <div><span className="text-muted-foreground">CGST:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.cgst)}</span></div>
+              <div><span className="text-muted-foreground">SGST:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.sgst)}</span></div>
+              <div><span className="text-muted-foreground">Excluded:</span>{" "}<span className="font-semibold text-amber-600">{gstr1Exclusions.drafts + gstr1Exclusions.cancelled + gstr1Exclusions.zeroGst + gstr1Exclusions.invZ + gstr1Exclusions.zeroTaxable}</span></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div><span className="text-muted-foreground">GST:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.gst)}</span></div>
+              <div><span className="text-muted-foreground">Balance Due:</span>{" "}<span className="font-semibold">{fmtINR(previewTotals.balance)}</span></div>
+              {periodLabel !== "Current View" && (
+                <div className="col-span-2"><span className="text-muted-foreground">Period:</span>{" "}<span className="font-semibold">{periodLabel}</span></div>
+              )}
+            </div>
+          )}
 
           {reconciliation.hasWarning && (
             <div className="flex items-center gap-1.5 text-xs text-amber-600 mt-1">
@@ -412,8 +552,8 @@ export function InvoiceExportDialog({
           )}
         </div>
 
-        {/* Column Selection (for detailed modes) */}
-        {isDetailed && (
+        {/* Column Selection (for detailed modes, not GSTR-1 which uses fixed columns) */}
+        {isDetailed && !isGstr1 && (
           <>
             <div className="flex flex-wrap gap-2 mb-1">
               <Button variant="outline" size="sm" onClick={selectAll}>Select All</Button>
@@ -449,6 +589,13 @@ export function InvoiceExportDialog({
               </div>
             </ScrollArea>
           </>
+        )}
+
+        {isGstr1 && (
+          <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+            GSTR-1 Sales Register uses 14 fixed columns: Sl.No, Client Name, GST No, Campaign, Bill From, Bill To, Inv. No, Date, Total Value, Rate (%), Taxable Value, IGST, CGST, SGST.
+            <br /><span className="text-[10px]">Excel export includes 3 sheets: Sales Register, Reconciliation, and Summary.</span>
+          </div>
         )}
 
         {!isDetailed && (

@@ -28,15 +28,17 @@ import { generateAssetCycles, type GroupedCycleBucket } from "@/utils/generateAs
 interface AssetCycleBillingPreviewProps {
   campaignAssets: any[];
   gstPercent: number;
+  campaignEndDate?: string;
 }
 
 export function AssetCycleBillingPreview({
   campaignAssets,
   gstPercent,
+  campaignEndDate,
 }: AssetCycleBillingPreviewProps) {
   const { groupedBuckets, totalAmount, totalCycles, allCycles } = useMemo(
-    () => generateAssetCycles(campaignAssets),
-    [campaignAssets]
+    () => generateAssetCycles(campaignAssets, campaignEndDate),
+    [campaignAssets, campaignEndDate]
   );
 
   const totalGst = totalAmount * (gstPercent / 100);

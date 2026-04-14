@@ -53,12 +53,28 @@ function resolveAssetDates(asset: any): { start: Date; end: Date } {
 }
 
 /**
- * Generate 30-day billing cycles for a single campaign asset.
+ * Generate recurring 30-day billing cycles for a single campaign asset.
+ * 
+ * Cycle anchor = asset start date
+ * Cycle continuation end = campaignEndDate (unless asset has an earlier explicit stop)
  * Uses final negotiated price only.
  */
-function generateCyclesForAsset(asset: any): AssetCycle[] {
-  const { start, end } = resolveAssetDates(asset);
-  const totalBookedDays = differenceInDays(end, start) + 1; // inclusive
+function generateCyclesForAsset(asset: any, campaignEndDate?: Date): AssetCycle[] {
+  const { start, end: assetEnd } = resolveAssetDates(asset);
+
+  // Determine the effective billing end:
+  // Use campaign end date for cycle continuation, but respect asset's
+  // explicit earlier stop (removal, drop, or shorter booking).
+  let billingEnd = assetEnd;
+  if (campaignEndDate && campaignEndDate > assetEnd) {
+    // Only extend if the asset is NOT explicitly removed/dropped
+    const isExplicitlyEnded = asset.is_removed || asset.dropped_on || asset.removal_type;
+    if (!isExplicitlyEnded) {
+      billingEnd = campaignEndDate;
+    }
+  }
+
+  const totalBookedDays = differenceInDays(billingEnd, start) + 1; // inclusive
 
   if (totalBookedDays <= 0) return [];
 
@@ -71,11 +87,11 @@ function generateCyclesForAsset(asset: any): AssetCycle[] {
   let cycleStart = new Date(start);
   let cycleNumber = 1;
 
-  while (cycleStart <= end) {
+  while (cycleStart <= billingEnd) {
     // Cycle end = cycleStart + 29 days (30-day window inclusive),
-    // but capped at asset end date
+    // but capped at billing end date
     const naturalEnd = addDays(cycleStart, 29);
-    const cycleEnd = naturalEnd > end ? end : naturalEnd;
+    const cycleEnd = naturalEnd > billingEnd ? billingEnd : naturalEnd;
     const cycleDays = differenceInDays(cycleEnd, cycleStart) + 1;
     const isPartial = cycleDays < 30;
     const cycleAmount = perDayRate * cycleDays;
@@ -110,18 +126,19 @@ function generateCyclesForAsset(asset: any): AssetCycle[] {
  * by matching (cycleNumber across assets with same start date, or by
  * exact start+end date windows).
  */
-export function generateAssetCycles(campaignAssets: any[]): {
+export function generateAssetCycles(campaignAssets: any[], campaignEndDate?: string): {
   allCycles: AssetCycle[];
   groupedBuckets: GroupedCycleBucket[];
   totalAmount: number;
   totalCycles: number;
 } {
+  const parsedCampaignEnd = campaignEndDate ? new Date(campaignEndDate) : undefined;
   // Filter out removed assets
   const activeAssets = campaignAssets.filter((a) => !a.is_removed);
 
   const allCycles: AssetCycle[] = [];
   for (const asset of activeAssets) {
-    const cycles = generateCyclesForAsset(asset);
+    const cycles = generateCyclesForAsset(asset, parsedCampaignEnd);
     allCycles.push(...cycles);
   }
 

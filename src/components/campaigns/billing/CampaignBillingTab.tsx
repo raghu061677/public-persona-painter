@@ -763,6 +763,7 @@ export function CampaignBillingTab({
         <AssetCycleBillingPreview
           campaignAssets={campaignAssets}
           gstPercent={totals.gstRate}
+          campaignEndDate={campaign.end_date}
         />
       )}
 

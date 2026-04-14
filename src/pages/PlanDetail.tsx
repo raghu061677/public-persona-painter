@@ -134,20 +134,44 @@ export default function PlanDetail() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get user's effective roles to check if THEY have pending approvals for this plan
-    const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
-    const roles = await getEffectiveApprovalRoles(user.id);
+    // Admin users see ALL pending approvals for this plan (no role filter)
+    const isUserAdmin = isAdmin || await checkIsAdmin(user.id);
 
-    const { data, error } = await supabase
-      .from("plan_approvals")
-      .select("*", { count: "exact" })
-      .eq("plan_id", id)
-      .eq("status", "pending")
-      .in("required_role", roles as any);
+    if (isUserAdmin) {
+      const { data, error } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact" })
+        .eq("plan_id", id)
+        .eq("status", "pending");
 
-    if (!error && data) {
-      setPendingApprovalsCount(data.length);
+      if (!error && data) {
+        setPendingApprovalsCount(data.length);
+      }
+    } else {
+      // Non-admin: only count approvals matching their effective roles
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
+      const { data, error } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact" })
+        .eq("plan_id", id)
+        .eq("status", "pending")
+        .in("required_role", roles as any);
+
+      if (!error && data) {
+        setPendingApprovalsCount(data.length);
+      }
     }
+  };
+
+  // Helper to check admin status without relying on state (for async contexts)
+  const checkIsAdmin = async (userId: string): Promise<boolean> => {
+    const { data: ur } = await supabase.from('user_roles').select('role').eq('user_id', userId);
+    if (ur?.some(r => r.role === 'admin')) return true;
+    const { data: cu } = await supabase.from('company_users').select('role').eq('user_id', userId).eq('status', 'active');
+    if (cu?.some(r => r.role === 'admin')) return true;
+    return false;
   };
 
   // Pre-conversion availability check when convert dialog opens
@@ -338,15 +362,9 @@ export default function PlanDetail() {
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      // Check if 'admin' role exists in the array
-      const hasAdminRole = data?.some(r => r.role === 'admin') || false;
-      setIsAdmin(hasAdminRole);
-      console.log('Admin check for user:', user.email, 'Has admin role:', hasAdminRole, 'Roles:', data);
+      const result = await checkIsAdmin(user.id);
+      setIsAdmin(result);
+      console.log('Admin check for user:', user.email, 'Has admin role:', result);
     }
   };
 
@@ -1043,27 +1061,31 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get user's effective roles to find their eligible pending approval
-      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
-      const roles = await getEffectiveApprovalRoles(user.id);
-
-      const { data: approvals } = await supabase
+      let approvalQuery = supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
-        .in("required_role", roles as any)
         .order("approval_level")
         .limit(1);
+
+      // Admin can approve any level; non-admin filtered by their roles
+      if (!isAdmin) {
+        const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+        const roles = await getEffectiveApprovalRoles(user.id);
+        approvalQuery = approvalQuery.in("required_role", roles as any);
+      }
+
+      const { data: approvals } = await approvalQuery;
 
       if (!approvals || approvals.length === 0) {
         throw new Error("No pending approval found for your role");
       }
 
-      const result = await supabase.rpc("process_plan_approval", {
+      await supabase.rpc("process_plan_approval", {
         p_approval_id: approvals[0].id,
         p_status: "approved",
-        p_comments: approvalRemarks,
+        p_comments: approvalRemarks || (isAdmin ? "Admin approval" : ""),
       });
 
       toast({
@@ -1071,7 +1093,6 @@ export default function PlanDetail() {
         description: "Plan approved successfully",
       });
 
-      // Trigger email notification
       const payload = buildPlanPayload(plan, clientDetails, company);
       triggerEmail('plan_approved_internal', payload,
         [{ to: company?.email || '' }], id);
@@ -1094,18 +1115,21 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get user's effective roles to find their eligible pending approval
-      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
-      const roles = await getEffectiveApprovalRoles(user.id);
-
-      const { data: approvals } = await supabase
+      let approvalQuery = supabase
         .from("plan_approvals")
         .select("id")
         .eq("plan_id", id)
         .eq("status", "pending")
-        .in("required_role", roles as any)
         .order("approval_level")
         .limit(1);
+
+      if (!isAdmin) {
+        const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+        const roles = await getEffectiveApprovalRoles(user.id);
+        approvalQuery = approvalQuery.in("required_role", roles as any);
+      }
+
+      const { data: approvals } = await approvalQuery;
 
       if (!approvals || approvals.length === 0) {
         throw new Error("No pending approval found for your role");
@@ -1123,7 +1147,6 @@ export default function PlanDetail() {
         variant: "destructive",
       });
 
-      // Trigger email notification
       const payload = buildPlanPayload(plan, clientDetails, company);
       triggerEmail('plan_rejected_internal', payload,
         [{ to: company?.email || '' }], id);
@@ -1138,6 +1161,69 @@ export default function PlanDetail() {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  // Admin bypass: auto-approve all pending levels and convert to campaign
+  const handleAdminBypassConvert = async () => {
+    if (isConverting) return;
+    setIsConverting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch all pending approvals for this plan
+      const { data: pendingApprovals } = await supabase
+        .from("plan_approvals")
+        .select("id")
+        .eq("plan_id", id)
+        .eq("status", "pending")
+        .order("approval_level");
+
+      if (pendingApprovals && pendingApprovals.length > 0) {
+        // Auto-approve each level sequentially
+        for (const approval of pendingApprovals) {
+          await supabase.rpc("process_plan_approval", {
+            p_approval_id: approval.id,
+            p_status: "approved",
+            p_comments: "Admin bypass — direct conversion to campaign",
+          });
+        }
+      }
+
+      // Update plan status to Approved
+      await supabase.from('plans').update({ status: 'Approved' as any }).eq('id', id);
+
+      toast({
+        title: "Approvals Bypassed",
+        description: "All approval levels auto-approved by admin. Opening campaign conversion...",
+      });
+
+      // Refresh plan state, then open convert dialog
+      await fetchPlan();
+      await loadPendingApprovals();
+
+      setCampaignData({
+        campaign_name: plan.plan_name,
+        start_date: plan.start_date,
+        end_date: plan.end_date,
+        notes: plan.notes || "",
+      });
+
+      // Check for signed RO
+      if (!plan.signed_ro_url) {
+        setShowROWarningDialog(true);
+      } else {
+        setShowConvertDialog(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -1575,7 +1661,24 @@ export default function PlanDetail() {
               </TooltipProvider>
             )}
 
-            {!['approved', 'converted'].includes(plan.status?.toLowerCase()) && (
+            {/* Admin bypass: Convert to Campaign directly from Sent status */}
+            {plan.status?.toLowerCase() === 'sent' && isAdmin && !existingCampaignId && (
+              <Button 
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg"
+                onClick={handleAdminBypassConvert}
+                disabled={isConverting}
+              >
+                {isConverting ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Rocket className="mr-2 h-5 w-5" />
+                )}
+                {isConverting ? "Processing..." : "Bypass & Convert to Campaign"}
+              </Button>
+            )}
+
+            {!['approved', 'converted', 'sent'].includes(plan.status?.toLowerCase()) && !isAdmin && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1590,6 +1693,27 @@ export default function PlanDetail() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-medium">Plan must be approved before converting to campaign</p>
+                    <p className="text-sm text-muted-foreground mt-1">Current status: {plan.status}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {!['approved', 'converted'].includes(plan.status?.toLowerCase()) && plan.status?.toLowerCase() !== 'sent' && isAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      disabled
+                      className="opacity-50 cursor-not-allowed"
+                    >
+                      <Rocket className="mr-2 h-5 w-5" />
+                      Convert to Campaign
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Submit plan for approval first, or use Draft → Sent workflow</p>
                     <p className="text-sm text-muted-foreground mt-1">Current status: {plan.status}</p>
                   </TooltipContent>
                 </Tooltip>

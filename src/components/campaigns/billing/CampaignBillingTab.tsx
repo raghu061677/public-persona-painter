@@ -57,7 +57,7 @@ interface InvoiceRecord {
   is_monthly_split: boolean | null;
 }
 
-type BillingMode = 'monthly' | 'single';
+type BillingMode = 'monthly' | 'single' | 'asset_cycle';
 
 export function CampaignBillingTab({
   campaign,

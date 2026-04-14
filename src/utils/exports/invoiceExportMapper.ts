@@ -864,7 +864,7 @@ export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType
         inv.campaign_display.toLowerCase().includes(term)
       );
     }
-    return filtered;
+    return sortByInvoiceNumber(filtered);
   }
   return data;
 }

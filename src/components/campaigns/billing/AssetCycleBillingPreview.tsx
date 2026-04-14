@@ -36,6 +36,7 @@ interface CycleInvoice {
   cycle_end_date: string | null;
   total_amount: number;
   status: string;
+  is_draft?: boolean;
 }
 
 interface AssetCycleBillingPreviewProps {
@@ -48,6 +49,7 @@ interface AssetCycleBillingPreviewProps {
   companyId?: string;
   campaignName: string;
   taxType?: string;
+  gstMode?: 'CGST_SGST' | 'IGST';
   onInvoiceGenerated?: () => void;
 }
 
@@ -61,6 +63,7 @@ export function AssetCycleBillingPreview({
   companyId,
   campaignName,
   taxType,
+  gstMode = 'CGST_SGST',
   onInvoiceGenerated,
 }: AssetCycleBillingPreviewProps) {
   const navigate = useNavigate();
@@ -80,7 +83,7 @@ export function AssetCycleBillingPreview({
   const fetchCycleInvoices = useCallback(async () => {
     const { data } = await supabase
       .from("invoices")
-      .select("id, cycle_start_date, cycle_end_date, total_amount, status")
+      .select("id, cycle_start_date, cycle_end_date, total_amount, status, is_draft")
       .eq("campaign_id", campaignId)
       .eq("billing_mode", "asset_cycle")
       .neq("status", "Cancelled");
@@ -195,6 +198,10 @@ export function AssetCycleBillingPreview({
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
+      // GST mode — use the resolved gstMode from parent
+      const isIGST = gstMode === 'IGST';
+      const gstHalf = gstPercent / 2;
+
       const { error } = await supabase.from("invoices").insert({
         id: invoiceId,
         invoice_no: invoiceId,
@@ -215,6 +222,14 @@ export function AssetCycleBillingPreview({
         gst_amount: gstAmount,
         total_amount: total,
         balance_due: total,
+        tax_type: isIGST ? 'igst' : 'cgst_sgst',
+        gst_mode: gstMode,
+        cgst_percent: isIGST ? 0 : gstHalf,
+        sgst_percent: isIGST ? 0 : gstHalf,
+        igst_percent: isIGST ? gstPercent : 0,
+        cgst_amount: isIGST ? 0 : gstAmount / 2,
+        sgst_amount: isIGST ? 0 : gstAmount / 2,
+        igst_amount: isIGST ? gstAmount : 0,
         status: "Draft",
         is_draft: true,
         items,
@@ -304,7 +319,8 @@ export function AssetCycleBillingPreview({
                 const bucketTotal = bucket.totalAmount + bucketGst;
                 const bucketKey = `${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`;
                 const matchedInvoice = findInvoiceForBucket(bucket);
-                const isInvoiced = !!matchedInvoice;
+                const isInvoiced = !!matchedInvoice && !matchedInvoice.is_draft;
+                const isDraft = !!matchedInvoice && matchedInvoice.is_draft;
                 const isGenerating = generatingBucket === bucketKey;
 
                 return (
@@ -369,6 +385,10 @@ export function AssetCycleBillingPreview({
                         <Badge variant="default" className="text-xs">
                           Invoiced
                         </Badge>
+                      ) : isDraft ? (
+                        <Badge variant="secondary" className="text-xs">
+                          Draft
+                        </Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs">
                           Not Invoiced
@@ -376,7 +396,7 @@ export function AssetCycleBillingPreview({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isInvoiced && matchedInvoice ? (
+                      {(isInvoiced || isDraft) && matchedInvoice ? (
                         <Button
                           size="sm"
                           variant="outline"

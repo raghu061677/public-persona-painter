@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateDraftInvoiceId } from "@/utils/finance";
+import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 
 interface GenerateInvoiceDialogProps {
   campaign: any;
@@ -134,8 +135,39 @@ export function GenerateInvoiceDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Determine tax_type from campaign
-      const campaignTaxType = (campaign as any).tax_type || 'cgst_sgst';
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
+
+      // Determine tax_type: campaign.tax_type first, then registration-aware fallback
+      let campaignTaxType = (campaign as any).tax_type;
+      if (!campaignTaxType) {
+        // Registration-aware fallback: check registration billing_state vs company state
+        const regId = (campaign as any).client_registration_id;
+        if (regId) {
+          const [{ data: regData }, { data: compData }] = await Promise.all([
+            supabase.from('client_registrations').select('billing_state').eq('id', regId).maybeSingle(),
+            supabase.from('companies').select('state').eq('id', campaign.company_id).maybeSingle(),
+          ]);
+          const regState = regData?.billing_state;
+          const compState = compData?.state;
+          if (regState && compState) {
+            campaignTaxType = regState.toLowerCase() === compState.toLowerCase() ? 'cgst_sgst' : 'igst';
+          }
+        }
+        // Legacy fallback: check clients.billing_state
+        if (!campaignTaxType) {
+          const { data: clientData } = await supabase
+            .from('clients').select('billing_state').eq('id', campaign.client_id).maybeSingle();
+          const { data: compData2 } = await supabase
+            .from('companies').select('state').eq('id', campaign.company_id).maybeSingle();
+          const clientState = clientData?.billing_state;
+          const compState2 = compData2?.state;
+          if (clientState && compState2) {
+            campaignTaxType = clientState.toLowerCase() === compState2.toLowerCase() ? 'cgst_sgst' : 'igst';
+          }
+        }
+        if (!campaignTaxType) campaignTaxType = 'cgst_sgst';
+      }
       const isIGST = campaignTaxType === 'igst';
 
       // Create invoice - include company_id for RLS
@@ -165,6 +197,7 @@ export function GenerateInvoiceDialog({
           client_po_number: campaign.client_po_number || null,
           client_po_date: campaign.client_po_date || null,
           created_by: user.id,
+          ...regSnapshot,
         })
         .select()
         .single();

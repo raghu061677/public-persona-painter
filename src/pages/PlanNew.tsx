@@ -1031,6 +1031,34 @@ export default function PlanNew() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tax Type</Label>
+                  <Select 
+                    value={formData.tax_type} 
+                    onValueChange={(v: string) => {
+                      setManualTaxOverride(true);
+                      setFormData(prev => ({ ...prev, tax_type: v as TaxType }));
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CGST_SGST">CGST + SGST ({parseFloat(formData.gst_percent)/2}% + {parseFloat(formData.gst_percent)/2}%)</SelectItem>
+                      <SelectItem value="IGST">IGST ({formData.gst_percent}%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!manualTaxOverride && (
+                    <p className="text-xs text-muted-foreground">Auto-detected based on registration state</p>
+                  )}
+                  {manualTaxOverride && (
+                    <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs"
+                      onClick={() => setManualTaxOverride(false)}
+                    >
+                      Reset to auto-detect
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

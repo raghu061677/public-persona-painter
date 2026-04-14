@@ -138,7 +138,7 @@ export function generateAssetCycles(campaignAssets: any[], campaignEndDate?: str
 
   const allCycles: AssetCycle[] = [];
   for (const asset of activeAssets) {
-    const cycles = generateCyclesForAsset(asset);
+    const cycles = generateCyclesForAsset(asset, parsedCampaignEnd);
     allCycles.push(...cycles);
   }
 

@@ -131,11 +131,17 @@ export function computeCampaignTotals({
        : (asset.booking_start_date 
          ? new Date(asset.booking_start_date) 
          : (asset.start_date ? new Date(asset.start_date) : campaignStartDate));
-     const assetEnd = asset.effective_end_date 
+     let assetEnd = asset.effective_end_date 
        ? new Date(asset.effective_end_date) 
        : (asset.booking_end_date 
          ? new Date(asset.booking_end_date) 
          : (asset.end_date ? new Date(asset.end_date) : campaignEndDate));
+     
+     // Commercial continuation: active assets (not removed/dropped) continue
+     // billing until campaign end date, matching Asset Cycle Billing behavior
+     if (!asset.is_removed && !asset.effective_end_date && assetEnd < campaignEndDate) {
+       assetEnd = campaignEndDate;
+     }
      
      // Calculate this asset's duration in days (inclusive)
      const assetDurationDays = Math.ceil((assetEnd.getTime() - assetStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -298,17 +304,24 @@ export function computeCampaignTotals({
    let baseRent = 0;
    const activeAssets = campaignAssets.filter(a => !a.is_removed);
 
-   for (const asset of activeAssets) {
+    for (const asset of activeAssets) {
+     const campaignEndDate = period.periodEnd; // fallback only
+     const campaignEndDateFull = totals.campaignPeriodEnd;
      const assetStart = asset.effective_start_date
        ? new Date(asset.effective_start_date)
        : asset.booking_start_date
          ? new Date(asset.booking_start_date)
          : asset.start_date ? new Date(asset.start_date) : period.periodStart;
-     const assetEnd = asset.effective_end_date
+     let assetEnd = asset.effective_end_date
        ? new Date(asset.effective_end_date)
        : asset.booking_end_date
          ? new Date(asset.booking_end_date)
          : asset.end_date ? new Date(asset.end_date) : period.periodEnd;
+
+     // Commercial continuation: extend active assets to campaign end date
+     if (!asset.is_removed && !asset.effective_end_date && assetEnd < campaignEndDateFull) {
+       assetEnd = campaignEndDateFull;
+     }
 
      // Calculate overlap between asset booking and this billing period
      const overlapStart = assetStart > period.periodStart ? assetStart : period.periodStart;

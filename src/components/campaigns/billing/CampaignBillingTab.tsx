@@ -532,9 +532,9 @@ export function CampaignBillingTab({
 
       {/* Billing Mode Selector */}
       {totals.billingPeriods.length > 1 && (
-        <Card>
+      <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Invoice Generation Mode</CardTitle>
+            <CardTitle className="text-base">Billing Type</CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup 
@@ -545,9 +545,9 @@ export function CampaignBillingTab({
               <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
                 <RadioGroupItem value="monthly" id="monthly" />
                 <Label htmlFor="monthly" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Monthly Invoices</div>
+                  <div className="font-medium">Calendar Monthly</div>
                   <div className="text-sm text-muted-foreground">
-                    Generate separate invoices for each billing period
+                    Generate separate invoices for each calendar month
                   </div>
                 </Label>
               </div>
@@ -557,6 +557,18 @@ export function CampaignBillingTab({
                   <div className="font-medium">Single Invoice</div>
                   <div className="text-sm text-muted-foreground">
                     Generate one invoice for the entire campaign
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1 border-dashed">
+                <RadioGroupItem value="asset_cycle" id="asset_cycle" />
+                <Label htmlFor="asset_cycle" className="flex-1 cursor-pointer">
+                  <div className="font-medium flex items-center gap-2">
+                    Asset Cycle Billing
+                    <Badge variant="secondary" className="text-[10px]">Preview</Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    30-day cycles per asset using final negotiated price
                   </div>
                 </Label>
               </div>

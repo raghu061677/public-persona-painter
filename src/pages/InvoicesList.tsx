@@ -220,7 +220,7 @@ export default function InvoicesList() {
         campaign_name: inv.campaigns?.campaign_name || inv.campaign_id || null,
         campaign_start_date: inv.campaign_start_date || inv.campaigns?.start_date || null,
         campaign_end_date: inv.campaign_end_date || inv.campaigns?.end_date || null,
-        client_gst_number: inv.client_gstin_snapshot || inv.clients?.gst_number || null,
+        client_gst_number: inv.registration_gstin_snapshot || inv.client_gstin_snapshot || inv.clients?.gst_number || null,
       }));
       setInvoices(invoiceScopeFilter(enriched));
     }

@@ -134,20 +134,44 @@ export default function PlanDetail() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get user's effective roles to check if THEY have pending approvals for this plan
-    const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
-    const roles = await getEffectiveApprovalRoles(user.id);
+    // Admin users see ALL pending approvals for this plan (no role filter)
+    const isUserAdmin = isAdmin || await checkIsAdmin(user.id);
 
-    const { data, error } = await supabase
-      .from("plan_approvals")
-      .select("*", { count: "exact" })
-      .eq("plan_id", id)
-      .eq("status", "pending")
-      .in("required_role", roles as any);
+    if (isUserAdmin) {
+      const { data, error } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact" })
+        .eq("plan_id", id)
+        .eq("status", "pending");
 
-    if (!error && data) {
-      setPendingApprovalsCount(data.length);
+      if (!error && data) {
+        setPendingApprovalsCount(data.length);
+      }
+    } else {
+      // Non-admin: only count approvals matching their effective roles
+      const { getEffectiveApprovalRoles } = await import("@/utils/approvalRoles");
+      const roles = await getEffectiveApprovalRoles(user.id);
+
+      const { data, error } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact" })
+        .eq("plan_id", id)
+        .eq("status", "pending")
+        .in("required_role", roles as any);
+
+      if (!error && data) {
+        setPendingApprovalsCount(data.length);
+      }
     }
+  };
+
+  // Helper to check admin status without relying on state (for async contexts)
+  const checkIsAdmin = async (userId: string): Promise<boolean> => {
+    const { data: ur } = await supabase.from('user_roles').select('role').eq('user_id', userId);
+    if (ur?.some(r => r.role === 'admin')) return true;
+    const { data: cu } = await supabase.from('company_users').select('role').eq('user_id', userId).eq('status', 'active');
+    if (cu?.some(r => r.role === 'admin')) return true;
+    return false;
   };
 
   // Pre-conversion availability check when convert dialog opens

@@ -351,15 +351,17 @@ export function CampaignBillingTab({
 
       // Check if an invoice already exists for this period (match by billing_month key)
       // Search ALL existing invoices (not just monthly), to avoid duplicate key constraint violations
-      const existingInvoice = existingInvoices.find(inv => {
-        if (inv.billing_month) {
-          return inv.billing_month === period.monthKey;
-        }
-        // Fallback: compare date strings
-        const invStart = inv.invoice_period_start;
-        const periodStartStr = format(period.periodStart, 'yyyy-MM-dd');
-        return invStart === periodStartStr;
-      });
+      const existingInvoice = existingInvoices
+        .filter(inv => !['Cancelled', 'Void'].includes(inv.status))
+        .find(inv => {
+          if (inv.billing_month) {
+            return inv.billing_month === period.monthKey;
+          }
+          // Fallback: compare date strings
+          const invStart = inv.invoice_period_start;
+          const periodStartStr = format(period.periodStart, 'yyyy-MM-dd');
+          return invStart === periodStartStr;
+        });
 
       // Fetch media_asset_code for all campaign assets
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);

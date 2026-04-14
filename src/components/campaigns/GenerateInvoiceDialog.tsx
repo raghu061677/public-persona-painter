@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { generateDraftInvoiceId } from "@/utils/finance";
+import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 
 interface GenerateInvoiceDialogProps {
   campaign: any;

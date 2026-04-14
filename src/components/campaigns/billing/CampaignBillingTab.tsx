@@ -834,6 +834,7 @@ export function CampaignBillingTab({
           companyId={campaign.company_id}
           campaignName={campaign.campaign_name}
           taxType={campaign.tax_type}
+          gstMode={gstMode}
           onInvoiceGenerated={() => {
             fetchExistingInvoices();
             onRefresh?.();

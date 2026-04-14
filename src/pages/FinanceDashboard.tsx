@@ -31,7 +31,7 @@ export default function FinanceDashboard() {
     setLoading(true);
     const query = supabase
       .from("invoices")
-      .select("id, client_id, client_name, campaign_id, invoice_date, due_date, status, total_amount, paid_amount, credited_amount, balance_due, sub_total, gst_amount, clients:client_id(gst_number), campaigns:campaign_id(campaign_name)")
+      .select("id, client_id, client_name, campaign_id, invoice_date, due_date, status, total_amount, paid_amount, credited_amount, balance_due, sub_total, gst_amount, registration_gstin_snapshot, client_gstin_snapshot, clients:client_id(gst_number), campaigns:campaign_id(campaign_name)")
       .not("status", "in", '("Draft","Cancelled")');
 
     const { data } = await query;

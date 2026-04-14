@@ -287,13 +287,40 @@ export function MonthlyInvoiceGenerator({
   // Fetch client and company states for GST mode determination
   const fetchGSTInfo = useCallback(async () => {
     try {
-      // Fetch client state
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('billing_state')
-        .eq('id', campaign.client_id)
-        .single();
-      
+      // Priority 1: campaign's saved tax_type — honour immediately
+      const campaignTaxType = (campaign as any).tax_type;
+      if (campaignTaxType === 'igst') {
+        setGstMode('IGST');
+        return;
+      }
+      if (campaignTaxType === 'cgst_sgst') {
+        setGstMode('CGST_SGST');
+        return;
+      }
+
+      // Priority 2: registration-aware billing state (if campaign has client_registration_id)
+      let billingState = '';
+      const campaignRegId = (campaign as any).client_registration_id;
+
+      if (campaignRegId) {
+        const { data: regData } = await supabase
+          .from('client_registrations')
+          .select('billing_state')
+          .eq('id', campaignRegId)
+          .maybeSingle();
+        billingState = regData?.billing_state || '';
+      }
+
+      // Priority 3: fallback to legacy client billing_state
+      if (!billingState) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('billing_state')
+          .eq('id', campaign.client_id)
+          .single();
+        billingState = clientData?.billing_state || '';
+      }
+
       // Fetch company state
       if (campaign.company_id) {
         const { data: companyData } = await supabase
@@ -301,33 +328,27 @@ export function MonthlyInvoiceGenerator({
           .select('state')
           .eq('id', campaign.company_id)
           .single();
-        
-        const clientSt = clientData?.billing_state || '';
-        const companySt = companyData?.state || 'Telangana'; // Default company state
-        
-        setClientState(clientSt);
+
+        const companySt = companyData?.state || 'Telangana';
+
+        setClientState(billingState);
         setCompanyState(companySt);
-        
-        // Determine GST mode: prioritize campaign's saved tax_type
-        const campaignTaxType = (campaign as any).tax_type;
-        if (campaignTaxType === 'igst') {
-          setGstMode('IGST');
-        } else if (campaignTaxType === 'cgst_sgst') {
+
+        // Compare states to determine GST mode
+        if (billingState && companySt &&
+            billingState.toLowerCase().trim() === companySt.toLowerCase().trim()) {
           setGstMode('CGST_SGST');
-        } else if (clientSt && companySt && 
-            clientSt.toLowerCase().trim() === companySt.toLowerCase().trim()) {
-          setGstMode('CGST_SGST');
-        } else if (clientSt) {
+        } else if (billingState) {
           setGstMode('IGST');
         } else {
-          // Default to CGST_SGST if client state unknown
+          // Default to CGST_SGST if billing state unknown
           setGstMode('CGST_SGST');
         }
       }
     } catch (err) {
       console.error('Error fetching GST info:', err);
     }
-  }, [campaign.client_id, campaign.company_id]);
+  }, [campaign.client_id, campaign.company_id, (campaign as any).client_registration_id, (campaign as any).tax_type]);
   
   // Check for existing invoice when month changes
   const checkExistingInvoice = useCallback(async (month: string) => {

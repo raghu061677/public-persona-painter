@@ -82,7 +82,7 @@ export function AssetCycleBillingPreview({
   const fetchCycleInvoices = useCallback(async () => {
     const { data } = await supabase
       .from("invoices")
-      .select("id, cycle_start_date, cycle_end_date, total_amount, status")
+      .select("id, cycle_start_date, cycle_end_date, total_amount, status, is_draft")
       .eq("campaign_id", campaignId)
       .eq("billing_mode", "asset_cycle")
       .neq("status", "Cancelled");

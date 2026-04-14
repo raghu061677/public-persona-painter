@@ -48,6 +48,7 @@ interface AssetCycleBillingPreviewProps {
   companyId?: string;
   campaignName: string;
   taxType?: string;
+  gstMode?: 'CGST_SGST' | 'IGST';
   onInvoiceGenerated?: () => void;
 }
 

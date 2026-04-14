@@ -91,7 +91,7 @@ export function normalizeInvoice(row: any, index: number, companyName?: string):
   const periodEnd = fmtDate(row.invoice_period_end || row.billing_to || row.end_date);
   const displayPeriod = periodStart && periodEnd ? `${periodStart} to ${periodEnd}` : periodStart || periodEnd || "";
 
-  const gstin = row.client_gstin_snapshot || row.client_gst_number || row.client_gstin || row.gstin || "";
+  const gstin = row.registration_gstin_snapshot || row.client_gstin_snapshot || row.client_gst_number || row.client_gstin || row.gstin || "";
 
   let overdueDays = 0;
   let overdueAmount = 0;
@@ -122,7 +122,7 @@ export function normalizeInvoice(row: any, index: number, companyName?: string):
     sgst: sgstAmt,
     status: row.status || "",
     client_code: row.client_id || "",
-    place_of_supply: row.place_of_supply || row.billing_state || "",
+    place_of_supply: row.place_of_supply || row.registration_state_snapshot || row.billing_state || "",
     billing_period: row.billing_month || row.billing_period || "",
     billing_month: row.billing_month || fmtYYYYMM(row.invoice_date) || "",
     asset_count: row.asset_count || (row.items ? (Array.isArray(row.items) ? row.items.length : 0) : 0),

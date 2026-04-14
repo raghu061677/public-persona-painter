@@ -5,6 +5,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { resolveBillTo, resolveShipTo } from './registrationAddressHelper';
 import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
@@ -223,26 +224,10 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   const colMidX = pageWidth / 2;
   const colWidth = contentWidth / 2 - 5;
 
-  const billTo = {
-    name: data.client.name || 'Client',
-    address1: data.client.billing_address_line1 || data.client.address || '',
-    address2: data.client.billing_address_line2 || '',
-    city: data.client.billing_city || data.client.city || '',
-    state: data.client.billing_state || data.client.state || '',
-    pincode: data.client.billing_pincode || data.client.pincode || '',
-    gstin: data.client.gst_number || '',
-    contact: data.client.contact_person || '',
-  };
+  const billTo = resolveBillTo(data);
 
-  const hasShippingAddress = !!(data.client.shipping_address_line1 || data.client.shipping_city);
-  const shipTo = {
-    name: data.client.name || 'Client',
-    address1: data.client.shipping_address_line1 || billTo.address1,
-    city: data.client.shipping_city || billTo.city,
-    state: data.client.shipping_state || billTo.state,
-    pincode: data.client.shipping_pincode || billTo.pincode,
-    gstin: billTo.gstin,
-  };
+  const shipToResult = resolveShipTo(data, billTo);
+  const shipTo = shipToResult.address;
 
   const boxHeight = 34;
   doc.setDrawColor(200, 200, 200);
@@ -293,7 +278,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   if (shipCityState) { doc.text(shipCityState, colMidX + 5.5, rightY); rightY += 3.5; }
   if (shipTo.gstin) { doc.setFont('NotoSans', 'bold'); doc.text(`GSTIN: ${shipTo.gstin}`, colMidX + 5.5, rightY); }
 
-  if (!hasShippingAddress) {
+  if (shipToResult.sameAsBillTo) {
     doc.setFontSize(6);
     doc.setFont('NotoSans', 'italic');
     doc.setTextColor(100, 100, 100);

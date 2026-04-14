@@ -5,6 +5,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { resolveBillTo, resolveShipTo } from './registrationAddressHelper';
 import { renderPaymentQRSection } from './paymentQR';
 import { getBankDetailsFromCompany } from '@/lib/bankDetails';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
@@ -152,26 +153,12 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   yPos = doc.lastAutoTable.finalY + 4;
 
   // ========== BILL TO / SHIP TO - Two column bordered grid ==========
-  const billTo = {
-    name: data.client.name || 'Client',
-    address1: data.client.billing_address_line1 || data.client.address || '',
-    address2: data.client.billing_address_line2 || '',
-    city: data.client.billing_city || data.client.city || '',
-    state: data.client.billing_state || data.client.state || '',
-    pincode: data.client.billing_pincode || data.client.pincode || '',
-    gstin: data.client.gst_number || '',
-  };
+  const billTo = resolveBillTo(data);
 
-  const hasShippingAddress = !!(data.client.shipping_address_line1 || data.client.shipping_city);
+  const shipToResult = resolveShipTo(data, billTo);
   const shipTo = {
-    name: data.client.name || 'Client',
-    address1: data.client.shipping_address_line1 || billTo.address1,
-    address2: data.client.shipping_address_line2 || billTo.address2,
-    city: data.client.shipping_city || billTo.city,
-    state: data.client.shipping_state || billTo.state,
-    pincode: data.client.shipping_pincode || billTo.pincode,
-    gstin: billTo.gstin,
-    sameAsBillTo: !hasShippingAddress,
+    ...shipToResult.address,
+    sameAsBillTo: shipToResult.sameAsBillTo,
   };
 
   // Build full address strings

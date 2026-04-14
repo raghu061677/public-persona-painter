@@ -822,6 +822,32 @@ export function getGSTR1ExclusionCounts(allInvoices: NormalizedInvoice[]): {
   return { drafts, cancelled, zeroGst, invZ, zeroTaxable };
 }
 
+// ─── Sort by invoice number (numeric sequence extraction) ───────────────
+function extractInvoiceSeq(invoiceNo: string): { fy: string; seq: number } {
+  // Matches patterns like INV/2026-27/0001 or INV/2025-26/0123
+  const m = invoiceNo.match(/INV\/(\d{4}-\d{2})\/(\d+)/i);
+  if (m) return { fy: m[1], seq: parseInt(m[2], 10) };
+  // Fallback: extract trailing digits
+  const digits = invoiceNo.match(/(\d+)$/);
+  return { fy: "", seq: digits ? parseInt(digits[1], 10) : Number.MAX_SAFE_INTEGER };
+}
+
+export function sortByInvoiceNumber(data: NormalizedInvoice[]): NormalizedInvoice[] {
+  return [...data].sort((a, b) => {
+    const seqA = extractInvoiceSeq(a.invoice_number);
+    const seqB = extractInvoiceSeq(b.invoice_number);
+    // Sort by FY first, then by sequence number
+    if (seqA.fy !== seqB.fy) return seqA.fy.localeCompare(seqB.fy);
+    if (seqA.seq !== seqB.seq) return seqA.seq - seqB.seq;
+    // Fallback to invoice_date
+    const dA = a.invoice_date || "";
+    const dB = b.invoice_date || "";
+    if (dA !== dB) return dA.localeCompare(dB);
+    // Final tie-breaker: client name
+    return a.client_name.localeCompare(b.client_name);
+  });
+}
+
 // ─── Pre-filter data for outstanding & GSTR-1 export types ─────────────
 export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType): NormalizedInvoice[] {
   if (et.startsWith("outstanding_")) {
@@ -864,7 +890,7 @@ export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType
         inv.campaign_display.toLowerCase().includes(term)
       );
     }
-    return filtered;
+    return sortByInvoiceNumber(filtered);
   }
   return data;
 }

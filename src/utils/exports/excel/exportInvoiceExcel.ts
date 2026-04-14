@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import {
   normalizeInvoices,
+  normalizeInvoice,
   buildTotalsRow,
   getSummaryColumnsForType,
   resolveSummaryData,
@@ -11,9 +12,13 @@ import {
   getPeriodFileSlug,
   getPeriodLabel,
   checkReconciliation,
+  aggregateMonthwise,
+  getGSTR1ValidationFlags,
+  getGSTR1ExclusionCounts,
   EXPORT_TYPE_SHEET_NAMES,
   EXPORT_TYPE_FILE_SLUGS,
   GST_INVOICEWISE_KEYS,
+  GSTR1_SALES_REGISTER_KEYS,
   OUTSTANDING_DETAIL_KEYS,
   type ExportType,
   type DateBasis,
@@ -31,12 +36,25 @@ export interface InvoiceExcelColumn {
   getValue: (row: NormalizedInvoice) => any;
 }
 
+const fmtDateDDMMYYYY = (d: string | null | undefined): string => {
+  if (!d) return "";
+  try { return format(new Date(d), "dd-MM-yyyy"); } catch { return String(d); }
+};
+
 export const ALL_INVOICE_COLUMNS: InvoiceExcelColumn[] = [
   { key: "sno", label: "Sl.No", width: 6, type: "number", getValue: (r) => r.sno },
   { key: "client_name", label: "Client Name", width: 28, type: "text", getValue: (r) => r.client_name },
   { key: "client_gstin", label: "GST No", width: 18, type: "text", getValue: (r) => r.client_gstin },
   { key: "campaign_display", label: "Campaign Display", width: 30, type: "text", getValue: (r) => r.campaign_display },
   { key: "display_period", label: "Display Period", width: 28, type: "text", getValue: (r) => r.display_period },
+  { key: "bill_from", label: "Bill From", width: 14, type: "text", getValue: (r) => {
+    const raw = r.raw;
+    return fmtDateDDMMYYYY(raw.invoice_period_start || raw.billing_from || raw.start_date);
+  }},
+  { key: "bill_to", label: "Bill To", width: 14, type: "text", getValue: (r) => {
+    const raw = r.raw;
+    return fmtDateDDMMYYYY(raw.invoice_period_end || raw.billing_to || raw.end_date);
+  }},
   { key: "invoice_number", label: "Invoice Number", width: 22, type: "text", getValue: (r) => r.invoice_number },
   { key: "invoice_date", label: "Invoice Date", width: 14, type: "text", getValue: (r) => r.invoice_date },
   { key: "total_value", label: "Total Value", width: 14, type: "currency", getValue: (r) => r.total_value },
@@ -79,8 +97,8 @@ export function loadSavedColumnKeys(exportType: ExportType = "detailed"): string
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch { /* */ }
-  // Return type-specific defaults
   if (exportType === "gst_invoicewise") return GST_INVOICEWISE_KEYS;
+  if (exportType === "gstr1_sales_register") return GSTR1_SALES_REGISTER_KEYS;
   if (exportType === "outstanding_detailed" || exportType === "outstanding_overdue") return OUTSTANDING_DETAIL_KEYS;
   return DEFAULT_INVOICE_EXPORT_KEYS;
 }
@@ -195,6 +213,170 @@ async function exportSummary(summaryRows: SummaryRow[], exportType: ExportType) 
   return wb;
 }
 
+// ─── GSTR-1 3-Sheet Enterprise Workbook ────────────────────────────────
+async function exportGSTR1Workbook(
+  normalized: NormalizedInvoice[],
+  allRawInvoices: any[],
+  companyName: string,
+  companyGstin: string,
+  periodLabel: string,
+) {
+  const columns = GSTR1_SALES_REGISTER_KEYS
+    .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
+    .filter(Boolean) as InvoiceExcelColumn[];
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "GO-ADS 360°";
+  wb.created = new Date();
+
+  // ── Sheet 1: GSTR-1 Sales Register ──
+  const ws1 = wb.addWorksheet("GSTR-1 Sales Register", {
+    properties: { defaultRowHeight: 18 },
+    views: [{ state: "frozen", ySplit: 5, xSplit: 0 }],
+  });
+
+  // Company header rows
+  const colCount = columns.length;
+  const addMergedRow = (text: string, font: Partial<ExcelJS.Font>) => {
+    const row = ws1.addRow([text]);
+    ws1.mergeCells(row.number, 1, row.number, colCount);
+    row.getCell(1).font = font;
+    row.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+    return row;
+  };
+
+  addMergedRow(companyName || "Company", { bold: true, size: 14 });
+  if (companyGstin) addMergedRow(`GSTIN: ${companyGstin}`, { size: 10, color: { argb: "FF666666" } });
+  addMergedRow("GSTR-1 Sales Register (GST Filing Report)", { bold: true, size: 12, color: { argb: "FF1E40AF" } });
+  addMergedRow(`Period: ${periodLabel || "All"} | Generated: ${format(new Date(), "dd-MM-yyyy HH:mm")}`, { size: 9, color: { argb: "FF888888" } });
+
+  // Data header
+  const headerRow = ws1.addRow(columns.map((c) => c.label));
+  applyHeaderStyle(headerRow);
+  columns.forEach((col, idx) => { ws1.getColumn(idx + 1).width = col.width || 14; });
+
+  // Data rows
+  normalized.forEach((row) => {
+    const values = columns.map((col) => col.getValue(row));
+    const excelRow = ws1.addRow(values);
+    applyDataRowStyle(excelRow, columns);
+  });
+
+  // Totals row
+  const totalsValues = columns.map((col) => {
+    if (col.key === "sno") return "";
+    if (col.key === "client_name") return "TOTAL";
+    if (col.type === "currency") return normalized.reduce((s, r) => s + (col.getValue(r) as number || 0), 0);
+    return "";
+  });
+  const totalsRow = ws1.addRow(totalsValues);
+  applyTotalsRowStyle(totalsRow);
+
+  // AutoFilter on header row
+  ws1.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: colCount } };
+
+  // ── Sheet 2: Reconciliation ──
+  const ws2 = wb.addWorksheet("Reconciliation", { properties: { defaultRowHeight: 18 } });
+
+  // Get all raw invoices normalized without GSTR-1 prefilter for exclusion counts
+  const allNormalized = allRawInvoices.map((r, i) => normalizeInvoice(r, i, companyName));
+  const exclusions = getGSTR1ExclusionCounts(allNormalized);
+  const validationIssues: { inv: string; warnings: string[] }[] = [];
+  for (const inv of normalized) {
+    const flags = getGSTR1ValidationFlags(inv);
+    if (flags.length > 0) validationIssues.push({ inv: inv.invoice_number, warnings: flags });
+  }
+
+  ws2.getColumn(1).width = 35;
+  ws2.getColumn(2).width = 18;
+
+  const addReconRow = (label: string, value: string | number, bold = false) => {
+    const row = ws2.addRow([label, value]);
+    if (bold) row.eachCell(c => { c.font = { bold: true, size: 11 }; });
+    else row.eachCell(c => { c.font = { size: 10 }; });
+    if (typeof value === "number") row.getCell(2).numFmt = '#,##0.00';
+  };
+
+  addReconRow("GSTR-1 Reconciliation Summary", "", true);
+  ws2.addRow([]);
+  addReconRow("Included Invoices", normalized.length, true);
+  addReconRow("Excluded: Drafts", exclusions.drafts);
+  addReconRow("Excluded: Cancelled/Void", exclusions.cancelled);
+  addReconRow("Excluded: Zero-GST (Rate ≤ 0)", exclusions.zeroGst);
+  addReconRow("Excluded: INV-Z Invoices", exclusions.invZ);
+  addReconRow("Excluded: Zero Taxable Value", exclusions.zeroTaxable);
+  ws2.addRow([]);
+  addReconRow("Validation Issues", validationIssues.length, true);
+
+  if (validationIssues.length > 0) {
+    ws2.addRow([]);
+    const issueHeader = ws2.addRow(["Invoice No", "Validation Warning"]);
+    issueHeader.eachCell(c => { c.font = { bold: true, size: 10 }; });
+    for (const issue of validationIssues.slice(0, 100)) {
+      ws2.addRow([issue.inv, issue.warnings.join("; ")]);
+    }
+  }
+
+  // ── Sheet 3: Summary ──
+  const ws3 = wb.addWorksheet("Summary", { properties: { defaultRowHeight: 18 } });
+
+  // Monthly summary
+  const monthlySummary = aggregateMonthwise(normalized, "invoice_date");
+  const sumCols = [
+    { key: "label", label: "Month", width: 18 },
+    { key: "invoiceCount", label: "Invoice Count", width: 14, type: "number" as const },
+    { key: "taxableValue", label: "Taxable Value", width: 16, type: "currency" as const },
+    { key: "igst", label: "IGST", width: 14, type: "currency" as const },
+    { key: "cgst", label: "CGST", width: 14, type: "currency" as const },
+    { key: "sgst", label: "SGST", width: 14, type: "currency" as const },
+    { key: "totalValue", label: "Total Value", width: 16, type: "currency" as const },
+  ];
+
+  const sumHeaderRow = ws3.addRow(sumCols.map(c => c.label));
+  applyHeaderStyle(sumHeaderRow);
+  sumCols.forEach((col, idx) => { ws3.getColumn(idx + 1).width = col.width || 14; });
+
+  monthlySummary.forEach(row => {
+    const values = sumCols.map(c => (row as any)[c.key] ?? "");
+    const excelRow = ws3.addRow(values);
+    applyDataRowStyle(excelRow, sumCols);
+  });
+
+  if (monthlySummary.length > 0) {
+    const mTotals = buildTotalsRow(monthlySummary);
+    const mTotalsValues = sumCols.map(c => (mTotals as any)[c.key] ?? "");
+    const mTotalsRow = ws3.addRow(mTotalsValues);
+    applyTotalsRowStyle(mTotalsRow);
+  }
+
+  // Tax type summary
+  ws3.addRow([]);
+  ws3.addRow([]);
+  const igstRows = normalized.filter(inv => inv.igst > 0 && inv.cgst === 0 && inv.sgst === 0);
+  const cgstSgstRows = normalized.filter(inv => (inv.cgst > 0 || inv.sgst > 0) && inv.igst === 0);
+
+  const taxTypeHeader = ws3.addRow(["Tax Type", "Invoice Count", "Taxable Value", "Tax Amount", "Total Value"]);
+  applyHeaderStyle(taxTypeHeader);
+  ws3.getColumn(1).width = 18;
+
+  const addTaxRow = (label: string, rows: NormalizedInvoice[]) => {
+    const taxable = rows.reduce((s, r) => s + r.taxable_value, 0);
+    const tax = rows.reduce((s, r) => s + r.igst + r.cgst + r.sgst, 0);
+    const total = rows.reduce((s, r) => s + r.total_value, 0);
+    const r = ws3.addRow([label, rows.length, taxable, tax, total]);
+    r.eachCell((cell, colNum) => {
+      if (colNum >= 3) cell.numFmt = '#,##0.00';
+      cell.font = { size: 10 };
+    });
+  };
+
+  addTaxRow("IGST", igstRows);
+  addTaxRow("CGST + SGST", cgstSgstRows);
+  addTaxRow("Total", normalized);
+
+  return wb;
+}
+
 // ─── Main Export Function ──────────────────────────────────────────────
 export async function exportInvoiceExcel(
   invoices: any[],
@@ -203,18 +385,27 @@ export async function exportInvoiceExcel(
   exportType: ExportType = "detailed",
   dateBasis: DateBasis = "invoice_date",
   period?: PeriodConfig,
+  companyGstin?: string,
 ) {
   let normalized = normalizeInvoices(invoices, companyName);
   if (period) normalized = filterByPeriod(normalized, period, dateBasis);
   normalized = prefilterForExportType(normalized, exportType);
   if (normalized.length === 0) return;
 
-  // Re-index sno after filtering
   normalized.forEach((r, i) => { r.sno = i + 1; });
 
   const periodSlug = period ? getPeriodFileSlug(period) : "";
+  const periodLabel = period ? getPeriodLabel(period) : "All";
   const now = format(new Date(), "yyyyMMdd_HHmm");
   const periodPart = periodSlug ? `_${periodSlug}` : "";
+
+  // GSTR-1 gets a 3-sheet enterprise workbook
+  if (exportType === "gstr1_sales_register") {
+    const compName = companyName || "Company";
+    const fileName = `GST_Filing_Report_${compName.replace(/[^a-zA-Z0-9]/g, "_")}${periodPart}_${now}.xlsx`;
+    const wb = await exportGSTR1Workbook(normalized, invoices, compName, companyGstin || "", periodLabel);
+    return downloadExcel(wb, fileName);
+  }
 
   if (isDetailedExportType(exportType)) {
     const keys = exportType === "gst_invoicewise" ? GST_INVOICEWISE_KEYS

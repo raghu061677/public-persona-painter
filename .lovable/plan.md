@@ -1,43 +1,46 @@
 
 
-## Plan: Fix Admin Approval Visibility & Add Admin Bypass for Campaign Conversion
+## Plan: Make All Plan/Campaign Exports Registration-Aware
 
-### Problem Summary
-1. **"Syncing" badge:** Admin user sees "Syncing… Click to refresh" because `loadPendingApprovals` only counts approvals matching the user's exact role (`admin`), but the approval levels require `sales` and `finance`. Since `admin` ≠ `sales`/`finance`, the count is 0, triggering the syncing state.
-2. **No approval action:** Even though admin should be able to approve/reject any level, the role filter excludes them.
-3. **No bypass option:** Convert to Campaign requires `status === 'Approved'`. Admin has no way to skip the approval workflow and convert directly.
+### Problem
+All PDF and Excel exports (Quotation, Visual Quotation, Release Order, Excel Export) fetch client address data directly from the `clients` table master record. They ignore the `plan.client_registration_id` field, so even when a Telangana registration is selected, exports show the legacy AP (Visakhapatnam) address.
 
-### Changes (single file: `src/pages/PlanDetail.tsx`)
+### Affected Files
+1. **`src/lib/exports/unifiedPDFExport.ts`** — 3 separate code paths all use raw `clientData`:
+   - `generateROFromPlanData()` (Release Order) — lines 131-136
+   - Standard quotation/estimate/work order path — lines 387-395
+   - `generateFullDetailPDF()` — lines 453-466
+   - `generateWithPhotosPDF()` — lines 569-573
 
-#### Fix 1: Admin sees ALL pending approvals
-In `loadPendingApprovals`, when the user is admin, query ALL pending approvals for this plan (don't filter by `required_role`). Non-admin users keep the existing role-filtered behavior.
+2. **`src/lib/exports/generateVisualQuotationPDF.ts`** — lines 211-216, same pattern
 
-#### Fix 2: Admin can approve/reject any approval level
-In `handleApprovePlan` and `handleRejectPlan`, when the user is admin, fetch the first pending approval regardless of `required_role` (ordered by `approval_level`). Non-admin users keep the existing role-filtered logic.
+3. **`src/lib/exports/unifiedExcelExport.ts`** — lines 35-92, same pattern
 
-#### Fix 3: Admin bypass — direct Convert to Campaign
-Add a new button visible when:
-- `plan.status === 'sent'` (in approval workflow)
-- `isAdmin === true`
-- No existing campaign
+### Approach: Create a Shared Registration-Aware Client Resolver
 
-The button will:
-1. Auto-approve all pending approval levels for this plan (mark as approved by admin with comment "Admin bypass")
-2. Update plan status to `Approved`
-3. Then open the Convert to Campaign dialog
+Create a single helper function that all export paths call after fetching `clientData`. It checks `plan.client_registration_id`, and if present, fetches `client_registrations` and overrides billing address, GSTIN, city, state, pincode on the client object. If no registration exists, the client object passes through unchanged.
 
-This preserves the audit trail (approvals are marked as admin-approved, not deleted).
+### Changes
 
-#### Fix 4: Reconciliation handles admin context
-The auto-reconciliation useEffect already works correctly — once all approvals are approved, it transitions to `Approved`. No change needed here.
+**New helper** (in `src/lib/exports/resolveExportClient.ts`):
+- `async function resolveExportClient(plan, clientData)` 
+- If `plan.client_registration_id` exists, fetch `client_registrations` record
+- Override: `billing_address_line1`, `billing_address_line2`, `billing_city`, `billing_state`, `billing_pincode`, `gst_number`, `name` (use `label` or `legal_name` if available, fallback to client name)
+- Return enriched client object
+
+**`src/lib/exports/unifiedPDFExport.ts`**:
+- Import and call `resolveExportClient(plan, clientData)` in all 3 paths (RO, standard, full_detail/with_photos)
+- Use the resolved client object instead of raw `clientData`
+
+**`src/lib/exports/generateVisualQuotationPDF.ts`**:
+- Same: call `resolveExportClient(plan, clientData)` after the client fetch
+
+**`src/lib/exports/unifiedExcelExport.ts`**:
+- Same: call `resolveExportClient(plan, clientData)` after the client fetch
 
 ### Safety
-- No stored financial data changes
-- No invoice/PDF/export changes
-- Approval records are properly updated (not deleted) maintaining audit trail
-- Non-admin users experience zero change
-- Existing approval workflow logic untouched for non-admin paths
-
-### Files changed
-- `src/pages/PlanDetail.tsx` — only file modified
+- No stored data changes — this only affects how exports read client addresses at generation time
+- No financial formula changes — totals, GST amounts remain untouched
+- Full backward compatibility — if no `client_registration_id`, behavior is identical to current
+- No invoice/campaign data rewrite
 

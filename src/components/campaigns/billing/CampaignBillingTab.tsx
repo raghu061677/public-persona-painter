@@ -534,6 +534,8 @@ export function CampaignBillingTab({
           invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
           invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
           billing_month: period.monthKey,
+          billing_mode: 'calendar_monthly',
+          billing_window_key: period.monthKey,
           is_monthly_split: true,
           sub_total: amounts.subtotal,
           gst_percent: totals.gstRate,

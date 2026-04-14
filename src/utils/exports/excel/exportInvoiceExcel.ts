@@ -281,46 +281,86 @@ async function exportGSTR1Workbook(
   // Get all raw invoices normalized without GSTR-1 prefilter for exclusion counts
   const allNormalized = allRawInvoices.map((r, i) => normalizeInvoice(r, i, companyName));
   const exclusions = getGSTR1ExclusionCounts(allNormalized);
+  const recon = checkReconciliation(normalized);
   const validationIssues: { inv: string; warnings: string[] }[] = [];
   for (const inv of normalized) {
     const flags = getGSTR1ValidationFlags(inv);
     if (flags.length > 0) validationIssues.push({ inv: inv.invoice_number, warnings: flags });
   }
 
-  ws2.getColumn(1).width = 35;
-  ws2.getColumn(2).width = 18;
+  ws2.getColumn(1).width = 38;
+  ws2.getColumn(2).width = 22;
+
+  const addReconSection = (title: string) => {
+    ws2.addRow([]);
+    const row = ws2.addRow([title]);
+    row.getCell(1).font = { bold: true, size: 12, color: { argb: "FF1E40AF" } };
+    row.getCell(1).border = { bottom: { style: "thin", color: { argb: "FF1E40AF" } } };
+    ws2.addRow([]);
+  };
 
   const addReconRow = (label: string, value: string | number, bold = false) => {
     const row = ws2.addRow([label, value]);
     if (bold) row.eachCell(c => { c.font = { bold: true, size: 11 }; });
     else row.eachCell(c => { c.font = { size: 10 }; });
     if (typeof value === "number") row.getCell(2).numFmt = '#,##0.00';
+    row.getCell(2).alignment = { horizontal: "right" };
   };
 
-  addReconRow("GSTR-1 Reconciliation Summary", "", true);
-  ws2.addRow([]);
-  addReconRow("Included Invoices", normalized.length, true);
-  addReconRow("Excluded: Drafts", exclusions.drafts);
-  addReconRow("Excluded: Cancelled/Void", exclusions.cancelled);
+  // Title
+  const titleRow = ws2.addRow(["GSTR-1 Reconciliation Summary"]);
+  titleRow.getCell(1).font = { bold: true, size: 14 };
+  ws2.addRow([`Period: ${periodLabel || "All"} | Generated: ${format(new Date(), "dd-MM-yyyy HH:mm")}`]).getCell(1).font = { size: 9, color: { argb: "FF888888" } };
+
+  // Section 1: Inclusion / Exclusion
+  addReconSection("Inclusion / Exclusion Breakdown");
+  addReconRow("Included in Report", normalized.length, true);
+  addReconRow("Excluded: Draft Invoices", exclusions.drafts);
+  addReconRow("Excluded: Cancelled / Void", exclusions.cancelled);
   addReconRow("Excluded: Zero-GST (Rate ≤ 0)", exclusions.zeroGst);
-  addReconRow("Excluded: INV-Z Invoices", exclusions.invZ);
+  addReconRow("Excluded: INV-Z Sequence", exclusions.invZ);
   addReconRow("Excluded: Zero Taxable Value", exclusions.zeroTaxable);
-  ws2.addRow([]);
-  addReconRow("Validation Issues", validationIssues.length, true);
+
+  // Section 2: Tax Reconciliation
+  addReconSection("Tax Reconciliation");
+  addReconRow("Total Taxable Value", recon.taxableTotal, true);
+  addReconRow("IGST Total", recon.igstTotal);
+  addReconRow("CGST Total", recon.cgstTotal);
+  addReconRow("SGST Total", recon.sgstTotal);
+  addReconRow("Total Tax", recon.totalTax, true);
+  addReconRow("Grand Total", recon.grossTotal, true);
+
+  // Section 3: Validation Issues
+  addReconSection(`Validation Issues (${validationIssues.length})`);
 
   if (validationIssues.length > 0) {
-    ws2.addRow([]);
     const issueHeader = ws2.addRow(["Invoice No", "Validation Warning"]);
-    issueHeader.eachCell(c => { c.font = { bold: true, size: 10 }; });
+    issueHeader.eachCell(c => { c.font = { bold: true, size: 10 }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } }; });
+    ws2.getColumn(2).width = 50;
     for (const issue of validationIssues.slice(0, 100)) {
-      ws2.addRow([issue.inv, issue.warnings.join("; ")]);
+      const r = ws2.addRow([issue.inv, issue.warnings.join("; ")]);
+      r.eachCell(c => { c.font = { size: 10 }; });
     }
+  } else {
+    const noIssueRow = ws2.addRow(["No validation issues found."]);
+    noIssueRow.getCell(1).font = { size: 10, color: { argb: "FF16A34A" } };
   }
 
   // ── Sheet 3: Summary ──
   const ws3 = wb.addWorksheet("Summary", { properties: { defaultRowHeight: 18 } });
 
-  // Monthly summary
+  // Title
+  const sumTitle = ws3.addRow(["GSTR-1 Summary"]);
+  sumTitle.getCell(1).font = { bold: true, size: 14 };
+  const sumSubTitle = ws3.addRow([`Period: ${periodLabel || "All"} | Generated: ${format(new Date(), "dd-MM-yyyy HH:mm")}`]);
+  sumSubTitle.getCell(1).font = { size: 9, color: { argb: "FF888888" } };
+  ws3.addRow([]);
+
+  // Section 1: Monthly summary
+  const sectionRow1 = ws3.addRow(["Monthly Breakdown"]);
+  sectionRow1.getCell(1).font = { bold: true, size: 12, color: { argb: "FF1E40AF" } };
+  ws3.addRow([]);
+
   const monthlySummary = aggregateMonthwise(normalized, "invoice_date");
   const sumCols = [
     { key: "label", label: "Month", width: 18 },
@@ -329,7 +369,8 @@ async function exportGSTR1Workbook(
     { key: "igst", label: "IGST", width: 14, type: "currency" as const },
     { key: "cgst", label: "CGST", width: 14, type: "currency" as const },
     { key: "sgst", label: "SGST", width: 14, type: "currency" as const },
-    { key: "totalValue", label: "Total Value", width: 16, type: "currency" as const },
+    { key: "totalTax", label: "Total Tax", width: 14, type: "currency" as const },
+    { key: "totalValue", label: "Grand Total", width: 16, type: "currency" as const },
   ];
 
   const sumHeaderRow = ws3.addRow(sumCols.map(c => c.label));
@@ -337,33 +378,47 @@ async function exportGSTR1Workbook(
   sumCols.forEach((col, idx) => { ws3.getColumn(idx + 1).width = col.width || 14; });
 
   monthlySummary.forEach(row => {
-    const values = sumCols.map(c => (row as any)[c.key] ?? "");
+    const totalTax = (row.igst || 0) + (row.cgst || 0) + (row.sgst || 0);
+    const values = sumCols.map(c => {
+      if (c.key === "totalTax") return totalTax;
+      return (row as any)[c.key] ?? "";
+    });
     const excelRow = ws3.addRow(values);
     applyDataRowStyle(excelRow, sumCols);
   });
 
   if (monthlySummary.length > 0) {
     const mTotals = buildTotalsRow(monthlySummary);
-    const mTotalsValues = sumCols.map(c => (mTotals as any)[c.key] ?? "");
+    const mTotalTax = (mTotals.igst || 0) + (mTotals.cgst || 0) + (mTotals.sgst || 0);
+    const mTotalsValues = sumCols.map(c => {
+      if (c.key === "totalTax") return mTotalTax;
+      return (mTotals as any)[c.key] ?? "";
+    });
     const mTotalsRow = ws3.addRow(mTotalsValues);
     applyTotalsRowStyle(mTotalsRow);
   }
 
-  // Tax type summary
+  // Section 2: Tax type summary
   ws3.addRow([]);
+  const sectionRow2 = ws3.addRow(["Tax Type Breakdown"]);
+  sectionRow2.getCell(1).font = { bold: true, size: 12, color: { argb: "FF1E40AF" } };
   ws3.addRow([]);
+
   const igstRows = normalized.filter(inv => inv.igst > 0 && inv.cgst === 0 && inv.sgst === 0);
   const cgstSgstRows = normalized.filter(inv => (inv.cgst > 0 || inv.sgst > 0) && inv.igst === 0);
 
-  const taxTypeHeader = ws3.addRow(["Tax Type", "Invoice Count", "Taxable Value", "Tax Amount", "Total Value"]);
+  const taxTypeCols = ["Tax Type", "Invoice Count", "Taxable Value", "IGST", "CGST", "SGST", "Total Tax", "Grand Total"];
+  const taxTypeHeader = ws3.addRow(taxTypeCols);
   applyHeaderStyle(taxTypeHeader);
-  ws3.getColumn(1).width = 18;
 
   const addTaxRow = (label: string, rows: NormalizedInvoice[]) => {
     const taxable = rows.reduce((s, r) => s + r.taxable_value, 0);
-    const tax = rows.reduce((s, r) => s + r.igst + r.cgst + r.sgst, 0);
+    const igst = rows.reduce((s, r) => s + r.igst, 0);
+    const cgst = rows.reduce((s, r) => s + r.cgst, 0);
+    const sgst = rows.reduce((s, r) => s + r.sgst, 0);
+    const totalTax = igst + cgst + sgst;
     const total = rows.reduce((s, r) => s + r.total_value, 0);
-    const r = ws3.addRow([label, rows.length, taxable, tax, total]);
+    const r = ws3.addRow([label, rows.length, taxable, igst, cgst, sgst, totalTax, total]);
     r.eachCell((cell, colNum) => {
       if (colNum >= 3) cell.numFmt = '#,##0.00';
       cell.font = { size: 10 };
@@ -372,7 +427,43 @@ async function exportGSTR1Workbook(
 
   addTaxRow("IGST", igstRows);
   addTaxRow("CGST + SGST", cgstSgstRows);
-  addTaxRow("Total", normalized);
+  const totalTaxRow = ws3.addRow([
+    "Total", normalized.length,
+    normalized.reduce((s, r) => s + r.taxable_value, 0),
+    normalized.reduce((s, r) => s + r.igst, 0),
+    normalized.reduce((s, r) => s + r.cgst, 0),
+    normalized.reduce((s, r) => s + r.sgst, 0),
+    normalized.reduce((s, r) => s + r.igst + r.cgst + r.sgst, 0),
+    normalized.reduce((s, r) => s + r.total_value, 0),
+  ]);
+  applyTotalsRowStyle(totalTaxRow);
+
+  // Section 3: GST Rate breakdown
+  ws3.addRow([]);
+  const sectionRow3 = ws3.addRow(["GST Rate Breakdown"]);
+  sectionRow3.getCell(1).font = { bold: true, size: 12, color: { argb: "FF1E40AF" } };
+  ws3.addRow([]);
+
+  const rateGroups = new Map<number, NormalizedInvoice[]>();
+  for (const inv of normalized) {
+    const rate = inv.rate_percent || 0;
+    if (!rateGroups.has(rate)) rateGroups.set(rate, []);
+    rateGroups.get(rate)!.push(inv);
+  }
+
+  const rateHeader = ws3.addRow(["GST Rate (%)", "Invoice Count", "Taxable Value", "Total Tax", "Grand Total"]);
+  applyHeaderStyle(rateHeader);
+
+  Array.from(rateGroups.entries()).sort((a, b) => a[0] - b[0]).forEach(([rate, rows]) => {
+    const taxable = rows.reduce((s, r) => s + r.taxable_value, 0);
+    const tax = rows.reduce((s, r) => s + r.igst + r.cgst + r.sgst, 0);
+    const total = rows.reduce((s, r) => s + r.total_value, 0);
+    const r = ws3.addRow([`${rate}%`, rows.length, taxable, tax, total]);
+    r.eachCell((cell, colNum) => {
+      if (colNum >= 3) cell.numFmt = '#,##0.00';
+      cell.font = { size: 10 };
+    });
+  });
 
   return wb;
 }

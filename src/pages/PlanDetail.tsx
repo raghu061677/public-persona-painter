@@ -373,7 +373,24 @@ export default function PlanDetail() {
           .select('name, email, phone, company, gst_number, pan_number, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode')
           .eq('id', data.client_id)
           .single();
-        setClientDetails(client);
+
+        // If plan has a linked registration, fetch its GSTIN for display
+        let registrationGstin: string | null = null;
+        if (data.client_registration_id) {
+          const { data: reg } = await supabase
+            .from('client_registrations')
+            .select('gstin')
+            .eq('id', data.client_registration_id)
+            .single();
+          registrationGstin = reg?.gstin || null;
+        }
+
+        // Enrich client details with registration-aware GST
+        const enriched = client ? {
+          ...client,
+          gst_number: registrationGstin || client.gst_number,
+        } : client;
+        setClientDetails(enriched);
         // Sync plan's snapshot client_name with live client data
         if (client?.name && client.name !== data.client_name) {
           setPlan((prev: any) => prev ? { ...prev, client_name: client.name } : prev);

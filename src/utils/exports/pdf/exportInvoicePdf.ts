@@ -432,11 +432,11 @@ async function exportGSTR1Pdf(
     .map((k) => ALL_INVOICE_COLUMNS.find((c) => c.key === k))
     .filter(Boolean) as InvoiceExcelColumn[];
 
-  // Custom widths for landscape GSTR-1
+  // Custom widths for landscape GSTR-1 — must fit within ~770pt (842 - 36*2)
   const gstr1Widths: Record<string, number> = {
-    sno: 28, client_name: 100, client_gstin: 90, campaign_display: 95,
-    bill_from: 58, bill_to: 58, invoice_number: 80, invoice_date: 58,
-    total_value: 62, rate_percent: 32, taxable_value: 62, igst: 52, cgst: 52, sgst: 52,
+    sno: 22, client_name: 80, client_gstin: 72, campaign_display: 72,
+    bill_from: 48, bill_to: 48, invoice_number: 68, invoice_date: 48,
+    total_value: 54, rate_percent: 26, taxable_value: 54, igst: 46, cgst: 46, sgst: 46,
   };
 
   const head = [columns.map((c) => c.label)];
@@ -465,10 +465,11 @@ async function exportGSTR1Pdf(
 
   const colStyles: Record<number, any> = {};
   columns.forEach((col, i) => {
-    const w = gstr1Widths[col.key] || 60;
+    const w = gstr1Widths[col.key] || 50;
     const style: any = { cellWidth: w };
     if (col.type === "currency" || col.type === "number") style.halign = "right";
     if (col.key === "invoice_date" || col.key === "bill_from" || col.key === "bill_to" || col.key === "rate_percent") style.halign = "center";
+    if (col.key === "client_name" || col.key === "campaign_display") style.cellWidth = w;
     colStyles[i] = style;
   });
 
@@ -478,8 +479,8 @@ async function exportGSTR1Pdf(
     body,
     styles: {
       font: "helvetica",
-      fontSize: 7.5,
-      cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+      fontSize: 6.5,
+      cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
       textColor: [17, 24, 39],
       lineColor: [229, 231, 235],
       lineWidth: 0.3,
@@ -490,9 +491,9 @@ async function exportGSTR1Pdf(
       fillColor: [themeRgb[0], themeRgb[1], themeRgb[2]],
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 7.5,
-      cellPadding: { top: 5, right: 4, bottom: 5, left: 4 },
-      minCellHeight: 20,
+      fontSize: 6.5,
+      cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+      minCellHeight: 18,
     },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: mL, right: mR, bottom: 40 },

@@ -43,6 +43,8 @@ import {
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
+import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
+import { useClientRegistrations } from "@/hooks/useClientRegistrations";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -66,21 +68,29 @@ export default function PlanNew() {
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
+  type TaxType = 'CGST_SGST' | 'IGST';
+  const [companyState, setCompanyState] = useState<string>("");
+  const [manualTaxOverride, setManualTaxOverride] = useState(false);
   const [formData, setFormData] = useState({
     client_id: "",
     client_name: "",
+    client_registration_id: "" as string,
     plan_name: "",
     plan_type: "Quotation",
     start_date: new Date(),
-    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     duration_days: 30,
     duration_mode: 'MONTH' as DurationMode,
     months_count: 1,
     gst_percent: "18",
+    tax_type: "CGST_SGST" as TaxType,
     notes: "",
     payment_terms: "",
     quotation_validity_days: 7,
   });
+
+  // Client registrations hook
+  const { registrations, defaultRegistration } = useClientRegistrations(formData.client_id || null);
 
   useEffect(() => {
     fetchClients();

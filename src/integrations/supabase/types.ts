@@ -7441,6 +7441,7 @@ export type Database = {
       invoices: {
         Row: {
           balance_due: number
+          billing_mode: string | null
           billing_month: string | null
           billing_period_id: string | null
           billing_state_code_snapshot: string | null
@@ -7460,6 +7461,8 @@ export type Database = {
           created_at: string | null
           created_by: string
           credited_amount: number
+          cycle_end_date: string | null
+          cycle_start_date: string | null
           draft_number: string | null
           due_date: string
           estimation_id: string | null
@@ -7516,6 +7519,7 @@ export type Database = {
         }
         Insert: {
           balance_due: number
+          billing_mode?: string | null
           billing_month?: string | null
           billing_period_id?: string | null
           billing_state_code_snapshot?: string | null
@@ -7535,6 +7539,8 @@ export type Database = {
           created_at?: string | null
           created_by: string
           credited_amount?: number
+          cycle_end_date?: string | null
+          cycle_start_date?: string | null
           draft_number?: string | null
           due_date: string
           estimation_id?: string | null
@@ -7591,6 +7597,7 @@ export type Database = {
         }
         Update: {
           balance_due?: number
+          billing_mode?: string | null
           billing_month?: string | null
           billing_period_id?: string | null
           billing_state_code_snapshot?: string | null
@@ -7610,6 +7617,8 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           credited_amount?: number
+          cycle_end_date?: string | null
+          cycle_start_date?: string | null
           draft_number?: string | null
           due_date?: string
           estimation_id?: string | null

@@ -266,7 +266,9 @@ export default function PlanEdit() {
         ...prev,
         client_id: clientId,
         client_name: client.name,
+        client_registration_id: "", // Reset; auto-select fires via effect
       }));
+      setManualTaxOverride(false);
     }
   };
 
@@ -652,6 +654,7 @@ export default function PlanEdit() {
         .update({
           client_id: formData.client_id,
           client_name: formData.client_name,
+          client_registration_id: formData.client_registration_id || null,
           plan_name: formData.plan_name,
           plan_type: formData.plan_type,
           start_date: formatForSupabase(toDateOnly(formData.start_date)),
@@ -943,6 +946,17 @@ export default function PlanEdit() {
                     disabled={isReadOnly}
                   />
                 </div>
+                {formData.client_id && registrations.length > 0 && (
+                  <ClientRegistrationSelect
+                    registrations={registrations}
+                    value={formData.client_registration_id}
+                    onChange={(regId) => {
+                      setFormData(prev => ({ ...prev, client_registration_id: regId }));
+                      setManualTaxOverride(false);
+                    }}
+                    disabled={isReadOnly}
+                  />
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Name *</Label>
                   <Input

@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { supabase } from '@/integrations/supabase/client';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
+import { resolveExportClient } from './resolveExportClient';
 
 interface ExportData {
   plan: any;
@@ -31,12 +32,13 @@ function getDocumentTypeLabel(optionType: string): string {
 export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;
 
-  // Fetch client details
-  const { data: clientData } = await supabase
+  // Fetch client details (registration-aware)
+  const { data: rawClientData } = await supabase
     .from('clients')
     .select('*')
     .eq('id', plan.client_id)
     .single();
+  const clientData = await resolveExportClient(plan, rawClientData);
 
   // Fetch company details for the prefix
   const { data: companyData } = await supabase

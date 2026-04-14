@@ -4,6 +4,7 @@ import { fetchImageAsDataUri } from './imageData';
 import { getSignedUrl } from '@/utils/storage';
 import { getDurationDisplay, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
 import { resolveExportSalesperson, resolvePaymentTerms } from '@/lib/utils/exportMetadata';
+import { resolveExportClient } from './resolveExportClient';
 import { generateStandardizedPDFDoc, formatDateToDDMMYYYY, formatDateToDDMonYY } from '@/lib/pdf/standardPDFTemplate';
 import type { PDFDocumentData } from '@/lib/pdf/standardPDFTemplate';
 import { getPrimaryContactName } from '@/lib/pdf/pdfHelpers';
@@ -111,7 +112,8 @@ export async function generateVisualQuotationPDF(
   options: ExportOptions,
 ): Promise<Blob> {
   // ===== Fetch all required data (same as unifiedPDFExport standard path) =====
-  const { data: clientData } = await supabase.from('clients').select('*').eq('id', plan.client_id).single();
+  const { data: rawClientData } = await supabase.from('clients').select('*').eq('id', plan.client_id).single();
+  const clientData = await resolveExportClient(plan, rawClientData);
   const { data: clientContacts } = await supabase.from('client_contacts').select('*').eq('client_id', plan.client_id).order('is_primary', { ascending: false });
   const { data: companyData } = await supabase.from('companies').select('name,gstin,pan,logo_url').eq('id', plan.company_id).single();
   const { data: orgSettings } = await supabase.from('organization_settings').select('logo_url,organization_name,default_payment_terms').limit(1).maybeSingle();

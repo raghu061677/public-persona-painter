@@ -758,6 +758,14 @@ export function CampaignBillingTab({
         </Card>
       )}
 
+      {/* Asset Cycle Billing Preview */}
+      {billingMode === 'asset_cycle' && (
+        <AssetCycleBillingPreview
+          campaignAssets={campaignAssets}
+          gstPercent={totals.gstRate}
+        />
+      )}
+
       {/* Bulk Generate Dialog */}
       <GenerateMonthlyInvoicesDialog
         open={showBulkDialog}

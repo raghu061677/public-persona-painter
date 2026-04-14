@@ -932,6 +932,16 @@ export default function PlanNew() {
                     returnPath="/admin/plans/new"
                   />
                 </div>
+                {formData.client_id && registrations.length > 0 && (
+                  <ClientRegistrationSelect
+                    registrations={registrations}
+                    value={formData.client_registration_id}
+                    onChange={(id) => {
+                      setFormData(prev => ({ ...prev, client_registration_id: id }));
+                      setManualTaxOverride(false);
+                    }}
+                  />
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Name *</Label>
                   <Input

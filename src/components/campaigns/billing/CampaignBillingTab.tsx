@@ -212,6 +212,9 @@ export function CampaignBillingTab({
       // Generate draft invoice ID - permanent number assigned on finalization
       const invoiceId = generateDraftInvoiceId();
 
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
+
       // Fetch media_asset_code for all campaign assets
       const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
       const { data: maData } = assetIds.length > 0

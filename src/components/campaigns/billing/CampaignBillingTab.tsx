@@ -531,7 +531,7 @@ export function CampaignBillingTab({
       />
 
       {/* Billing Mode Selector */}
-      {totals.billingPeriods.length > 1 && (
+      {(
       <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Billing Type</CardTitle>

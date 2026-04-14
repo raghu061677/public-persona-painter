@@ -198,6 +198,10 @@ export function AssetCycleBillingPreview({
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
+      // GST mode — use the resolved gstMode from parent
+      const isIGST = gstMode === 'IGST';
+      const gstHalf = gstPercent / 2;
+
       const { error } = await supabase.from("invoices").insert({
         id: invoiceId,
         invoice_no: invoiceId,
@@ -218,6 +222,14 @@ export function AssetCycleBillingPreview({
         gst_amount: gstAmount,
         total_amount: total,
         balance_due: total,
+        tax_type: isIGST ? 'igst' : 'cgst_sgst',
+        gst_mode: gstMode,
+        cgst_percent: isIGST ? 0 : gstHalf,
+        sgst_percent: isIGST ? 0 : gstHalf,
+        igst_percent: isIGST ? gstPercent : 0,
+        cgst_amount: isIGST ? 0 : gstAmount / 2,
+        sgst_amount: isIGST ? 0 : gstAmount / 2,
+        igst_amount: isIGST ? gstAmount : 0,
         status: "Draft",
         is_draft: true,
         items,

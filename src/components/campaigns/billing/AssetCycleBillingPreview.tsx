@@ -384,7 +384,7 @@ export function AssetCycleBillingPreview({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {isInvoiced && matchedInvoice ? (
+                      {(isInvoiced || isDraft) && matchedInvoice ? (
                         <Button
                           size="sm"
                           variant="outline"

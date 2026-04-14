@@ -14,6 +14,11 @@ interface ClientInfo {
   state?: string;
   pincode?: string;
   gstin?: string;
+  // Shipping address (if different from billing)
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPincode?: string;
 }
 
 interface DocumentDetails {
@@ -239,7 +244,13 @@ export function renderBillShipGrid(
     doc.text(`GSTIN: ${client.gstin}`, leftMargin + 3, leftY);
   }
 
-  // Ship To Content (same as Bill To for now)
+  // Ship To Content — use shipping fields if available, else mirror billing
+  const shipAddress = client.shippingAddress || client.address;
+  const shipCity = client.shippingCity || client.city;
+  const shipState = client.shippingState || client.state;
+  const shipPincode = client.shippingPincode || client.pincode;
+  const shipCityStatePin = [shipCity, shipState, shipPincode].filter(Boolean).join(', ');
+
   let rightY = yPos + 10;
   
   doc.setFont('NotoSans', 'bold');
@@ -247,16 +258,16 @@ export function renderBillShipGrid(
   rightY += 4;
   
   doc.setFont('NotoSans', 'normal');
-  if (client.address) {
-    const addressLines = doc.splitTextToSize(client.address, colWidth - 8);
+  if (shipAddress) {
+    const addressLines = doc.splitTextToSize(shipAddress, colWidth - 8);
     addressLines.slice(0, 2).forEach((line: string) => {
       doc.text(line, colMidX + 5.5, rightY);
       rightY += 3.5;
     });
   }
   
-  if (cityStatePin) {
-    doc.text(cityStatePin, colMidX + 5.5, rightY);
+  if (shipCityStatePin) {
+    doc.text(shipCityStatePin, colMidX + 5.5, rightY);
     rightY += 4;
   }
   

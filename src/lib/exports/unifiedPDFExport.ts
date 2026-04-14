@@ -397,6 +397,10 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     clientState: clientData?.billing_state || clientData?.state || '',
     clientPincode: clientData?.billing_pincode || '',
     clientGSTIN: clientData?.gst_number || undefined,
+    clientShippingAddress: [clientData?.shipping_address_line1, clientData?.shipping_address_line2].filter(Boolean).join(', ') || undefined,
+    clientShippingCity: clientData?.shipping_city || undefined,
+    clientShippingState: clientData?.shipping_state || undefined,
+    clientShippingPincode: clientData?.shipping_pincode || undefined,
 
     companyName,
     companyGSTIN,

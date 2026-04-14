@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateAssetCycles, type GroupedCycleBucket } from "@/utils/generateAssetCycles";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
+import { getFYRange } from "@/utils/finance";
 import { generateDraftInvoiceId } from "@/utils/finance";
 import { toast } from "@/hooks/use-toast";
 
@@ -191,10 +192,10 @@ export function AssetCycleBillingPreview({
 
       const invoiceId = generateDraftInvoiceId();
 
-      // Smart date logic
-      const fy2627Start = new Date(2026, 3, 1);
+      // Smart date logic — dynamic FY boundary
+      const currentFY = getFYRange(new Date());
       const cycleEnd = new Date(bEnd);
-      const invoiceDate = cycleEnd < fy2627Start ? new Date(2026, 2, 31) : new Date();
+      const invoiceDate = cycleEnd < currentFY.start ? new Date(currentFY.start.getFullYear(), currentFY.start.getMonth() - 1, new Date(currentFY.start.getFullYear(), currentFY.start.getMonth(), 0).getDate()) : new Date();
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 

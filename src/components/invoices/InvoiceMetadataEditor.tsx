@@ -16,6 +16,7 @@ interface InvoiceMetadataEditorProps {
   poDate: string;
   dueDate: string;
   onUpdate: () => void;
+  onInvoiceDateChange?: (newDate: string) => void;
 }
 
 export function InvoiceMetadataEditor({
@@ -26,6 +27,7 @@ export function InvoiceMetadataEditor({
   poDate,
   dueDate,
   onUpdate,
+  onInvoiceDateChange,
 }: InvoiceMetadataEditorProps) {
   const [form, setForm] = useState({
     invoice_date: invoiceDate || '',
@@ -79,7 +81,11 @@ export function InvoiceMetadataEditor({
               id="invoiceDate"
               type="date"
               value={form.invoice_date?.split("T")[0] || ""}
-              onChange={(e) => setForm({ ...form, invoice_date: e.target.value })}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                setForm({ ...form, invoice_date: newDate });
+                onInvoiceDateChange?.(newDate);
+              }}
               className="mt-1"
             />
           </div>

@@ -96,7 +96,32 @@ export default function PlanNew() {
     fetchClients();
     fetchAvailableAssets();
     loadTemplateFromSession();
+    fetchCompanyState();
   }, []);
+
+  // Auto-select default registration when registrations load or client changes
+  useEffect(() => {
+    if (registrations.length > 0 && !formData.client_registration_id) {
+      const def = registrations.find(r => r.is_default) || registrations[0];
+      if (def) {
+        setFormData(prev => ({ ...prev, client_registration_id: def.id }));
+      }
+    }
+  }, [registrations]);
+
+  // Auto-detect tax type from selected registration vs company state
+  useEffect(() => {
+    if (manualTaxOverride || !companyState) return;
+    const reg = registrations.find(r => r.id === formData.client_registration_id);
+    const clientState = reg?.billing_state || clients.find(c => c.id === formData.client_id)?.billing_state || "";
+    const normCompany = companyState.toLowerCase().trim();
+    const normClient = clientState.toLowerCase().trim();
+    const isSame = normCompany === normClient && normClient !== "";
+    const detected: TaxType = isSame ? 'CGST_SGST' : 'IGST';
+    if (formData.tax_type !== detected) {
+      setFormData(prev => ({ ...prev, tax_type: detected }));
+    }
+  }, [formData.client_registration_id, formData.client_id, companyState, registrations, clients, manualTaxOverride]);
 
   // Pre-fill client from URL parameter if provided
   useEffect(() => {
@@ -127,6 +152,28 @@ export default function PlanNew() {
   }, [formData.start_date, formData.end_date]);
 
   // Plan ID is now generated server-side at insert time via generate_plan_number RPC
+
+  const fetchCompanyState = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      if (companyUser?.company_id) {
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('state')
+          .eq('id', companyUser.company_id)
+          .single();
+        if (comp?.state) setCompanyState(comp.state);
+      }
+    } catch (err) {
+      console.error('Error fetching company state:', err);
+    }
+  };
 
   const fetchClients = async () => {
     const { data } = await supabase

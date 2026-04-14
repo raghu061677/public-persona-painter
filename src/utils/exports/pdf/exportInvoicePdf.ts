@@ -439,6 +439,30 @@ async function exportGSTR1Pdf(
     total_value: 54, rate_percent: 26, taxable_value: 54, igst: 46, cgst: 46, sgst: 46,
   };
 
+  const head = [columns.map((c) => c.label)];
+  const body = normalized.map((row) =>
+    columns.map((col) => {
+      const v = col.getValue(row);
+      if (v === null || v === undefined) return "";
+      if (col.type === "currency" && typeof v === "number")
+        return v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return String(v);
+    })
+  );
+
+  // Totals row
+  const totalsBody = columns.map((col) => {
+    if (col.key === "sno") return "";
+    if (col.key === "client_name") return "TOTAL";
+    if (col.type === "currency") {
+      const sum = normalized.reduce((s, r) => s + ((col.getValue(r) as number) || 0), 0);
+      return sum.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (col.key === "rate_percent") return "";
+    return "";
+  });
+  body.push(totalsBody);
+
   const colStyles: Record<number, any> = {};
   columns.forEach((col, i) => {
     const w = gstr1Widths[col.key] || 50;

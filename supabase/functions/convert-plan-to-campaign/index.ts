@@ -107,7 +107,7 @@ serve(withAuth(async (req) => {
   // Load plan — MUST belong to user's company
   const { data: plan, error: planError } = await supabase
     .from("plans")
-    .select("id, plan_name, status, company_id, client_id, client_name, start_date, end_date, duration_days, total_amount, gst_percent, gst_amount, grand_total, notes, converted_to_campaign_id")
+    .select("id, plan_name, status, company_id, client_id, client_name, start_date, end_date, duration_days, total_amount, gst_percent, gst_amount, grand_total, notes, converted_to_campaign_id, client_registration_id")
     .eq("id", planId)
     .eq("company_id", companyId)
     .maybeSingle();

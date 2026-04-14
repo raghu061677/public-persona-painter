@@ -75,6 +75,7 @@ export function CampaignBillingTab({
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [lockedBillingMode, setLockedBillingMode] = useState<BillingMode | null>(null);
   const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
    
    // Only use actual manual_discount_amount from database - no auto-derivation
@@ -192,16 +193,24 @@ export function CampaignBillingTab({
         setPaymentSummaries({});
       }
       
-      // Auto-detect billing mode based on existing invoices
-      if (data && data.length > 0) {
-        const hasAssetCycle = data.some((inv: any) => inv.billing_mode === 'asset_cycle');
-        const hasSingleInvoice = data.some(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
-        const hasMonthlyInvoices = data.some(inv => inv.is_monthly_split === true);
+      // Auto-detect and lock billing mode based on existing non-cancelled invoices
+      const activeInvoices = (data || []).filter(inv => inv.status !== 'Cancelled');
+      if (activeInvoices.length > 0) {
+        const hasAssetCycle = activeInvoices.some((inv: any) => inv.billing_mode === 'asset_cycle');
+        const hasMonthly = activeInvoices.some((inv: any) => inv.billing_mode === 'calendar_monthly' || inv.is_monthly_split === true);
+        const hasSingle = activeInvoices.some((inv: any) => inv.billing_mode === 'single_invoice' || (!inv.billing_mode && inv.is_monthly_split !== true));
         if (hasAssetCycle) {
           setBillingMode('asset_cycle');
-        } else if (hasSingleInvoice && !hasMonthlyInvoices) {
+          setLockedBillingMode('asset_cycle');
+        } else if (hasMonthly) {
+          setBillingMode('monthly');
+          setLockedBillingMode('monthly');
+        } else if (hasSingle) {
           setBillingMode('single');
+          setLockedBillingMode('single');
         }
+      } else {
+        setLockedBillingMode(null);
       }
     } catch (err) {
       console.error('Error fetching invoices:', err);

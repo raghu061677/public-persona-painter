@@ -462,6 +462,7 @@ export function CampaignBillingTab({
           items,
           notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,
+          ...regSnapshot,
         });
 
         if (error) throw error;

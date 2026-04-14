@@ -507,6 +507,10 @@ export function MonthlyInvoiceGenerator({
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
+
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const { buildRegistrationSnapshot } = await import("@/utils/invoiceRegistrationSnapshot");
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
       
       // Generate draft invoice ID - permanent number assigned on finalization
       const invoiceId = `DRAFT-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;

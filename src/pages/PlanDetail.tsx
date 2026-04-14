@@ -1661,7 +1661,24 @@ export default function PlanDetail() {
               </TooltipProvider>
             )}
 
-            {!['approved', 'converted'].includes(plan.status?.toLowerCase()) && (
+            {/* Admin bypass: Convert to Campaign directly from Sent status */}
+            {plan.status?.toLowerCase() === 'sent' && isAdmin && !existingCampaignId && (
+              <Button 
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg"
+                onClick={handleAdminBypassConvert}
+                disabled={isConverting}
+              >
+                {isConverting ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Rocket className="mr-2 h-5 w-5" />
+                )}
+                {isConverting ? "Processing..." : "Bypass & Convert to Campaign"}
+              </Button>
+            )}
+
+            {!['approved', 'converted', 'sent'].includes(plan.status?.toLowerCase()) && !isAdmin && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1676,6 +1693,27 @@ export default function PlanDetail() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-medium">Plan must be approved before converting to campaign</p>
+                    <p className="text-sm text-muted-foreground mt-1">Current status: {plan.status}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {!['approved', 'converted'].includes(plan.status?.toLowerCase()) && plan.status?.toLowerCase() !== 'sent' && isAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      disabled
+                      className="opacity-50 cursor-not-allowed"
+                    >
+                      <Rocket className="mr-2 h-5 w-5" />
+                      Convert to Campaign
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Submit plan for approval first, or use Draft → Sent workflow</p>
                     <p className="text-sm text-muted-foreground mt-1">Current status: {plan.status}</p>
                   </TooltipContent>
                 </Tooltip>

@@ -75,10 +75,12 @@ Deno.serve(withAuth(async (req) => {
   let clientName: string;
   let clientGstin: string;
   let clientAddress: string;
+  let shipToAddress: string;
   let placeOfSupply: string;
 
   if (hasRegSnapshot) {
     const regBilling = formatSnapshotAddr(invoice.registration_billing_address_snapshot);
+    const regShipping = formatSnapshotAddr(invoice.registration_shipping_address_snapshot);
     clientName = invoice.registration_label_snapshot || invoice.clients.name;
     clientGstin = invoice.registration_gstin_snapshot || invoice.clients.gstin || '';
     clientAddress = [
@@ -87,11 +89,17 @@ Deno.serve(withAuth(async (req) => {
       [regBilling.city || invoice.clients.billing_city || '', regBilling.state || invoice.registration_state_snapshot || invoice.clients.billing_state || ''].filter(Boolean).join(', '),
       regBilling.pincode || invoice.clients.billing_pincode || '',
     ].filter(Boolean).join(', ').trim();
+    // Ship To: prefer registration shipping snapshot, fallback to billing
+    const hasShipping = !!(regShipping.line1 || regShipping.city);
+    shipToAddress = hasShipping
+      ? [regShipping.line1, regShipping.line2, [regShipping.city, regShipping.state].filter(Boolean).join(', '), regShipping.pincode].filter(Boolean).join(', ').trim()
+      : clientAddress;
     placeOfSupply = invoice.place_of_supply || invoice.registration_state_snapshot || invoice.clients.billing_state || '';
   } else {
     clientName = invoice.clients.name;
     clientGstin = invoice.clients.gstin || '';
     clientAddress = `${invoice.clients.billing_address_line1 || ''}, ${invoice.clients.billing_city || ''}, ${invoice.clients.billing_state || ''} ${invoice.clients.billing_pincode || ''}`.trim();
+    shipToAddress = clientAddress;
     placeOfSupply = invoice.place_of_supply || invoice.clients.billing_state || '';
   }
 

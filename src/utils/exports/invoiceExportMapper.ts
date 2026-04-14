@@ -558,6 +558,7 @@ export type ExportType =
   | "gst_b2c"
   | "gst_statewise"
   | "gst_invoicewise"
+  | "gstr1_sales_register"
   | "outstanding_detailed"
   | "outstanding_overdue"
   | "outstanding_clientwise"
@@ -575,6 +576,7 @@ export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
   gst_b2c: "GST B2C Summary",
   gst_statewise: "State-wise Tax Summary",
   gst_invoicewise: "Invoice-wise GST Summary",
+  gstr1_sales_register: "GSTR-1 Sales Register",
   outstanding_detailed: "Outstanding Detailed",
   outstanding_overdue: "Overdue Only",
   outstanding_clientwise: "Client-wise Outstanding",
@@ -584,7 +586,7 @@ export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
 
 export const EXPORT_TYPE_GROUPS: Record<string, ExportType[]> = {
   "Invoice Reports": ["detailed", "monthwise", "quarterwise", "clientwise", "campaignwise"],
-  "GST / GSTR Reports": ["gst_ratewise", "gst_b2b", "gst_b2c", "gst_statewise", "gst_invoicewise"],
+  "GST / GSTR Reports": ["gst_ratewise", "gst_b2b", "gst_b2c", "gst_statewise", "gst_invoicewise", "gstr1_sales_register"],
   "Outstanding / Receivables": ["outstanding_detailed", "outstanding_overdue", "outstanding_clientwise", "outstanding_aging", "outstanding_campaignwise"],
 };
 
@@ -599,6 +601,7 @@ export const EXPORT_TYPE_SHEET_NAMES: Record<ExportType, string> = {
   gst_b2c: "B2C Summary",
   gst_statewise: "State Tax Summary",
   gst_invoicewise: "GST Invoice Detail",
+  gstr1_sales_register: "GSTR-1 Sales Register",
   outstanding_detailed: "Outstanding Detail",
   outstanding_overdue: "Overdue Invoices",
   outstanding_clientwise: "Client Outstanding",
@@ -617,6 +620,7 @@ export const EXPORT_TYPE_FILE_SLUGS: Record<ExportType, string> = {
   gst_b2c: "GST_B2C",
   gst_statewise: "GSTStatewise",
   gst_invoicewise: "GSTSummary",
+  gstr1_sales_register: "GST_Filing_Report",
   outstanding_detailed: "Outstanding",
   outstanding_overdue: "Overdue",
   outstanding_clientwise: "OutstandingClient",
@@ -732,14 +736,113 @@ export function resolveSummaryData(
 
 // ─── Check if export type is a "detailed" row-per-invoice mode ─────────
 export function isDetailedExportType(et: ExportType): boolean {
-  return et === "detailed" || et === "gst_invoicewise" || et === "outstanding_detailed" || et === "outstanding_overdue";
+  return et === "detailed" || et === "gst_invoicewise" || et === "outstanding_detailed" || et === "outstanding_overdue" || et === "gstr1_sales_register";
 }
 
-// ─── Pre-filter data for outstanding export types ──────────────────────
+// ─── GSTR-1 Filter Options ────────────────────────────────────────────
+export interface GSTR1FilterOptions {
+  includeZeroGst?: boolean;
+  includeInvZ?: boolean;
+  includeZeroTaxable?: boolean;
+  includeDrafts?: boolean;
+  includeCancelled?: boolean;
+  taxTypeFilter?: "all" | "igst" | "cgst_sgst";
+  billingModeFilter?: "all" | "single_invoice" | "calendar_monthly" | "asset_cycle";
+  gstRateFilter?: number | null;
+  searchTerm?: string;
+}
+
+let _gstr1FilterOptions: GSTR1FilterOptions = {};
+
+export function setGSTR1FilterOptions(opts: GSTR1FilterOptions) {
+  _gstr1FilterOptions = opts;
+}
+
+export function getGSTR1FilterOptions(): GSTR1FilterOptions {
+  return _gstr1FilterOptions;
+}
+
+// ─── GSTR-1 Validation Flags ──────────────────────────────────────────
+export interface GSTR1ValidationFlag {
+  invoiceNumber: string;
+  warnings: string[];
+}
+
+export function getGSTR1ValidationFlags(inv: NormalizedInvoice): string[] {
+  const warnings: string[] = [];
+  if (!inv.client_gstin || inv.client_gstin.length < 15) warnings.push("Missing GSTIN");
+  if (!inv.invoice_number) warnings.push("Missing Invoice No");
+  if (!inv.invoice_date) warnings.push("Missing Invoice Date");
+  if (!inv.campaign_display) warnings.push("Missing Campaign/Display Name");
+  if (inv.igst > 0 && (inv.cgst > 0 || inv.sgst > 0)) warnings.push("IGST row has CGST/SGST");
+  if ((inv.cgst > 0 || inv.sgst > 0) && inv.igst > 0) warnings.push("CGST/SGST row has IGST");
+  if (inv.taxable_value < 0) warnings.push("Negative Taxable Value");
+  const expectedTax = inv.taxable_value * (inv.rate_percent / 100);
+  const actualTax = inv.igst + inv.cgst + inv.sgst;
+  if (inv.taxable_value > 0 && Math.abs(expectedTax - actualTax) > Math.max(2, inv.taxable_value * 0.005)) {
+    warnings.push("Tax/Taxable Mismatch");
+  }
+  return warnings;
+}
+
+export function getGSTR1ExclusionCounts(allInvoices: NormalizedInvoice[]): {
+  drafts: number; cancelled: number; zeroGst: number; invZ: number; zeroTaxable: number;
+} {
+  let drafts = 0, cancelled = 0, zeroGst = 0, invZ = 0, zeroTaxable = 0;
+  for (const inv of allInvoices) {
+    const raw = inv.raw;
+    if (raw.is_draft || raw.status === "Draft") drafts++;
+    if (raw.status === "Cancelled" || raw.status === "Void") cancelled++;
+    if (inv.rate_percent <= 0) zeroGst++;
+    if (inv.invoice_number.startsWith("INV-Z/")) invZ++;
+    if (inv.taxable_value <= 0) zeroTaxable++;
+  }
+  return { drafts, cancelled, zeroGst, invZ, zeroTaxable };
+}
+
+// ─── Pre-filter data for outstanding & GSTR-1 export types ─────────────
 export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType): NormalizedInvoice[] {
   if (et.startsWith("outstanding_")) {
     if (et === "outstanding_overdue") return filterOverdueOnly(data);
     return filterOutstandingOnly(data);
+  }
+  if (et === "gstr1_sales_register") {
+    const opts = getGSTR1FilterOptions();
+    let filtered = data.filter(inv => {
+      const raw = inv.raw;
+      // Default exclusions (unless toggled ON)
+      if (!opts.includeDrafts && (raw.is_draft || raw.status === "Draft")) return false;
+      if (!opts.includeCancelled && (raw.status === "Cancelled" || raw.status === "Void")) return false;
+      if (!opts.includeZeroGst && inv.rate_percent <= 0) return false;
+      if (!opts.includeInvZ && inv.invoice_number.startsWith("INV-Z/")) return false;
+      if (!opts.includeZeroTaxable && inv.taxable_value <= 0) return false;
+      return true;
+    });
+    // Tax type filter
+    if (opts.taxTypeFilter === "igst") {
+      filtered = filtered.filter(inv => inv.igst > 0 && inv.cgst === 0 && inv.sgst === 0);
+    } else if (opts.taxTypeFilter === "cgst_sgst") {
+      filtered = filtered.filter(inv => (inv.cgst > 0 || inv.sgst > 0) && inv.igst === 0);
+    }
+    // Billing mode filter
+    if (opts.billingModeFilter && opts.billingModeFilter !== "all") {
+      filtered = filtered.filter(inv => inv.raw.billing_mode === opts.billingModeFilter);
+    }
+    // GST rate filter
+    if (opts.gstRateFilter != null) {
+      filtered = filtered.filter(inv => inv.rate_percent === opts.gstRateFilter);
+    }
+    // Search term
+    if (opts.searchTerm) {
+      const term = opts.searchTerm.toLowerCase();
+      filtered = filtered.filter(inv =>
+        inv.invoice_number.toLowerCase().includes(term) ||
+        inv.client_name.toLowerCase().includes(term) ||
+        inv.client_gstin.toLowerCase().includes(term) ||
+        inv.campaign_display.toLowerCase().includes(term)
+      );
+    }
+    return filtered;
   }
   return data;
 }
@@ -748,6 +851,12 @@ export function prefilterForExportType(data: NormalizedInvoice[], et: ExportType
 export const GST_INVOICEWISE_KEYS = [
   "sno", "invoice_number", "invoice_date", "client_name", "client_gstin",
   "place_of_supply", "taxable_value", "rate_percent", "igst", "cgst", "sgst", "total_value",
+];
+
+export const GSTR1_SALES_REGISTER_KEYS = [
+  "sno", "client_name", "client_gstin", "campaign_display",
+  "bill_from", "bill_to", "invoice_number", "invoice_date",
+  "total_value", "rate_percent", "taxable_value", "igst", "cgst", "sgst",
 ];
 
 export const OUTSTANDING_DETAIL_KEYS = [
@@ -784,6 +893,7 @@ export function getSystemPresets(): ExportPreset[] {
   const base: PeriodConfig = { type: "current_view" };
   return [
     { id: "sys_ca", name: "CA Format", exportType: "gst_invoicewise", dateBasis: "invoice_date", period: base, columns: GST_INVOICEWISE_KEYS },
+    { id: "sys_gstr1", name: "GSTR-1 Sales Register", exportType: "gstr1_sales_register", dateBasis: "invoice_date", period: base, columns: GSTR1_SALES_REGISTER_KEYS },
     { id: "sys_mgmt", name: "Management Format", exportType: "monthwise", dateBasis: "invoice_date", period: base, columns: [] },
     { id: "sys_client_ledger", name: "Client-wise Ledger", exportType: "clientwise", dateBasis: "invoice_date", period: base, columns: [] },
     { id: "sys_gst_review", name: "GST Review", exportType: "gst_ratewise", dateBasis: "invoice_date", period: base, columns: [] },

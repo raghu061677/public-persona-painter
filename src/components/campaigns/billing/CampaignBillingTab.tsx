@@ -302,6 +302,7 @@ export function CampaignBillingTab({
         items,
         notes: `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,
+        ...regSnapshot,
       });
 
       if (error) throw error;

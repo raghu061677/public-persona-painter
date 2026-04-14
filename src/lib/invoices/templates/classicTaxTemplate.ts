@@ -5,6 +5,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { resolveBillTo, resolveShipTo } from './registrationAddressHelper';
 import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
@@ -277,7 +278,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   if (shipCityState) { doc.text(shipCityState, colMidX + 5.5, rightY); rightY += 3.5; }
   if (shipTo.gstin) { doc.setFont('NotoSans', 'bold'); doc.text(`GSTIN: ${shipTo.gstin}`, colMidX + 5.5, rightY); }
 
-  if (!hasShippingAddress) {
+  if (shipToResult.sameAsBillTo) {
     doc.setFontSize(6);
     doc.setFont('NotoSans', 'italic');
     doc.setTextColor(100, 100, 100);

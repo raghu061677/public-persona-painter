@@ -4,6 +4,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { resolveBillTo, resolveShipTo } from './registrationAddressHelper';
 import { renderPaymentQRSection } from './paymentQR';
 import { getBankDetailsFromCompany } from '@/lib/bankDetails';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';

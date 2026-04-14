@@ -339,6 +339,9 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
+      // Phase 4A: fetch registration snapshot (empty if none linked)
+      const regSnapshot = await buildRegistrationSnapshot(campaign.id);
+
       // Calculate amounts using new calculator
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 

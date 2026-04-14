@@ -41,6 +41,8 @@ import {
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
+import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
+import { useClientRegistrations } from "@/hooks/useClientRegistrations";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -79,6 +81,7 @@ export default function PlanEdit() {
     id: "",
     client_id: "",
     client_name: "",
+    client_registration_id: "" as string,
     plan_name: "",
     plan_type: "Quotation" as "Quotation" | "Proposal" | "Estimate",
     start_date: new Date(),
@@ -95,6 +98,9 @@ export default function PlanEdit() {
     quotation_validity_days: 7,
   });
 
+  // Client registrations hook
+  const { registrations, defaultRegistration } = useClientRegistrations(formData.client_id || null);
+
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
@@ -102,13 +108,22 @@ export default function PlanEdit() {
     fetchCompanyState();
   }, [id]);
 
-  // Auto-detect tax type when client changes
+  // Auto-select default registration when registrations load (only if not already set)
+  useEffect(() => {
+    if (registrations.length > 0 && !formData.client_registration_id) {
+      const def = registrations.find(r => r.is_default) || registrations[0];
+      if (def) {
+        setFormData(prev => ({ ...prev, client_registration_id: def.id }));
+      }
+    }
+  }, [registrations]);
+
+  // Auto-detect tax type from selected registration vs company state
   useEffect(() => {
     if (!manualTaxOverride && formData.client_id && companyState) {
-      const client = clients.find(c => c.id === formData.client_id);
-      const clientState = client?.billing_state || "";
+      const reg = registrations.find(r => r.id === formData.client_registration_id);
+      const clientState = reg?.billing_state || clients.find(c => c.id === formData.client_id)?.billing_state || "";
       
-      // Normalize state names for comparison (case-insensitive, trimmed)
       const normalizedCompanyState = companyState.toLowerCase().trim();
       const normalizedClientState = clientState.toLowerCase().trim();
       
@@ -119,7 +134,7 @@ export default function PlanEdit() {
         setFormData(prev => ({ ...prev, tax_type: detectedTaxType }));
       }
     }
-  }, [formData.client_id, companyState, clients, manualTaxOverride]);
+  }, [formData.client_id, formData.client_registration_id, companyState, clients, registrations, manualTaxOverride]);
 
   const fetchCompanyState = async () => {
     try {
@@ -171,6 +186,7 @@ export default function PlanEdit() {
         id: plan.id,
         client_id: plan.client_id,
         client_name: plan.client_name,
+        client_registration_id: (plan as any).client_registration_id || "",
         plan_name: plan.plan_name,
         plan_type: plan.plan_type,
         start_date: new Date(plan.start_date),
@@ -250,7 +266,9 @@ export default function PlanEdit() {
         ...prev,
         client_id: clientId,
         client_name: client.name,
+        client_registration_id: "", // Reset; auto-select fires via effect
       }));
+      setManualTaxOverride(false);
     }
   };
 
@@ -636,6 +654,7 @@ export default function PlanEdit() {
         .update({
           client_id: formData.client_id,
           client_name: formData.client_name,
+          client_registration_id: formData.client_registration_id || null,
           plan_name: formData.plan_name,
           plan_type: formData.plan_type,
           start_date: formatForSupabase(toDateOnly(formData.start_date)),
@@ -927,6 +946,17 @@ export default function PlanEdit() {
                     disabled={isReadOnly}
                   />
                 </div>
+                {formData.client_id && registrations.length > 0 && (
+                  <ClientRegistrationSelect
+                    registrations={registrations}
+                    value={formData.client_registration_id}
+                    onChange={(regId) => {
+                      setFormData(prev => ({ ...prev, client_registration_id: regId }));
+                      setManualTaxOverride(false);
+                    }}
+                    disabled={isReadOnly}
+                  />
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Name *</Label>
                   <Input

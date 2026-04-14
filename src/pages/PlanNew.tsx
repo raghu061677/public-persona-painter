@@ -43,6 +43,8 @@ import {
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
+import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
+import { useClientRegistrations } from "@/hooks/useClientRegistrations";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -66,27 +68,60 @@ export default function PlanNew() {
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
+  type TaxType = 'CGST_SGST' | 'IGST';
+  const [companyState, setCompanyState] = useState<string>("");
+  const [manualTaxOverride, setManualTaxOverride] = useState(false);
   const [formData, setFormData] = useState({
     client_id: "",
     client_name: "",
+    client_registration_id: "" as string,
     plan_name: "",
     plan_type: "Quotation",
     start_date: new Date(),
-    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     duration_days: 30,
     duration_mode: 'MONTH' as DurationMode,
     months_count: 1,
     gst_percent: "18",
+    tax_type: "CGST_SGST" as TaxType,
     notes: "",
     payment_terms: "",
     quotation_validity_days: 7,
   });
 
+  // Client registrations hook
+  const { registrations, defaultRegistration } = useClientRegistrations(formData.client_id || null);
+
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
     loadTemplateFromSession();
+    fetchCompanyState();
   }, []);
+
+  // Auto-select default registration when registrations load or client changes
+  useEffect(() => {
+    if (registrations.length > 0 && !formData.client_registration_id) {
+      const def = registrations.find(r => r.is_default) || registrations[0];
+      if (def) {
+        setFormData(prev => ({ ...prev, client_registration_id: def.id }));
+      }
+    }
+  }, [registrations]);
+
+  // Auto-detect tax type from selected registration vs company state
+  useEffect(() => {
+    if (manualTaxOverride || !companyState) return;
+    const reg = registrations.find(r => r.id === formData.client_registration_id);
+    const clientState = reg?.billing_state || clients.find(c => c.id === formData.client_id)?.billing_state || "";
+    const normCompany = companyState.toLowerCase().trim();
+    const normClient = clientState.toLowerCase().trim();
+    const isSame = normCompany === normClient && normClient !== "";
+    const detected: TaxType = isSame ? 'CGST_SGST' : 'IGST';
+    if (formData.tax_type !== detected) {
+      setFormData(prev => ({ ...prev, tax_type: detected }));
+    }
+  }, [formData.client_registration_id, formData.client_id, companyState, registrations, clients, manualTaxOverride]);
 
   // Pre-fill client from URL parameter if provided
   useEffect(() => {
@@ -117,6 +152,28 @@ export default function PlanNew() {
   }, [formData.start_date, formData.end_date]);
 
   // Plan ID is now generated server-side at insert time via generate_plan_number RPC
+
+  const fetchCompanyState = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      if (companyUser?.company_id) {
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('state')
+          .eq('id', companyUser.company_id)
+          .single();
+        if (comp?.state) setCompanyState(comp.state);
+      }
+    } catch (err) {
+      console.error('Error fetching company state:', err);
+    }
+  };
 
   const fetchClients = async () => {
     const { data } = await supabase
@@ -215,7 +272,9 @@ export default function PlanNew() {
         ...prev,
         client_id: clientId,
         client_name: client.name,
+        client_registration_id: "", // Reset on client change; auto-select will fire via effect
       }));
+      setManualTaxOverride(false);
     }
   };
 
@@ -572,6 +631,7 @@ export default function PlanNew() {
           id: planId,
           client_id: formData.client_id,
           client_name: formData.client_name,
+          client_registration_id: formData.client_registration_id || null,
           plan_name: formData.plan_name,
           plan_type: formData.plan_type,
           start_date: formatForSupabase(toDateOnly(formData.start_date)),
@@ -584,6 +644,7 @@ export default function PlanNew() {
           gst_percent: parseFloat(formData.gst_percent),
           gst_amount: gstAmount,
           grand_total: grandTotal,
+          tax_type: formData.tax_type,
           notes: formData.notes,
           payment_terms: formData.payment_terms || null,
           quotation_validity_days: formData.quotation_validity_days || 7,
@@ -871,6 +932,16 @@ export default function PlanNew() {
                     returnPath="/admin/plans/new"
                   />
                 </div>
+                {formData.client_id && registrations.length > 0 && (
+                  <ClientRegistrationSelect
+                    registrations={registrations}
+                    value={formData.client_registration_id}
+                    onChange={(id) => {
+                      setFormData(prev => ({ ...prev, client_registration_id: id }));
+                      setManualTaxOverride(false);
+                    }}
+                  />
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Name *</Label>
                   <Input
@@ -959,6 +1030,34 @@ export default function PlanNew() {
                       <SelectItem value="28">28%</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tax Type</Label>
+                  <Select 
+                    value={formData.tax_type} 
+                    onValueChange={(v: string) => {
+                      setManualTaxOverride(true);
+                      setFormData(prev => ({ ...prev, tax_type: v as TaxType }));
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CGST_SGST">CGST + SGST ({parseFloat(formData.gst_percent)/2}% + {parseFloat(formData.gst_percent)/2}%)</SelectItem>
+                      <SelectItem value="IGST">IGST ({formData.gst_percent}%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!manualTaxOverride && (
+                    <p className="text-xs text-muted-foreground">Auto-detected based on registration state</p>
+                  )}
+                  {manualTaxOverride && (
+                    <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs"
+                      onClick={() => setManualTaxOverride(false)}
+                    >
+                      Reset to auto-detect
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

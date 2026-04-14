@@ -608,16 +608,25 @@ export function CampaignBillingTab({
       {(
       <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Billing Type</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              Billing Type
+              {lockedBillingMode && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  🔒 Locked — invoices already generated
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup 
               value={billingMode} 
-              onValueChange={(val) => setBillingMode(val as BillingMode)}
+              onValueChange={(val) => {
+                if (!lockedBillingMode) setBillingMode(val as BillingMode);
+              }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
-                <RadioGroupItem value="monthly" id="monthly" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg flex-1 ${lockedBillingMode && lockedBillingMode !== 'monthly' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="monthly" id="monthly" disabled={!!lockedBillingMode && lockedBillingMode !== 'monthly'} />
                 <Label htmlFor="monthly" className="flex-1 cursor-pointer">
                   <div className="font-medium">Calendar Monthly</div>
                   <div className="text-sm text-muted-foreground">
@@ -625,8 +634,8 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
-                <RadioGroupItem value="single" id="single" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg flex-1 ${lockedBillingMode && lockedBillingMode !== 'single' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="single" id="single" disabled={!!lockedBillingMode && lockedBillingMode !== 'single'} />
                 <Label htmlFor="single" className="flex-1 cursor-pointer">
                   <div className="font-medium">Single Invoice</div>
                   <div className="text-sm text-muted-foreground">
@@ -634,8 +643,8 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1 border-dashed">
-                <RadioGroupItem value="asset_cycle" id="asset_cycle" />
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg border-dashed flex-1 ${lockedBillingMode && lockedBillingMode !== 'asset_cycle' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="asset_cycle" id="asset_cycle" disabled={!!lockedBillingMode && lockedBillingMode !== 'asset_cycle'} />
                 <Label htmlFor="asset_cycle" className="flex-1 cursor-pointer">
                   <div className="font-medium flex items-center gap-2">
                     Asset Cycle Billing

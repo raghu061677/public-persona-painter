@@ -27,6 +27,11 @@ export interface PDFDocumentData {
   clientState: string;
   clientPincode: string;
   clientGSTIN?: string;
+  // Shipping address (if different from billing)
+  clientShippingAddress?: string;
+  clientShippingCity?: string;
+  clientShippingState?: string;
+  clientShippingPincode?: string;
 
   // Company/Seller details
   companyName: string;

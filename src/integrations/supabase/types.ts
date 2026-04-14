@@ -14778,6 +14778,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      can_reuse_cancelled_invoice_number: {
+        Args: { p_invoice_id: string }
+        Returns: boolean
+      }
       check_asset_availability: {
         Args: {
           p_asset_id: string

@@ -56,6 +56,45 @@ Deno.serve(withAuth(async (req) => {
     return jsonError('Company not found', 500);
   }
 
+  // --- Phase 4D: Registration-aware address resolution ---
+  // Helper to safely format JSONB address snapshots
+  function formatSnapshotAddr(snapshot: any): { line1: string; line2: string; city: string; state: string; pincode: string } {
+    if (!snapshot || typeof snapshot !== 'object') return { line1: '', line2: '', city: '', state: '', pincode: '' };
+    return {
+      line1: snapshot.line1 || '',
+      line2: snapshot.line2 || '',
+      city: [snapshot.city, snapshot.district].filter(Boolean).join(', '),
+      state: snapshot.state || '',
+      pincode: snapshot.pincode || '',
+    };
+  }
+
+  const hasRegSnapshot = !!(invoice.registration_gstin_snapshot ||
+    (invoice.registration_billing_address_snapshot && typeof invoice.registration_billing_address_snapshot === 'object' && Object.keys(invoice.registration_billing_address_snapshot).length > 0));
+
+  let clientName: string;
+  let clientGstin: string;
+  let clientAddress: string;
+  let placeOfSupply: string;
+
+  if (hasRegSnapshot) {
+    const regBilling = formatSnapshotAddr(invoice.registration_billing_address_snapshot);
+    clientName = invoice.registration_label_snapshot || invoice.clients.name;
+    clientGstin = invoice.registration_gstin_snapshot || invoice.clients.gstin || '';
+    clientAddress = [
+      regBilling.line1 || invoice.clients.billing_address_line1 || '',
+      regBilling.line2 || '',
+      [regBilling.city || invoice.clients.billing_city || '', regBilling.state || invoice.registration_state_snapshot || invoice.clients.billing_state || ''].filter(Boolean).join(', '),
+      regBilling.pincode || invoice.clients.billing_pincode || '',
+    ].filter(Boolean).join(', ').trim();
+    placeOfSupply = invoice.place_of_supply || invoice.registration_state_snapshot || invoice.clients.billing_state || '';
+  } else {
+    clientName = invoice.clients.name;
+    clientGstin = invoice.clients.gstin || '';
+    clientAddress = `${invoice.clients.billing_address_line1 || ''}, ${invoice.clients.billing_city || ''}, ${invoice.clients.billing_state || ''} ${invoice.clients.billing_pincode || ''}`.trim();
+    placeOfSupply = invoice.place_of_supply || invoice.clients.billing_state || '';
+  }
+
   // Generate PDF using Lovable AI PDF generation
   const pdfResponse = await fetch(`${Deno.env.get('LOVABLE_API_URL')}/generate-pdf`, {
     method: 'POST',
@@ -80,10 +119,11 @@ Deno.serve(withAuth(async (req) => {
           email: company.email,
         },
         client: {
-          name: invoice.clients.name,
-          gstin: invoice.clients.gstin,
-          address: `${invoice.clients.billing_address_line1 || ''}, ${invoice.clients.billing_city || ''}, ${invoice.clients.billing_state || ''} ${invoice.clients.billing_pincode || ''}`.trim(),
+          name: clientName,
+          gstin: clientGstin,
+          address: clientAddress,
         },
+        placeOfSupply,
         items: invoice.items || [],
         summary: {
           subTotal: invoice.sub_total,

@@ -404,7 +404,7 @@ export function PaymentRecordingPanel({
     setDialogOpen(open);
     if (open && clientTds.tds_applicable) {
       setTdsEnabled(true);
-      const rate = clientTds.default_tds_rate || 2;
+      const rate = clientTds.default_tds_rate > 0 ? clientTds.default_tds_rate : 2;
       const base = effectiveTdsBase;
       const tdsAmt = (base * rate / 100);
       setNewPayment(prev => ({
@@ -498,8 +498,10 @@ export function PaymentRecordingPanel({
                             tds_certificate_no: "",
                             tds_certificate_date: "",
                           }));
-                        } else if (clientTds.tds_applicable) {
-                          const rate = clientTds.default_tds_rate || 2;
+                        } else {
+                          const rate = clientTds.tds_applicable && clientTds.default_tds_rate > 0
+                            ? clientTds.default_tds_rate
+                            : 2;
                           const base = effectiveTdsBase;
                           setNewPayment(prev => ({
                             ...prev,

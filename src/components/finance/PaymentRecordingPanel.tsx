@@ -926,18 +926,145 @@ export function PaymentRecordingPanel({
 
       {/* Edit Payment Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Payment</DialogTitle>
             <DialogDescription>
-              Update payment details. Amount and TDS cannot be changed — delete and re-add if needed.
+              Update payment details including amount, TDS, and other fields.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div>
-              <Label>Amount (read-only)</Label>
-              <Input value={editingPayment ? formatINR(editingPayment.amount) : ""} disabled />
+              <Label htmlFor="editAmount">Amount Received *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                <Input
+                  id="editAmount"
+                  type="number"
+                  step="0.01"
+                  className="pl-8"
+                  value={editData.amount}
+                  onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                />
+              </div>
             </div>
+
+            {/* TDS Section */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="editTdsApplicable"
+                  checked={editTdsEnabled}
+                  onCheckedChange={(checked) => {
+                    setEditTdsEnabled(!!checked);
+                    if (!checked) {
+                      setEditData(prev => ({
+                        ...prev,
+                        tds_rate: "",
+                        tds_base_amount: "",
+                        tds_amount: "",
+                        tds_certificate_no: "",
+                        tds_certificate_date: "",
+                      }));
+                    } else {
+                      const rate = clientTds.tds_applicable && clientTds.default_tds_rate > 0
+                        ? clientTds.default_tds_rate : 2;
+                      const base = effectiveTdsBase;
+                      setEditData(prev => ({
+                        ...prev,
+                        tds_rate: rate.toString(),
+                        tds_base_amount: base.toFixed(2),
+                        tds_amount: (base * rate / 100).toFixed(2),
+                      }));
+                    }
+                  }}
+                />
+                <Label htmlFor="editTdsApplicable" className="font-medium cursor-pointer">
+                  Client deducted TDS
+                </Label>
+              </div>
+
+              {editTdsEnabled && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                    TDS is calculated on taxable value before GST
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="editTdsRate">TDS Rate (%)</Label>
+                      <Input
+                        id="editTdsRate"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="2"
+                        value={editData.tds_rate}
+                        onChange={(e) => handleEditTdsRateChange(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editTdsBase">TDS Base (Taxable Value)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                        <Input
+                          id="editTdsBase"
+                          type="number"
+                          step="0.01"
+                          className="pl-8"
+                          value={editData.tds_base_amount}
+                          onChange={(e) => {
+                            const base = parseFloat(e.target.value) || 0;
+                            const rate = parseFloat(editData.tds_rate) || 0;
+                            setEditData(prev => ({
+                              ...prev,
+                              tds_base_amount: e.target.value,
+                              tds_amount: rate > 0 ? (base * rate / 100).toFixed(2) : prev.tds_amount,
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="editTdsAmount">TDS Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                      <Input
+                        id="editTdsAmount"
+                        type="number"
+                        step="0.01"
+                        className="pl-8"
+                        value={editData.tds_amount}
+                        onChange={(e) => setEditData({ ...editData, tds_amount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="editTdsCertNo">Certificate No.</Label>
+                      <Input
+                        id="editTdsCertNo"
+                        placeholder="Form 16A number"
+                        value={editData.tds_certificate_no}
+                        onChange={(e) => setEditData({ ...editData, tds_certificate_no: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editTdsCertDate">Certificate Date</Label>
+                      <Input
+                        id="editTdsCertDate"
+                        type="date"
+                        value={editData.tds_certificate_date}
+                        onChange={(e) => setEditData({ ...editData, tds_certificate_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="editDate">Payment Date *</Label>
               <Input

@@ -404,7 +404,7 @@ export function PaymentRecordingPanel({
     setDialogOpen(open);
     if (open && clientTds.tds_applicable) {
       setTdsEnabled(true);
-      const rate = clientTds.default_tds_rate || 2;
+      const rate = clientTds.default_tds_rate > 0 ? clientTds.default_tds_rate : 2;
       const base = effectiveTdsBase;
       const tdsAmt = (base * rate / 100);
       setNewPayment(prev => ({

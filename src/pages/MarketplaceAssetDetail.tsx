@@ -56,24 +56,18 @@ export default function MarketplaceAssetDetail() {
   const fetchAssetDetail = async (code: string) => {
     setLoading(true);
     try {
-      // Try to fetch by media_asset_code first (for MNS codes like MNS-HYD-PUB-0001)
+      // Try to fetch by media_asset_code first
       let { data, error } = await supabase
         .from('public_media_assets_safe')
-        .select(`
-          *,
-          companies!inner(name)
-        `)
+        .select('*')
         .eq('media_asset_code', code)
         .maybeSingle();
 
-      // If not found by media_asset_code, try by id (UUID) for backwards compatibility
+      // If not found by media_asset_code, try by id (UUID)
       if (!data && !error) {
         const result = await supabase
           .from('public_media_assets_safe')
-          .select(`
-            *,
-            companies!inner(name)
-          `)
+          .select('*')
           .eq('id', code)
           .maybeSingle();
         
@@ -99,16 +93,26 @@ export default function MarketplaceAssetDetail() {
         return;
       }
 
-      // Map company data
+      // Fetch company name separately (PostgREST can't join on views)
+      let companyName = '';
+      if (data.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', data.company_id)
+          .maybeSingle();
+        companyName = company?.name || '';
+      }
+
       const mappedData: PublicAssetDetail = {
         ...data,
         media_asset_code: data.media_asset_code || null,
-        company_name: (data.companies as any)?.name || '',
+        company_name: companyName,
       };
       
       setAsset(mappedData);
 
-      // Fetch gallery photos from media_photos table
+      // Fetch gallery photos
       const { data: photos } = await supabase
         .from('media_photos')
         .select('photo_url')

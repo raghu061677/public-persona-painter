@@ -94,18 +94,10 @@ export default function Marketplace() {
   const fetchMarketplaceAssets = async () => {
     setLoading(true);
     try {
-      // Use the secure public view that excludes pricing and vendor details
+      // Query the public view without join (views don't support PostgREST joins)
       let query = supabase
         .from('public_media_assets_safe')
-        .select(`
-          *,
-          companies!inner(
-            name,
-            city,
-            phone,
-            email
-          )
-        `);
+        .select('*');
 
       if (selectedCity !== "all") {
         query = query.eq('city', selectedCity);
@@ -121,33 +113,44 @@ export default function Marketplace() {
 
       if (error) throw error;
 
-      // Get asset IDs to fetch photos
+      // Get unique company IDs and asset IDs
+      const companyIds = [...new Set((data || []).map(a => a.company_id).filter(Boolean))];
       const assetIds = (data || []).map(a => a.id);
-      
-      // Fetch photos for all assets
-      const { data: photosData } = await supabase
-        .from('media_photos')
-        .select('asset_id, photo_url')
-        .in('asset_id', assetIds);
-      
-      // Create a map of asset_id to first photo
+
+      // Fetch company data and photos in parallel
+      const [companiesResult, photosResult] = await Promise.all([
+        companyIds.length > 0
+          ? supabase.from('companies').select('id, name, city, phone, email').in('id', companyIds)
+          : Promise.resolve({ data: [] }),
+        assetIds.length > 0
+          ? supabase.from('media_photos').select('asset_id, photo_url').in('asset_id', assetIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Create maps
+      const companyMap = new Map<string, any>();
+      (companiesResult.data || []).forEach(c => companyMap.set(c.id, c));
+
       const photoMap = new Map<string, string>();
-      (photosData || []).forEach(p => {
+      (photosResult.data || []).forEach(p => {
         if (!photoMap.has(p.asset_id) && p.photo_url) {
           photoMap.set(p.asset_id, p.photo_url);
         }
       });
 
-      // Map company data to flat structure and get first photo
-      const mappedAssets = (data || []).map(asset => ({
-        ...asset,
-        media_asset_code: (asset as any).media_asset_code || null,
-        primary_photo_url: asset.primary_photo_url || photoMap.get(asset.id) || null,
-        company_name: (asset.companies as any)?.name || '',
-        company_city: (asset.companies as any)?.city || null,
-        company_phone: (asset.companies as any)?.phone || null,
-        company_email: (asset.companies as any)?.email || null,
-      }));
+      // Map to flat structure
+      const mappedAssets = (data || []).map(asset => {
+        const comp = companyMap.get(asset.company_id) || {};
+        return {
+          ...asset,
+          media_asset_code: asset.media_asset_code || null,
+          primary_photo_url: asset.primary_photo_url || photoMap.get(asset.id) || null,
+          company_name: comp.name || '',
+          company_city: comp.city || null,
+          company_phone: comp.phone || null,
+          company_email: comp.email || null,
+        };
+      });
 
       setAssets(mappedAssets);
     } catch (error: any) {

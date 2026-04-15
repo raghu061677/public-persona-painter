@@ -498,8 +498,10 @@ export function PaymentRecordingPanel({
                             tds_certificate_no: "",
                             tds_certificate_date: "",
                           }));
-                        } else if (clientTds.tds_applicable) {
-                          const rate = clientTds.default_tds_rate || 2;
+                        } else {
+                          const rate = clientTds.tds_applicable && clientTds.default_tds_rate > 0
+                            ? clientTds.default_tds_rate
+                            : 2;
                           const base = effectiveTdsBase;
                           setNewPayment(prev => ({
                             ...prev,

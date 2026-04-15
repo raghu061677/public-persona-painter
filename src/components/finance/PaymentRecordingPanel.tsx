@@ -351,30 +351,72 @@ export function PaymentRecordingPanel({
 
   const handleEditPayment = (payment: PaymentRecord) => {
     setEditingPayment(payment);
+    const hasTds = payment.tds_amount > 0;
+    setEditTdsEnabled(hasTds);
     setEditData({
       payment_date: payment.payment_date,
+      amount: payment.amount.toString(),
       method: payment.method,
       reference_no: payment.reference_no || "",
       notes: payment.notes || "",
+      tds_rate: payment.tds_rate > 0 ? payment.tds_rate.toString() : "",
+      tds_base_amount: payment.tds_base_amount > 0 ? payment.tds_base_amount.toString() : "",
+      tds_amount: payment.tds_amount > 0 ? payment.tds_amount.toString() : "",
+      tds_certificate_no: payment.tds_certificate_no || "",
+      tds_certificate_date: payment.tds_certificate_date || "",
     });
     setEditDialogOpen(true);
   };
 
+  const handleEditTdsRateChange = (rateStr: string) => {
+    const rate = parseFloat(rateStr) || 0;
+    const base = parseFloat(editData.tds_base_amount) || effectiveTdsBase;
+    const tdsAmt = rate > 0 ? (base * rate / 100) : 0;
+    setEditData(prev => ({
+      ...prev,
+      tds_rate: rateStr,
+      tds_amount: tdsAmt > 0 ? tdsAmt.toFixed(2) : "",
+    }));
+  };
+
   const handleSaveEdit = async () => {
     if (!editingPayment) return;
+    const amount = parseFloat(editData.amount);
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid payment amount");
+      return;
+    }
     if (!editData.payment_date) {
       toast.error("Please select a payment date");
       return;
     }
+    const tdsAmount = editTdsEnabled ? (parseFloat(editData.tds_amount) || 0) : 0;
+    const tdsRate = editTdsEnabled ? (parseFloat(editData.tds_rate) || 0) : 0;
+    const tdsBase = editTdsEnabled ? (parseFloat(editData.tds_base_amount) || (tdsAmount > 0 ? effectiveTdsBase : 0)) : 0;
+
+    // Check that new amount + tds doesn't exceed what's available
+    const otherSettled = totalSettled - editingPayment.amount - editingPayment.tds_amount;
+    const maxAllowed = totalAmount - otherSettled;
+    if (amount + tdsAmount > maxAllowed + 1.00) {
+      toast.error(`Payment + TDS (${formatExactINR(amount + tdsAmount)}) exceeds available balance (${formatExactINR(maxAllowed)})`);
+      return;
+    }
+
     setEditSaving(true);
     try {
       const { error } = await supabase
         .from("payment_records")
         .update({
+          amount: amount,
           payment_date: editData.payment_date,
           method: editData.method,
           reference_no: editData.reference_no || null,
           notes: editData.notes || null,
+          tds_amount: tdsAmount,
+          tds_rate: tdsRate,
+          tds_base_amount: tdsBase,
+          tds_certificate_no: editTdsEnabled ? (editData.tds_certificate_no?.trim() || null) : null,
+          tds_certificate_date: editTdsEnabled ? (editData.tds_certificate_date || null) : null,
         })
         .eq("id", editingPayment.id);
 

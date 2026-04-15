@@ -94,18 +94,10 @@ export default function Marketplace() {
   const fetchMarketplaceAssets = async () => {
     setLoading(true);
     try {
-      // Use the secure public view that excludes pricing and vendor details
+      // Query the public view without join (views don't support PostgREST joins)
       let query = supabase
         .from('public_media_assets_safe')
-        .select(`
-          *,
-          companies!inner(
-            name,
-            city,
-            phone,
-            email
-          )
-        `);
+        .select('*');
 
       if (selectedCity !== "all") {
         query = query.eq('city', selectedCity);

@@ -165,14 +165,41 @@ export default function ClientDetail() {
     try {
       setLoading(true);
 
-      // Fetch client info
-      const { data: clientData, error: clientError } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("id", id)
-        .single();
+      // Fetch client info + default registration in parallel
+      const [clientRes, regRes] = await Promise.all([
+        supabase.from("clients").select("*").eq("id", id).single(),
+        supabase.from("client_registrations")
+          .select("*, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_pincode, gstin, label")
+          .eq("client_id", id!)
+          .eq("is_default", true)
+          .eq("is_active", true)
+          .maybeSingle(),
+      ]);
 
-      if (clientError) throw clientError;
+      if (clientRes.error) throw clientRes.error;
+      const clientData = clientRes.data;
+      const defaultReg = regRes.data;
+
+      // Enrich client with default registration address when client fields are empty
+      if (defaultReg) {
+        if (!clientData.billing_address_line1 && defaultReg.billing_address_line1) {
+          clientData.billing_address_line1 = defaultReg.billing_address_line1;
+          clientData.billing_address_line2 = defaultReg.billing_address_line2 || clientData.billing_address_line2;
+          clientData.billing_city = defaultReg.billing_city || clientData.billing_city;
+          clientData.billing_state = defaultReg.billing_state || clientData.billing_state;
+          clientData.billing_pincode = defaultReg.billing_pincode || clientData.billing_pincode;
+        }
+        if (!clientData.shipping_address_line1 && defaultReg.shipping_address_line1) {
+          clientData.shipping_address_line1 = defaultReg.shipping_address_line1;
+          clientData.shipping_address_line2 = defaultReg.shipping_address_line2 || clientData.shipping_address_line2;
+          clientData.shipping_city = defaultReg.shipping_city || clientData.shipping_city;
+          clientData.shipping_state = defaultReg.shipping_state || clientData.shipping_state;
+          clientData.shipping_pincode = defaultReg.shipping_pincode || clientData.shipping_pincode;
+        }
+        if (!clientData.gst_number && defaultReg.gstin) {
+          clientData.gst_number = defaultReg.gstin;
+        }
+      }
       setClient(clientData);
 
       // Fetch plans (include signed RO fields)

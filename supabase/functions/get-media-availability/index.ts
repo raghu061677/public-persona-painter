@@ -183,7 +183,8 @@ serve(withAuth(async (req) => {
   let assetsQuery = supabase
     .from('media_assets')
     .select('id, media_asset_code, city, area, location, media_type, dimensions, card_rate, total_sqft, status, direction, illumination_type, latitude, longitude, primary_photo_url, qr_code_url, is_public, booked_from, booked_to, current_campaign_id')
-    .eq('company_id', companyId);
+    .eq('company_id', companyId)
+    .eq('operational_status', 'active');
 
   if (city && city !== 'all') assetsQuery = assetsQuery.eq('city', city);
   if (media_type && media_type !== 'all') assetsQuery = assetsQuery.eq('media_type', media_type);

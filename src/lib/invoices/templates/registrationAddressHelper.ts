@@ -39,7 +39,7 @@ export function resolveBillTo(data: { invoice: any; client: any }): AddressBlock
   if (hasRegSnapshot) {
     const addr = formatSnapshotAddress(regBilling);
     return {
-      name: inv.registration_label_snapshot || client.name || 'Client',
+      name: client.name || inv.registration_label_snapshot || 'Client',
       address1: addr.line1 || client.billing_address_line1 || client.address || '',
       address2: addr.line2 || client.billing_address_line2 || '',
       city: addr.city || client.billing_city || client.city || '',

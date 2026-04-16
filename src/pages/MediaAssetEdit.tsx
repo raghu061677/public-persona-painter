@@ -207,7 +207,7 @@ export default function MediaAssetEdit() {
         .update({
           media_type: formData.media_type,
           municipal_id: formData.municipal_id || null,
-          status: formData.status,
+          status: (formData.operational_status === 'removed' || formData.operational_status === 'inactive') ? 'Blocked' : formData.status,
           operational_status: formData.operational_status || 'active',
           deactivation_reason: formData.operational_status !== 'active' ? (formData.deactivation_reason || null) : null,
           category: formData.category,
@@ -237,7 +237,7 @@ export default function MediaAssetEdit() {
           maintenance: formData.maintenance ? parseFloat(formData.maintenance) : null,
           ownership: formData.ownership,
           municipal_authority: formData.municipal_authority || null,
-          is_public: formData.is_public,
+          is_public: (formData.operational_status === 'removed' || formData.operational_status === 'inactive') ? false : formData.is_public,
           vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
           search_tokens,
           // Power details
@@ -1152,7 +1152,14 @@ export default function MediaAssetEdit() {
                     <p className="text-xs text-muted-foreground mb-1">Controls whether this asset appears in availability & planning</p>
                     <Select 
                       value={formData.operational_status || 'active'} 
-                      onValueChange={(value) => updateField('operational_status', value)}
+                      onValueChange={(value) => {
+                        updateField('operational_status', value);
+                        // Auto-sync: when removed/inactive, force booking status to Blocked and hide from public
+                        if (value === 'removed' || value === 'inactive') {
+                          updateField('status', 'Blocked');
+                          updateField('is_public', false);
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1185,6 +1192,12 @@ export default function MediaAssetEdit() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {(formData.operational_status === 'removed' || formData.operational_status === 'inactive') && (
+                    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                      <strong>⚠ This asset is {formData.operational_status}.</strong> It will not appear in Plans, Campaigns, Media Availability, or the Marketplace. Booking status has been set to Blocked.
+                    </div>
+                  )}
 
                   {formData.operational_status && formData.operational_status !== 'active' && (
                     <div className="input-group">

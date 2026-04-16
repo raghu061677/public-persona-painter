@@ -1152,7 +1152,14 @@ export default function MediaAssetEdit() {
                     <p className="text-xs text-muted-foreground mb-1">Controls whether this asset appears in availability & planning</p>
                     <Select 
                       value={formData.operational_status || 'active'} 
-                      onValueChange={(value) => updateField('operational_status', value)}
+                      onValueChange={(value) => {
+                        updateField('operational_status', value);
+                        // Auto-sync: when removed/inactive, force booking status to Blocked and hide from public
+                        if (value === 'removed' || value === 'inactive') {
+                          updateField('status', 'Blocked');
+                          updateField('is_public', false);
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />

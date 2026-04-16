@@ -1193,6 +1193,12 @@ export default function MediaAssetEdit() {
                     </Select>
                   </div>
 
+                  {(formData.operational_status === 'removed' || formData.operational_status === 'inactive') && (
+                    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                      <strong>⚠ This asset is {formData.operational_status}.</strong> It will not appear in Plans, Campaigns, Media Availability, or the Marketplace. Booking status has been set to Blocked.
+                    </div>
+                  )}
+
                   {formData.operational_status && formData.operational_status !== 'active' && (
                     <div className="input-group">
                       <Label>Reason for Deactivation</Label>

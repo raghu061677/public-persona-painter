@@ -210,7 +210,6 @@ export default function MediaAssetEdit() {
           status: (formData.operational_status === 'removed' || formData.operational_status === 'inactive') ? 'Blocked' : formData.status,
           operational_status: formData.operational_status || 'active',
           deactivation_reason: formData.operational_status !== 'active' ? (formData.deactivation_reason || null) : null,
-          is_public: (formData.operational_status === 'removed' || formData.operational_status === 'inactive') ? false : formData.is_public,
           category: formData.category,
           location: formData.location,
           area: formData.area,

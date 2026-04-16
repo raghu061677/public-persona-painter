@@ -238,7 +238,7 @@ export default function MediaAssetEdit() {
           maintenance: formData.maintenance ? parseFloat(formData.maintenance) : null,
           ownership: formData.ownership,
           municipal_authority: formData.municipal_authority || null,
-          is_public: formData.is_public,
+          is_public: (formData.operational_status === 'removed' || formData.operational_status === 'inactive') ? false : formData.is_public,
           vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
           search_tokens,
           // Power details

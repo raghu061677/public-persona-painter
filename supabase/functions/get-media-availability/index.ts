@@ -200,6 +200,13 @@ serve(withAuth(async (req) => {
     .select('asset_id, campaign_id, booking_start_date, booking_end_date, campaigns(id, campaign_name, client_name, start_date, end_date, status)')
     .in('asset_id', assetIds);
 
+  // Also fetch active asset_holds overlapping the range
+  const { data: allHolds } = await supabase
+    .from('asset_holds')
+    .select('asset_id, id, client_name, start_date, end_date, status, hold_type')
+    .in('asset_id', assetIds)
+    .eq('status', 'ACTIVE');
+
   const assetBookingsMap = new Map<string, BookingInterval[]>();
   const assetAllBookingsInfoMap = new Map<string, BookingInfo[]>();
 
@@ -221,6 +228,27 @@ serve(withAuth(async (req) => {
     const intervals = assetBookingsMap.get(booking.asset_id) || [];
     intervals.push({ start: bs, end: be, info });
     assetBookingsMap.set(booking.asset_id, intervals);
+  }
+
+  // Merge asset_holds into bookings map so held assets show as booked
+  for (const hold of (allHolds || [])) {
+    if (!hold.start_date || !hold.end_date) continue;
+    const hs = parseDay(hold.start_date), he = parseDay(hold.end_date);
+    if (he < hs) continue;
+    const holdInfo: BookingInfo = {
+      campaign_id: hold.id,
+      campaign_name: `Hold (${hold.hold_type || 'General'})`,
+      client_name: hold.client_name || 'Hold',
+      start_date: hold.start_date,
+      end_date: hold.end_date,
+      status: 'HELD',
+    };
+    const allInfo = assetAllBookingsInfoMap.get(hold.asset_id) || [];
+    allInfo.push(holdInfo);
+    assetAllBookingsInfoMap.set(hold.asset_id, allInfo);
+    const intervals = assetBookingsMap.get(hold.asset_id) || [];
+    intervals.push({ start: hs, end: he, info: holdInfo });
+    assetBookingsMap.set(hold.asset_id, intervals);
   }
 
   const availableAssets: any[] = [];

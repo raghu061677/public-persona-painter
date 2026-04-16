@@ -37,11 +37,9 @@ export function useReportFilters({
     if (from && to) {
       return { from: new Date(from), to: new Date(to) };
     }
-    // Default to last 30 days
+    // Default to today only
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    return { from: thirtyDaysAgo, to: today };
+    return { from: today, to: today };
   });
 
   const [searchValue, setSearchValue] = useState(() => 
@@ -82,9 +80,7 @@ export function useReportFilters({
   const resetFilters = useCallback(() => {
     setDateType(defaultDateType);
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    setDateRange({ from: thirtyDaysAgo, to: today });
+    setDateRange({ from: today, to: today });
     setSearchValue("");
     setSelectedFilters({
       cities: [],

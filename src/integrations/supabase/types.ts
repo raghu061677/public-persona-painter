@@ -1932,6 +1932,92 @@ export type Database = {
           },
         ]
       }
+      campaign_asset_printing_panels: {
+        Row: {
+          campaign_asset_id: string
+          campaign_id: string | null
+          client_amount: number
+          client_rate_per_sqft: number
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          height_ft: number
+          id: string
+          illumination_type: string
+          margin_amount: number
+          notes: string | null
+          panel_name: string
+          payment_status: string
+          printer_vendor_id: string | null
+          printer_vendor_name: string | null
+          printing_status: string
+          sort_order: number
+          sqft: number
+          updated_at: string
+          vendor_amount: number
+          vendor_rate_per_sqft: number
+          width_ft: number
+        }
+        Insert: {
+          campaign_asset_id: string
+          campaign_id?: string | null
+          client_amount?: number
+          client_rate_per_sqft?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          height_ft?: number
+          id?: string
+          illumination_type?: string
+          margin_amount?: number
+          notes?: string | null
+          panel_name?: string
+          payment_status?: string
+          printer_vendor_id?: string | null
+          printer_vendor_name?: string | null
+          printing_status?: string
+          sort_order?: number
+          sqft?: number
+          updated_at?: string
+          vendor_amount?: number
+          vendor_rate_per_sqft?: number
+          width_ft?: number
+        }
+        Update: {
+          campaign_asset_id?: string
+          campaign_id?: string | null
+          client_amount?: number
+          client_rate_per_sqft?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          height_ft?: number
+          id?: string
+          illumination_type?: string
+          margin_amount?: number
+          notes?: string | null
+          panel_name?: string
+          payment_status?: string
+          printer_vendor_id?: string | null
+          printer_vendor_name?: string | null
+          printing_status?: string
+          sort_order?: number
+          sqft?: number
+          updated_at?: string
+          vendor_amount?: number
+          vendor_rate_per_sqft?: number
+          width_ft?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_asset_printing_panels_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_assets: {
         Row: {
           area: string
@@ -1980,9 +2066,13 @@ export type Database = {
           photos: Json | null
           printing_billed: boolean | null
           printing_charges: number | null
+          printing_client_amount: number
           printing_cost: number
           printing_cost_default: number | null
+          printing_costing_mode: string
+          printing_margin_amount: number
           printing_rate_per_sqft: number
+          printing_vendor_amount: number
           removal_notes: string | null
           removal_type: string | null
           rent_amount: number | null
@@ -2046,9 +2136,13 @@ export type Database = {
           photos?: Json | null
           printing_billed?: boolean | null
           printing_charges?: number | null
+          printing_client_amount?: number
           printing_cost?: number
           printing_cost_default?: number | null
+          printing_costing_mode?: string
+          printing_margin_amount?: number
           printing_rate_per_sqft?: number
+          printing_vendor_amount?: number
           removal_notes?: string | null
           removal_type?: string | null
           rent_amount?: number | null
@@ -2112,9 +2206,13 @@ export type Database = {
           photos?: Json | null
           printing_billed?: boolean | null
           printing_charges?: number | null
+          printing_client_amount?: number
           printing_cost?: number
           printing_cost_default?: number | null
+          printing_costing_mode?: string
+          printing_margin_amount?: number
           printing_rate_per_sqft?: number
+          printing_vendor_amount?: number
           removal_notes?: string | null
           removal_type?: string | null
           rent_amount?: number | null

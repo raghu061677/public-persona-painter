@@ -16,12 +16,26 @@ import {
   Settings2,
   ChevronDown,
   ChevronRight,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  Filter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -37,6 +51,13 @@ import {
 } from "@/lib/printing/printingStatus";
 import PanelEditorSheet from "@/components/operations/printing/PanelEditorSheet";
 import type { PrintingPanel } from "@/lib/printing/printingDefaults";
+import {
+  DatePeriodFilter,
+  type DatePeriodValue,
+  type PeriodKey,
+  getPeriodRange,
+} from "@/components/common/DatePeriodFilter";
+import type { DateRange } from "react-day-picker";
 
 interface CampaignAsset {
   id: string;
@@ -60,6 +81,21 @@ interface CampaignAsset {
   } | null;
 }
 
+type SortField =
+  | "campaign"
+  | "client"
+  | "location"
+  | "city"
+  | "panels"
+  | "client_amt"
+  | "vendor_amt"
+  | "margin_amt"
+  | "start_date"
+  | "status";
+type SortDir = "asc" | "desc";
+
+const STATUS_OPTIONS = ["Pending", "Assigned", "Installed", "Completed"];
+
 export default function OperationsPrinting() {
   const [assets, setAssets] = useState<CampaignAsset[]>([]);
   const [panelsByAsset, setPanelsByAsset] = useState<Record<string, PrintingPanel[]>>({});
@@ -70,9 +106,23 @@ export default function OperationsPrinting() {
   const { toast } = useToast();
   const { isAdmin, hasRole } = useAuth();
 
+  // Filters & sorting
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [costingMode, setCostingMode] = useState<string>("all");
+  const [period, setPeriod] = useState<PeriodKey>("current_month");
+  const [dateRange, setDateRange] = useState<DatePeriodValue | undefined>(() =>
+    getPeriodRange("current_month")
+  );
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [sortField, setSortField] = useState<SortField>("start_date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   const canEdit =
     isAdmin || hasRole("finance") || hasRole("operations") || hasRole("operations_manager");
-  const canSeeVendor = canEdit; // vendor cost is operational/financial — restrict like finance
+  const canSeeVendor = canEdit;
 
   useEffect(() => {
     void loadPrintingQueue();
@@ -98,7 +148,6 @@ export default function OperationsPrinting() {
       const list = (data || []) as unknown as CampaignAsset[];
       setAssets(list);
 
-      // Bulk-load panels for visible assets
       const ids = list.map((a) => a.id);
       if (ids.length) {
         const { data: pData, error: pErr } = await supabase
@@ -127,27 +176,126 @@ export default function OperationsPrinting() {
     }
   };
 
+  // Distinct city / client lists for filter dropdowns
+  const cities = useMemo(
+    () =>
+      Array.from(new Set(assets.map((a) => a.city).filter(Boolean))).sort(),
+    [assets]
+  );
+  const clients = useMemo(
+    () =>
+      Array.from(
+        new Set(assets.map((a) => a.campaigns?.client_name).filter(Boolean) as string[])
+      ).sort(),
+    [assets]
+  );
+
+  // Apply filters
+  const filteredAssets = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return assets.filter((a) => {
+      // Search across campaign, client, location, area, city, asset code
+      if (q) {
+        const hay = [
+          a.campaigns?.campaign_name,
+          a.campaigns?.client_name,
+          a.location,
+          a.area,
+          a.city,
+          a.asset_id,
+          a.media_type,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (statusFilter !== "all") {
+        if (normalizePrintingStatus(a.status) !== normalizePrintingStatus(statusFilter))
+          return false;
+      }
+      if (cityFilter !== "all" && a.city !== cityFilter) return false;
+      if (clientFilter !== "all" && a.campaigns?.client_name !== clientFilter)
+        return false;
+      if (costingMode !== "all") {
+        const panels = panelsByAsset[a.id] || [];
+        const mode = panels.length > 0 ? "panel_based" : "legacy";
+        if (mode !== costingMode) return false;
+      }
+      if (dateRange?.from && dateRange?.to && a.campaigns?.start_date) {
+        const sd = a.campaigns.start_date;
+        if (sd < dateRange.from || sd > dateRange.to) return false;
+      }
+      return true;
+    });
+  }, [
+    assets,
+    search,
+    statusFilter,
+    cityFilter,
+    clientFilter,
+    costingMode,
+    dateRange,
+    panelsByAsset,
+  ]);
+
+  // Apply sort
+  const sortedAssets = useMemo(() => {
+    const arr = [...filteredAssets];
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      const get = (x: CampaignAsset): string | number => {
+        switch (sortField) {
+          case "campaign":
+            return (x.campaigns?.campaign_name || "").toLowerCase();
+          case "client":
+            return (x.campaigns?.client_name || "").toLowerCase();
+          case "location":
+            return (x.location || "").toLowerCase();
+          case "city":
+            return (x.city || "").toLowerCase();
+          case "panels":
+            return (panelsByAsset[x.id] || []).length;
+          case "client_amt":
+            return Number(x.printing_client_amount || x.printing_charges || 0);
+          case "vendor_amt":
+            return Number(x.printing_vendor_amount || 0);
+          case "margin_amt":
+            return Number(x.printing_margin_amount || 0);
+          case "start_date":
+            return x.campaigns?.start_date || "";
+          case "status":
+            return normalizePrintingStatus(x.status);
+          default:
+            return "";
+        }
+      };
+      const va = get(a);
+      const vb = get(b);
+      if (va < vb) return -1 * dir;
+      if (va > vb) return 1 * dir;
+      return 0;
+    });
+    return arr;
+  }, [filteredAssets, sortField, sortDir, panelsByAsset]);
+
   const totals = useMemo(() => {
-    return assets.reduce(
+    return sortedAssets.reduce(
       (acc, a) => {
         const client = Number(a.printing_client_amount || a.printing_charges || 0);
         const vendor = Number(a.printing_vendor_amount || 0);
         const margin = Number(a.printing_margin_amount || 0);
+        const ns = normalizePrintingStatus(a.status);
         return {
           client: acc.client + client,
           vendor: acc.vendor + vendor,
           margin: acc.margin + margin,
-          pending:
-            acc.pending +
-            (normalizePrintingStatus(a.status) === "Pending" ||
-            normalizePrintingStatus(a.status) === "Assigned"
-              ? 1
-              : 0),
+          pending: acc.pending + (ns === "Pending" || ns === "Assigned" ? 1 : 0),
         };
       },
       { client: 0, vendor: 0, margin: 0, pending: 0 }
     );
-  }, [assets]);
+  }, [sortedAssets]);
 
   const toggleExpand = (id: string) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -165,6 +313,66 @@ export default function OperationsPrinting() {
       </Badge>
     );
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1" />
+    );
+  };
+
+  const SortableHead = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead>
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className="flex items-center hover:text-foreground transition-colors"
+      >
+        {children}
+        <SortIcon field={field} />
+      </button>
+    </TableHead>
+  );
+
+  const handlePeriodChange = (
+    p: PeriodKey,
+    range: DatePeriodValue | undefined,
+    custom?: DateRange
+  ) => {
+    setPeriod(p);
+    setDateRange(range);
+    if (custom) setCustomRange(custom);
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setCityFilter("all");
+    setClientFilter("all");
+    setCostingMode("all");
+    setPeriod("all");
+    setDateRange(undefined);
+    setCustomRange(undefined);
+  };
+
+  const activeFilterCount =
+    (search ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0) +
+    (cityFilter !== "all" ? 1 : 0) +
+    (clientFilter !== "all" ? 1 : 0) +
+    (costingMode !== "all" ? 1 : 0) +
+    (period !== "all" ? 1 : 0);
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
@@ -204,11 +412,130 @@ export default function OperationsPrinting() {
         />
       </div>
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Campaign, client, location, asset code…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 pl-8"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Period (Campaign Start)
+              </label>
+              <DatePeriodFilter
+                value={period}
+                customRange={customRange}
+                onChange={handlePeriodChange}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Status
+              </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  {STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                City
+              </label>
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {cities.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Client
+              </label>
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="h-9 w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Costing Mode
+              </label>
+              <Select value={costingMode} onValueChange={setCostingMode}>
+                <SelectTrigger className="h-9 w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modes</SelectItem>
+                  <SelectItem value="panel_based">Panel-based</SelectItem>
+                  <SelectItem value="legacy">Legacy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="h-9 gap-1.5"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear ({activeFilterCount})
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileCheck className="h-5 w-5" />
-            Printing Queue ({assets.length})
+            Printing Queue ({sortedAssets.length}
+            {sortedAssets.length !== assets.length && ` of ${assets.length}`})
           </CardTitle>
           <CardDescription>
             Track printing status and configure panel-wise client/vendor costs
@@ -221,33 +548,44 @@ export default function OperationsPrinting() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : assets.length === 0 ? (
+          ) : sortedAssets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FileCheck className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">No printing jobs in queue</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Printing tasks will appear here once campaigns start
+              <Filter className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">
+                {assets.length === 0
+                  ? "No printing jobs in queue"
+                  : "No jobs match your filters"}
               </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {assets.length === 0
+                  ? "Printing tasks will appear here once campaigns start"
+                  : "Try adjusting filters or clear them to see all jobs"}
+              </p>
+              {activeFilterCount > 0 && (
+                <Button variant="outline" size="sm" onClick={resetFilters} className="mt-4">
+                  Clear filters
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8" />
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Asset Location</TableHead>
-                  <TableHead>Panels</TableHead>
-                  <TableHead>Client ₹</TableHead>
-                  {canSeeVendor && <TableHead>Vendor ₹</TableHead>}
-                  {canSeeVendor && <TableHead>Margin ₹</TableHead>}
-                  <TableHead>Start</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableHead field="campaign">Campaign</SortableHead>
+                  <SortableHead field="client">Client</SortableHead>
+                  <SortableHead field="location">Asset Location</SortableHead>
+                  <SortableHead field="panels">Panels</SortableHead>
+                  <SortableHead field="client_amt">Client ₹</SortableHead>
+                  {canSeeVendor && <SortableHead field="vendor_amt">Vendor ₹</SortableHead>}
+                  {canSeeVendor && <SortableHead field="margin_amt">Margin ₹</SortableHead>}
+                  <SortableHead field="start_date">Start</SortableHead>
+                  <SortableHead field="status">Status</SortableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset) => {
+                {sortedAssets.map((asset) => {
                   const panels = panelsByAsset[asset.id] || [];
                   const isOpen = !!expanded[asset.id];
                   const clientAmt = Number(

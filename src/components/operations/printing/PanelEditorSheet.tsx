@@ -48,12 +48,15 @@ export default function PanelEditorSheet({
   assetLabel,
   canEdit,
   onSaved,
+  dimensions,
+  illuminationType,
 }: Props) {
   const { toast } = useToast();
   const [panels, setPanels] = useState<PrintingPanel[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [derivedFromDimensions, setDerivedFromDimensions] = useState(false);
 
   useEffect(() => {
     if (!open || !campaignAssetId) return;

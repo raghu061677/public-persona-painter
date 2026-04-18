@@ -793,6 +793,14 @@ export default function OperationsPrinting() {
             ? `${editingAsset.location} · ${editingAsset.area}, ${editingAsset.city}`
             : undefined
         }
+        dimensions={
+          editingAsset?.dimensions || editingAsset?.media_assets?.dimensions || null
+        }
+        illuminationType={
+          editingAsset?.illumination_type ||
+          editingAsset?.media_assets?.illumination_type ||
+          null
+        }
         canEdit={canEdit}
         onSaved={loadPrintingQueue}
       />

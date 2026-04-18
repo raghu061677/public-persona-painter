@@ -75,12 +75,42 @@ export default function PanelEditorSheet({
         .eq("campaign_asset_id", campaignAssetId)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      setPanels((data || []).map((p) => computePanel(p as any)));
+      const existing = (data || []).map((p) => computePanel(p as any));
+      if (existing.length > 0) {
+        setPanels(existing);
+        setDerivedFromDimensions(false);
+      } else {
+        // Auto-derive from existing asset dimensions (source of truth = media_assets / campaign_assets)
+        const derived = derivePanelsFromAsset({
+          dimensions: dimensions ?? null,
+          illumination_type: illuminationType ?? null,
+        });
+        setPanels(derived);
+        setDerivedFromDimensions(derived.length > 0);
+      }
     } catch (e: any) {
       toast({ title: "Failed to load panels", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const reDerive = () => {
+    const derived = derivePanelsFromAsset({
+      dimensions: dimensions ?? null,
+      illumination_type: illuminationType ?? null,
+    });
+    if (derived.length === 0) {
+      toast({
+        title: "No dimensions found",
+        description: "This asset has no parsable dimensions. Add a manual panel instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPanels(derived);
+    setDerivedFromDimensions(true);
+    setDeletedIds([]);
   };
 
   const updatePanel = (idx: number, patch: Partial<PrintingPanel>) => {

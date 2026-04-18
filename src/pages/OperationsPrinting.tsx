@@ -145,9 +145,11 @@ export default function OperationsPrinting() {
         .select(
           `
           id, campaign_id, asset_id, city, area, location, media_type, status,
+          dimensions, total_sqft, illumination_type,
           printing_charges, printing_client_amount, printing_vendor_amount,
           printing_margin_amount, printing_costing_mode,
-          campaigns ( campaign_name, client_name, start_date, company_id )
+          campaigns ( campaign_name, client_name, start_date, company_id ),
+          media_assets:asset_id ( dimensions, total_sqft, illumination_type )
         `
         )
         .in("status", ["Assigned", "Pending", "Installed", "Completed"])

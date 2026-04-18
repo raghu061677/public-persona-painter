@@ -21,6 +21,8 @@ import {
   type IlluminationType,
   type PrintingPanel,
 } from "@/lib/printing/printingDefaults";
+import { derivePanelsFromAsset } from "@/lib/printing/derivePanels";
+import { Sparkles, Info } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -31,6 +33,10 @@ interface Props {
   assetLabel?: string;
   canEdit: boolean;
   onSaved?: () => void;
+  /** Existing dimensions string from campaign_assets (or media_assets fallback) */
+  dimensions?: string | null;
+  /** Asset-level illumination, used as default for derived faces */
+  illuminationType?: string | null;
 }
 
 export default function PanelEditorSheet({

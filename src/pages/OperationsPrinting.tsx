@@ -51,6 +51,7 @@ import {
 } from "@/lib/printing/printingStatus";
 import PanelEditorSheet from "@/components/operations/printing/PanelEditorSheet";
 import type { PrintingPanel } from "@/lib/printing/printingDefaults";
+import { derivePanelsFromAsset } from "@/lib/printing/derivePanels";
 import {
   DatePeriodFilter,
   type DatePeriodValue,
@@ -68,6 +69,9 @@ interface CampaignAsset {
   location: string;
   media_type: string;
   status: string;
+  dimensions: string | null;
+  total_sqft: number | null;
+  illumination_type: string | null;
   printing_charges: number | null;
   printing_client_amount: number | null;
   printing_vendor_amount: number | null;
@@ -78,6 +82,11 @@ interface CampaignAsset {
     client_name: string;
     start_date: string;
     company_id?: string | null;
+  } | null;
+  media_assets?: {
+    dimensions: string | null;
+    total_sqft: number | null;
+    illumination_type: string | null;
   } | null;
 }
 

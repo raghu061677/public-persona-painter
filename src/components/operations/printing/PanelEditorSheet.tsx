@@ -217,14 +217,52 @@ export default function PanelEditorSheet({
             </div>
           ) : (
             <>
-              {panels.length === 0 && (
-                <Card>
-                  <CardContent className="py-6 text-sm text-muted-foreground">
-                    No panels yet. Add one to start panel-based costing. Until then, the
-                    legacy <code className="text-xs">printing_charges</code> value is used as the
-                    client amount.
+              {derivedFromDimensions && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="py-3 flex items-start gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 mt-0.5 text-primary" />
+                    <div>
+                      <div className="font-medium">
+                        Auto-derived {panels.length} panel{panels.length > 1 ? "s" : ""} from
+                        asset dimensions
+                        {dimensions ? (
+                          <code className="ml-1 text-xs bg-background px-1.5 py-0.5 rounded">
+                            {dimensions}
+                          </code>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Sizes come from Media Assets (read-only). Adjust illumination per face,
+                        override rates if needed, then save.
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {panels.length === 0 && (
+                <Card>
+                  <CardContent className="py-6 text-sm text-muted-foreground space-y-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 mt-0.5" />
+                      <div>
+                        No panels yet and no parsable dimensions on this asset. Add a manual
+                        panel below, or set <code className="text-xs">dimensions</code> on the
+                        media asset (e.g. <code className="text-xs">25x5 - 12x3</code>) and reopen.
+                        Until then, the legacy{" "}
+                        <code className="text-xs">printing_charges</code> value is used as the
+                        client amount.
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!derivedFromDimensions && dimensions && canEdit && (
+                <Button variant="outline" size="sm" onClick={reDerive} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Re-derive from dimensions ({dimensions})
+                </Button>
               )}
 
               {panels.map((p, idx) => (
@@ -240,20 +278,24 @@ export default function PanelEditorSheet({
                         />
                       </div>
                       <div className="col-span-6 sm:col-span-2">
-                        <Label className="text-xs">Width (ft)</Label>
+                        <Label className="text-xs">
+                          Width (ft){derivedFromDimensions && " 🔒"}
+                        </Label>
                         <Input
                           type="number"
                           value={p.width_ft || ""}
-                          disabled={!canEdit}
+                          disabled={!canEdit || derivedFromDimensions}
                           onChange={(e) => updatePanel(idx, { width_ft: Number(e.target.value) })}
                         />
                       </div>
                       <div className="col-span-6 sm:col-span-2">
-                        <Label className="text-xs">Height (ft)</Label>
+                        <Label className="text-xs">
+                          Height (ft){derivedFromDimensions && " 🔒"}
+                        </Label>
                         <Input
                           type="number"
                           value={p.height_ft || ""}
-                          disabled={!canEdit}
+                          disabled={!canEdit || derivedFromDimensions}
                           onChange={(e) => updatePanel(idx, { height_ft: Number(e.target.value) })}
                         />
                       </div>

@@ -597,7 +597,26 @@ export default function OperationsPrinting() {
               </TableHeader>
               <TableBody>
                 {sortedAssets.map((asset) => {
-                  const panels = panelsByAsset[asset.id] || [];
+                  const savedPanels = panelsByAsset[asset.id] || [];
+                  // Effective dimensions/illumination: campaign_assets first, fallback to media_assets
+                  const effDimensions =
+                    asset.dimensions || asset.media_assets?.dimensions || null;
+                  const effIllumination =
+                    asset.illumination_type || asset.media_assets?.illumination_type || null;
+                  const effTotalSqft =
+                    asset.total_sqft ?? asset.media_assets?.total_sqft ?? null;
+
+                  // Derived panels (preview only — not persisted unless user opens editor & saves)
+                  const derivedPanels =
+                    savedPanels.length === 0
+                      ? derivePanelsFromAsset({
+                          dimensions: effDimensions,
+                          illumination_type: effIllumination,
+                        })
+                      : [];
+                  const displayPanels = savedPanels.length > 0 ? savedPanels : derivedPanels;
+                  const isDerivedPreview = savedPanels.length === 0 && derivedPanels.length > 0;
+
                   const isOpen = !!expanded[asset.id];
                   const clientAmt = Number(
                     asset.printing_client_amount || asset.printing_charges || 0
@@ -613,7 +632,7 @@ export default function OperationsPrinting() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => toggleExpand(asset.id)}
-                            disabled={panels.length === 0}
+                            disabled={displayPanels.length === 0}
                           >
                             {isOpen ? (
                               <ChevronDown className="h-4 w-4" />
@@ -634,12 +653,26 @@ export default function OperationsPrinting() {
                               <div className="text-xs text-muted-foreground">
                                 {asset.area}, {asset.city}
                               </div>
+                              {effDimensions && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  <span className="font-medium">{effDimensions}</span>
+                                  {effTotalSqft ? ` · ${effTotalSqft} sqft` : ""}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {panels.length > 0 ? (
-                            <Badge variant="secondary">{panels.length} panel(s)</Badge>
+                          {savedPanels.length > 0 ? (
+                            <Badge variant="secondary">{savedPanels.length} panel(s)</Badge>
+                          ) : derivedPanels.length > 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="border-primary/40 text-primary"
+                              title="Auto-derived from dimensions — open Configure to confirm illumination & save"
+                            >
+                              {derivedPanels.length} derived
+                            </Badge>
                           ) : (
                             <Badge variant="outline" className="text-muted-foreground">
                               Legacy
@@ -674,15 +707,26 @@ export default function OperationsPrinting() {
                             disabled={!canEdit}
                           >
                             <Settings2 className="h-4 w-4 mr-1" />
-                            {panels.length ? "Edit panels" : "Configure"}
+                            {savedPanels.length
+                              ? "Edit panels"
+                              : derivedPanels.length
+                                ? "Review & save"
+                                : "Configure"}
                           </Button>
                         </TableCell>
                       </TableRow>
-                      {isOpen && panels.length > 0 && (
+                      {isOpen && displayPanels.length > 0 && (
                         <TableRow key={`${asset.id}-panels`} className="bg-muted/30">
                           <TableCell />
                           <TableCell colSpan={canSeeVendor ? 10 : 8}>
                             <div className="py-2">
+                              {isDerivedPreview && (
+                                <div className="text-xs text-muted-foreground mb-2 italic">
+                                  Preview derived from asset dimensions ·{" "}
+                                  <span className="font-medium">{effDimensions}</span>. Open
+                                  "Review & save" to confirm illumination per face and persist.
+                                </div>
+                              )}
                               <Table>
                                 <TableHeader>
                                   <TableRow>
@@ -699,8 +743,8 @@ export default function OperationsPrinting() {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {panels.map((p) => (
-                                    <TableRow key={p.id}>
+                                  {displayPanels.map((p, pi) => (
+                                    <TableRow key={p.id ?? `derived-${pi}`}>
                                       <TableCell className="font-medium">{p.panel_name}</TableCell>
                                       <TableCell>{`${p.width_ft} × ${p.height_ft}`}</TableCell>
                                       <TableCell>{p.sqft}</TableCell>

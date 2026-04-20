@@ -22,6 +22,8 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { logActivity } from "@/utils/activityLogger";
 import { generateMarketplacePPT } from "@/lib/marketplace/generateMarketplacePPT";
 import { format } from "date-fns";
+import { LayoutGrid, Map as MapIcon } from "lucide-react";
+import { MarketplaceMapView } from "@/components/marketplace/MarketplaceMapView";
 
 interface MarketplaceAsset {
   id: string;

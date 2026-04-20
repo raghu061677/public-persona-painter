@@ -128,13 +128,17 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
       mapRef.current.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
     }
 
+  }, [validAssets, onAssetClick]);
+
+  // Destroy map only on unmount to avoid Leaflet `_leaflet_pos` errors on re-render
+  useEffect(() => {
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [validAssets, onAssetClick]);
+  }, []);
 
   if (validAssets.length === 0) {
     return (

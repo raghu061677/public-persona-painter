@@ -602,6 +602,14 @@ export default function Marketplace() {
             )}
           </div>
 
+          {viewMode === "map" ? (
+            <MarketplaceMapView
+              assets={filteredAssets}
+              onAssetClick={(asset) =>
+                navigate(`/marketplace/asset/${asset.media_asset_code || asset.id}`)
+              }
+            />
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredAssets.map((asset) => (
             <Card key={asset.id} className="hover:shadow-lg transition-shadow relative group overflow-hidden">

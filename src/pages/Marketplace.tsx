@@ -22,6 +22,8 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { logActivity } from "@/utils/activityLogger";
 import { generateMarketplacePPT } from "@/lib/marketplace/generateMarketplacePPT";
 import { format } from "date-fns";
+import { LayoutGrid, Map as MapIcon } from "lucide-react";
+import { MarketplaceMapView } from "@/components/marketplace/MarketplaceMapView";
 
 interface MarketplaceAsset {
   id: string;
@@ -60,6 +62,9 @@ export default function Marketplace() {
   // Multi-select state
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // View mode toggle (grid is the existing default)
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   
   // Quote request dialog state
   const [quoteDialog, setQuoteDialog] = useState(false);
@@ -514,6 +519,33 @@ export default function Marketplace() {
               <SelectItem value="Booked">Booked</SelectItem>
             </SelectContent>
           </Select>
+          {/* View toggle: Grid / Map (does not affect filters) */}
+          <div className="inline-flex rounded-md border bg-background p-0.5 self-start sm:self-auto">
+            <Button
+              type="button"
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Grid</span>
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "map" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => setViewMode("map")}
+              aria-pressed={viewMode === "map"}
+              aria-label="Map view"
+            >
+              <MapIcon className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Map</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -570,6 +602,14 @@ export default function Marketplace() {
             )}
           </div>
 
+          {viewMode === "map" ? (
+            <MarketplaceMapView
+              assets={filteredAssets}
+              onAssetClick={(asset) =>
+                navigate(`/marketplace/asset/${asset.media_asset_code || asset.id}`)
+              }
+            />
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredAssets.map((asset) => (
             <Card key={asset.id} className="hover:shadow-lg transition-shadow relative group overflow-hidden">
@@ -663,6 +703,7 @@ export default function Marketplace() {
             </Card>
           ))}
         </div>
+          )}
         </>
       )}
 

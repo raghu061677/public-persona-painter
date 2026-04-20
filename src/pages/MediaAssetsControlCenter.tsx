@@ -304,7 +304,12 @@ export default function MediaAssetsControlCenter() {
         </div>
       )}
       {/* Main Content */}
-      <div className="flex-1">
+      <div
+        className={cn(
+          "flex-1 transition-[padding] duration-300 ease-out",
+          isPanelOpen && "lg:pr-[480px]"
+        )}
+      >
         <div className="flex flex-col h-[calc(100vh-3.5rem)]">
           {/* Header */}
           <HeaderBar

@@ -62,6 +62,9 @@ export default function Marketplace() {
   // Multi-select state
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // View mode toggle (grid is the existing default)
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   
   // Quote request dialog state
   const [quoteDialog, setQuoteDialog] = useState(false);

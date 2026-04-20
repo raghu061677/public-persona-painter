@@ -11,6 +11,7 @@ interface MarketplaceMapAsset {
   city: string;
   media_type: string;
   dimensions: string;
+  direction?: string | null;
   illumination_type: string | null;
   status: string;
   latitude: number | null;
@@ -30,8 +31,20 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// Explicit public status → marker color mapping.
+// Keeps prior behavior for Available/Booked; documents the fallback for
+// other public statuses (Blocked, Under Maintenance, Expired, etc.).
+const STATUS_MARKER_COLOR: Record<string, string> = {
+  Available: "green",
+  Booked: "red",
+  Blocked: "grey",
+  "Under Maintenance": "orange",
+  Maintenance: "orange",
+  Expired: "grey",
+};
+
 const createMarkerIcon = (status: string) => {
-  const color = status === "Available" ? "green" : status === "Booked" ? "red" : "blue";
+  const color = STATUS_MARKER_COLOR[status] ?? "blue"; // unknown/other → blue
   return L.icon({
     iconUrl: `https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
@@ -106,6 +119,7 @@ export function MarketplaceMapView({ assets, onAssetClick }: MarketplaceMapViewP
             <span style="color:#6b7280;">Area</span><span>${esc(asset.area)}, ${esc(asset.city)}</span>
             <span style="color:#6b7280;">Media Type</span><span>${esc(asset.media_type)}</span>
             <span style="color:#6b7280;">Dimensions</span><span>${esc(asset.dimensions)}</span>
+            ${asset.direction ? `<span style="color:#6b7280;">Direction</span><span>${esc(asset.direction)}</span>` : ""}
             <span style="color:#6b7280;">Illumination</span><span>${esc(asset.illumination_type)}</span>
           </div>
         </div>

@@ -703,6 +703,7 @@ export default function Marketplace() {
             </Card>
           ))}
         </div>
+          )}
         </>
       )}
 

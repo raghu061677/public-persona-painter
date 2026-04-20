@@ -519,6 +519,33 @@ export default function Marketplace() {
               <SelectItem value="Booked">Booked</SelectItem>
             </SelectContent>
           </Select>
+          {/* View toggle: Grid / Map (does not affect filters) */}
+          <div className="inline-flex rounded-md border bg-background p-0.5 self-start sm:self-auto">
+            <Button
+              type="button"
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Grid</span>
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "map" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => setViewMode("map")}
+              aria-pressed={viewMode === "map"}
+              aria-label="Map view"
+            >
+              <MapIcon className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Map</span>
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -76,32 +76,47 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
         icon: createMarkerIcon(asset.status),
       });
 
-      // Create popup content
+      // Escape helper to keep popup safe from unexpected characters
+      const esc = (v: any) =>
+        v === null || v === undefined || v === ""
+          ? "—"
+          : String(v)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+
+      const statusClass =
+        asset.status === "Available"
+          ? "background:#dcfce7;color:#166534;"
+          : asset.status === "Booked"
+          ? "background:#fee2e2;color:#991b1b;"
+          : "background:#f3f4f6;color:#374151;";
+
+      // Compact hover-card popup
       const popupContent = `
-        <div class="min-w-[250px] p-2">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-bold text-sm">${asset.media_asset_code || asset.id}</h3>
-            <span class="px-2 py-1 text-xs rounded ${
-              asset.status === "Available"
-                ? "bg-green-100 text-green-800"
-                : asset.status === "Booked"
-                ? "bg-red-100 text-red-800"
-                : "bg-gray-100 text-gray-800"
-            }">${asset.status}</span>
+        <div style="min-width:220px;max-width:260px;font-family:inherit;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+            <h3 style="font-size:12px;font-weight:600;margin:0;line-height:1.2;">${esc(asset.media_asset_code || asset.id)}</h3>
+            <span style="${statusClass}padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;white-space:nowrap;">${esc(asset.status)}</span>
           </div>
-          <div class="space-y-1 text-xs">
-            <p><span class="font-semibold">Area:</span> ${asset.area}</p>
-            <p><span class="font-semibold">Location:</span> ${asset.location}</p>
-            <p><span class="font-semibold">City:</span> ${asset.city}</p>
-            <p><span class="font-semibold">Type:</span> ${asset.media_type}</p>
-            <p><span class="font-semibold">Size:</span> ${asset.dimensions}</p>
-            ${asset.direction ? `<p><span class="font-semibold">Direction:</span> ${asset.direction}</p>` : ""}
-            ${asset.illumination_type ? `<p><span class="font-semibold">Lighting:</span> ${asset.illumination_type}</p>` : ""}
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:11px;line-height:1.35;color:#1f2937;">
+            <span style="color:#6b7280;">Location</span><span>${esc(asset.location)}</span>
+            <span style="color:#6b7280;">Area</span><span>${esc(asset.area)}</span>
+            <span style="color:#6b7280;">Direction</span><span>${esc(asset.direction)}</span>
+            <span style="color:#6b7280;">Dimensions</span><span>${esc(asset.dimensions)}</span>
+            <span style="color:#6b7280;">Illumination</span><span>${esc(asset.illumination_type)}</span>
           </div>
         </div>
       `;
 
-      marker.bindPopup(popupContent);
+      marker.bindPopup(popupContent, {
+        autoPan: false,
+        closeButton: false,
+        offset: L.point(0, -10),
+        className: "ma-hover-popup",
+      });
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
       marker.on("click", () => onAssetClick(asset));
       marker.addTo(mapRef.current!);
 

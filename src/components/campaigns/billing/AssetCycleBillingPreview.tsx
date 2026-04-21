@@ -364,6 +364,16 @@ export function AssetCycleBillingPreview({
         <SummaryCard label="Grand Total" value={formatCurrency(grandTotal)} highlight />
       </div>
 
+      {/* Charges panel — initial printing/mounting auto-seeded to Cycle 1, plus ad-hoc */}
+      <CycleChargesPanel
+        items={chargeItems}
+        totalCycles={totalCycles}
+        onAdd={addCharge}
+        onReassign={reassignCycle}
+        onDelete={deleteCharge}
+        campaignAssets={campaignAssets}
+      />
+
       {/* Cycle Schedule Table */}
       <Card>
         <CardContent className="p-0">
@@ -503,8 +513,8 @@ export function AssetCycleBillingPreview({
       <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <span>
-          Asset cycle billing generates invoices per 30-day window using each asset's final
-          negotiated price. One-time charges (printing/mounting) are not included in cycle invoices.
+          Cycle invoices include 30-day display billing plus any pending one-time or ad-hoc
+          charges assigned to that billing window.
         </span>
       </div>
     </div>

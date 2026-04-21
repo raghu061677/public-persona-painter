@@ -29,6 +29,8 @@ import { generateAssetCycles, type GroupedCycleBucket } from "@/utils/generateAs
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { generateDraftInvoiceId } from "@/utils/finance";
 import { toast } from "@/hooks/use-toast";
+import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
+import { CycleChargesPanel } from "./charges/CycleChargesPanel";
 
 interface CycleInvoice {
   id: string;
@@ -74,6 +76,28 @@ export function AssetCycleBillingPreview({
     () => generateAssetCycles(campaignAssets, campaignEndDate),
     [campaignAssets, campaignEndDate]
   );
+
+  // Charge items (initial printing/mounting + ad-hoc reprints/remounts)
+  const {
+    items: chargeItems,
+    addCharge,
+    reassignCycle,
+    deleteCharge,
+    refetch: refetchCharges,
+  } = useCampaignChargeItems(campaignId, campaignAssets, companyId, totalCycles);
+
+  // Pending (uninvoiced) charges grouped by cycle
+  const pendingChargesByCycle = useMemo(() => {
+    const map = new Map<number, typeof chargeItems>();
+    for (const it of chargeItems) {
+      if (it.is_invoiced) continue;
+      const c = it.billing_cycle_no || 1;
+      const arr = map.get(c) || [];
+      arr.push(it);
+      map.set(c, arr);
+    }
+    return map;
+  }, [chargeItems]);
 
   const totalGst = totalAmount * (gstPercent / 100);
   const grandTotal = totalAmount + totalGst;
@@ -186,8 +210,41 @@ export function AssetCycleBillingPreview({
       });
 
       const subtotal = bucket.totalAmount;
-      const gstAmount = subtotal * (gstPercent / 100);
-      const total = subtotal + gstAmount;
+      // Pending one-time / ad-hoc charges assigned to this cycle
+      const cycleCharges = pendingChargesByCycle.get(bucket.cycleNumber) || [];
+      const chargesTotal = cycleCharges.reduce((s, c) => s + Number(c.amount || 0), 0);
+
+      // Append charge lines to invoice items
+      let sno = items.length;
+      for (const ch of cycleCharges) {
+        sno += 1;
+        const ca = ch.campaign_asset_id
+          ? campaignAssets.find((c) => c.id === ch.campaign_asset_id)
+          : null;
+        items.push({
+          sno,
+          asset_id: ca?.asset_id || null,
+          asset_code: ca ? maCodeMap.get(ca.asset_id) || null : null,
+          campaign_asset_id: ch.campaign_asset_id || null,
+          description:
+            ch.description ||
+            `${ch.charge_type.charAt(0).toUpperCase() + ch.charge_type.slice(1)} charge`,
+          location: ca?.location || null,
+          area: ca?.area || null,
+          media_type: ca?.media_type || null,
+          quantity: 1,
+          rate: Number(ch.amount),
+          amount: Number(ch.amount),
+          total: Number(ch.amount),
+          charge_type: ch.charge_type,
+          charge_item_id: ch.id,
+          hsn_sac: "998361",
+        });
+      }
+
+      const taxableSubtotal = subtotal + chargesTotal;
+      const gstAmount = taxableSubtotal * (gstPercent / 100);
+      const total = taxableSubtotal + gstAmount;
 
       const invoiceId = generateDraftInvoiceId();
 
@@ -216,7 +273,7 @@ export function AssetCycleBillingPreview({
         cycle_start_date: bStart,
         cycle_end_date: bEnd,
         is_monthly_split: false,
-        sub_total: subtotal,
+        sub_total: taxableSubtotal,
         gst_percent: gstPercent,
         gst_amount: gstAmount,
         total_amount: total,
@@ -238,6 +295,18 @@ export function AssetCycleBillingPreview({
       });
 
       if (error) throw error;
+
+      // Mark included charge items as invoiced and link them to this invoice
+      if (cycleCharges.length > 0) {
+        await supabase
+          .from("campaign_charge_items")
+          .update({ is_invoiced: true, invoice_id: invoiceId })
+          .in(
+            "id",
+            cycleCharges.map((c) => c.id),
+          );
+        await refetchCharges();
+      }
 
       toast({
         title: "Invoice Generated",

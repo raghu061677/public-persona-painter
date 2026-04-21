@@ -351,6 +351,40 @@
                 // Use prorated line total if available, else recalculate
                 const lineTotal = item.prorated_line_total ?? ((rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0));
 
+                // Charge-line items (printing/mounting/reprint/remount/misc): render as a flat
+                // single-amount row without booking dates or asset metadata. Keeps cycle
+                // invoices accurate when one-time charges are attached to a billing window.
+                if (item.charge_type || item.charge_item_id) {
+                  const chargeAmount = Number(item.amount ?? item.total ?? item.rate ?? 0);
+                  const ct = String(item.charge_type || 'misc').toLowerCase();
+                  const labelMap: Record<string, string> = {
+                    printing: 'Printing',
+                    reprinting: 'Re-printing',
+                    mounting: 'Mounting',
+                    remounting: 'Re-mounting',
+                    misc: 'Charge',
+                  };
+                  const chargeLabel = labelMap[ct] || (ct.charAt(0).toUpperCase() + ct.slice(1));
+                  const chargeAssetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
+                  return (
+                    <tr key={index} className="border-t border-border">
+                      <td className="p-2 align-top">{index + 1}</td>
+                      <td className="p-2 align-top">
+                        <div className="font-medium">{chargeLabel} Charge{chargeAssetCode ? ` — [${chargeAssetCode}]` : ''}</div>
+                        {item.description && (
+                          <div className="text-muted-foreground text-[10px]">{item.description}</div>
+                        )}
+                      </td>
+                      <td className="p-2 text-center align-top text-[10px]">—</td>
+                      <td className="p-2 text-center align-top text-[10px]">One-time</td>
+                      <td className="p-2 text-right align-top text-[10px]">
+                        <div>{chargeLabel}: {formatINR(chargeAmount)}</div>
+                      </td>
+                      <td className="p-2 text-right align-top font-medium">{formatINR(chargeAmount)}</td>
+                    </tr>
+                  );
+                }
+
                 // Detect discount/adjustment lines: negative amount or no real asset association
                 const isDiscountLine = (lineTotal < 0) || (rentAmount < 0) ||
                   (!item.campaign_asset_id && !item.asset_id) ||

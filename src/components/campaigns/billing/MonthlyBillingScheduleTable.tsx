@@ -33,12 +33,7 @@ interface MonthlyBillingScheduleTableProps {
    totals: CampaignTotalsResult;
   campaignAssets?: CampaignAsset[];
   existingInvoices: InvoiceRecord[];
-  onGenerateInvoice: (
-    period: BillingPeriodInfo,
-    includePrinting: boolean,
-    includeMounting: boolean,
-    chargeContext: { printingAmount: number; mountingAmount: number; chargeIds: string[] },
-  ) => void;
+  onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
   isGenerating?: boolean;
   printingBilled?: boolean;

@@ -170,6 +170,10 @@
           items = items.map((item: any) => {
             // Skip discount/adjustment line items (no asset association)
             if (!item.campaign_asset_id && !item.asset_id) return item;
+            // Skip charge-line items (printing/mounting/reprint/remount/misc one-time charges).
+            // These are flat charges attached to a cycle invoice and must NOT inherit
+            // asset booking dates or be treated as display-rent lines.
+            if (item.charge_type || item.charge_item_id) return item;
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;

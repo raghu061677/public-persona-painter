@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
 
 interface CampaignBillingTabProps {
   campaign: {
@@ -146,6 +147,28 @@ export function CampaignBillingTab({
     campaignAssets,
     manualDiscountAmount: localDiscount,
   });
+
+  // Per-month one-time/ad-hoc charge items (printing, mounting, reprints, etc.)
+  // Reused from the cycle-billing concept; in monthly mode each charge is pinned
+  // to a single billing_month_key so it never repeats every month.
+  const {
+    items: chargeItems,
+    refetch: refetchCharges,
+    ensureMonthlySeeded,
+  } = useCampaignChargeItems(
+    campaign.id,
+    campaignAssets,
+    campaign.company_id,
+    totals.billingPeriods.length,
+  );
+
+  // Lazy auto-seed: on first preview render of monthly mode, pin initial
+  // printing/mounting to the FIRST billing month only.
+  useEffect(() => {
+    if (billingMode !== 'monthly') return;
+    if (!totals.billingPeriods.length) return;
+    ensureMonthlySeeded(totals.billingPeriods[0].monthKey);
+  }, [billingMode, totals.billingPeriods, ensureMonthlySeeded]);
 
   // Fetch existing invoices for this campaign (both monthly split and single)
   useEffect(() => {
@@ -474,8 +497,62 @@ export function CampaignBillingTab({
           amount: lineTotal,
           total: lineTotal,
           hsn_sac: '998361',
+          merged_charge_ids: [] as string[],
         };
       });
+
+      // Merge per-month pending charge items (printing/mounting/reprints) into
+      // the matching asset row. Charges with no matching asset are appended as
+      // standalone charge-line items. Misc charges always become standalone rows.
+      const monthCharges = (chargeItems || []).filter(
+        (c) => !c.is_invoiced && c.billing_month_key === period.monthKey,
+      );
+      const consumedChargeIds: string[] = [];
+      for (const ch of monthCharges) {
+        const amt = Number(ch.amount || 0);
+        if (amt <= 0) continue;
+        const matched = ch.campaign_asset_id
+          ? items.find((it) => it.campaign_asset_id === ch.campaign_asset_id)
+          : null;
+        if (matched && (ch.charge_type === 'printing' || ch.charge_type === 'reprinting')) {
+          matched.printing_charges = Number(matched.printing_charges || 0) + amt;
+          matched.amount = Number(matched.rent_amount || 0) + Number(matched.printing_charges || 0) + Number(matched.mounting_charges || 0);
+          matched.total = matched.amount;
+          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
+          consumedChargeIds.push(ch.id);
+          continue;
+        }
+        if (matched && (ch.charge_type === 'mounting' || ch.charge_type === 'remounting')) {
+          matched.mounting_charges = Number(matched.mounting_charges || 0) + amt;
+          matched.amount = Number(matched.rent_amount || 0) + Number(matched.printing_charges || 0) + Number(matched.mounting_charges || 0);
+          matched.total = matched.amount;
+          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
+          consumedChargeIds.push(ch.id);
+          continue;
+        }
+        // Misc / unattached: standalone charge-line row
+        items.push({
+          sno: items.length + 1,
+          description: ch.description || `${ch.charge_type} charge`,
+          quantity: 1,
+          rate: amt,
+          amount: amt,
+          total: amt,
+          charge_type: ch.charge_type,
+          charge_item_id: ch.id,
+          hsn_sac: '998361',
+        });
+        consumedChargeIds.push(ch.id);
+      }
+
+      // Recompute period totals to include the merged charges (so subtotal/GST
+      // reflect the actual money on the invoice, not the static recurring totals).
+      const itemsSubtotal = items.reduce((s, it) => s + Number(it.amount || it.total || 0), 0);
+      const recomputedSubtotal = Math.max(0, itemsSubtotal - (amounts.discount || 0));
+      const recomputedGst = totals.gstRate > 0
+        ? Math.round(recomputedSubtotal * totals.gstRate) / 100
+        : 0;
+      const recomputedTotal = Math.round((recomputedSubtotal + recomputedGst) * 100) / 100;
 
       if (amounts.discount > 0) {
         items.push({
@@ -494,17 +571,24 @@ export function CampaignBillingTab({
       if (existingInvoice) {
         // UPDATE existing invoice - keep same ID and status
         const { error } = await supabase.from('invoices').update({
-          sub_total: amounts.subtotal,
+          sub_total: recomputedSubtotal,
           gst_percent: totals.gstRate,
-          gst_amount: amounts.gstAmount,
-          total_amount: amounts.total,
-          balance_due: amounts.total,
+          gst_amount: recomputedGst,
+          total_amount: recomputedTotal,
+          balance_due: recomputedTotal,
           items,
           notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           updated_at: new Date().toISOString(),
         }).eq('id', existingInvoice.id);
 
         if (error) throw error;
+
+        if (consumedChargeIds.length > 0) {
+          await supabase
+            .from('campaign_charge_items')
+            .update({ is_invoiced: true, invoice_id: existingInvoice.id })
+            .in('id', consumedChargeIds);
+        }
 
         toast({
           title: "Invoice Updated",
@@ -533,19 +617,19 @@ export function CampaignBillingTab({
           billing_mode: 'calendar_monthly',
           billing_window_key: period.monthKey,
           is_monthly_split: true,
-          sub_total: amounts.subtotal,
+          sub_total: recomputedSubtotal,
           gst_percent: totals.gstRate,
-          gst_amount: amounts.gstAmount,
-          total_amount: amounts.total,
-          balance_due: amounts.total,
+          gst_amount: recomputedGst,
+          total_amount: recomputedTotal,
+          balance_due: recomputedTotal,
           tax_type: isIGST ? 'igst' : 'cgst_sgst',
           gst_mode: gstMode,
           cgst_percent: isIGST ? 0 : gstHalf,
           sgst_percent: isIGST ? 0 : gstHalf,
           igst_percent: isIGST ? totals.gstRate : 0,
-          cgst_amount: isIGST ? 0 : amounts.gstAmount / 2,
-          sgst_amount: isIGST ? 0 : amounts.gstAmount / 2,
-          igst_amount: isIGST ? amounts.gstAmount : 0,
+          cgst_amount: isIGST ? 0 : recomputedGst / 2,
+          sgst_amount: isIGST ? 0 : recomputedGst / 2,
+          igst_amount: isIGST ? recomputedGst : 0,
           status: 'Draft',
           is_draft: true,
           items,
@@ -556,6 +640,13 @@ export function CampaignBillingTab({
 
         if (error) throw error;
 
+        if (consumedChargeIds.length > 0) {
+          await supabase
+            .from('campaign_charge_items')
+            .update({ is_invoiced: true, invoice_id: invoiceId })
+            .in('id', consumedChargeIds);
+        }
+
         toast({
           title: "Invoice Generated",
           description: `Invoice ${invoiceId} created for ${period.label}`,
@@ -564,6 +655,7 @@ export function CampaignBillingTab({
 
       // Refresh data
       await fetchExistingInvoices();
+      await refetchCharges();
       onRefresh?.();
     } catch (err: any) {
       console.error('Generate invoice error:', err);
@@ -721,6 +813,7 @@ export function CampaignBillingTab({
             isGenerating={generating}
             printingBilled={campaignAssets.some(a => a.printing_billed)}
             mountingBilled={campaignAssets.some(a => a.mounting_billed)}
+            chargeItems={chargeItems}
           />
         </>
       )}

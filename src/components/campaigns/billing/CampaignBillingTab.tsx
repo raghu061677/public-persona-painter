@@ -148,6 +148,28 @@ export function CampaignBillingTab({
     manualDiscountAmount: localDiscount,
   });
 
+  // Per-month one-time/ad-hoc charge items (printing, mounting, reprints, etc.)
+  // Reused from the cycle-billing concept; in monthly mode each charge is pinned
+  // to a single billing_month_key so it never repeats every month.
+  const {
+    items: chargeItems,
+    refetch: refetchCharges,
+    ensureMonthlySeeded,
+  } = useCampaignChargeItems(
+    campaign.id,
+    campaignAssets,
+    campaign.company_id,
+    totals.billingPeriods.length,
+  );
+
+  // Lazy auto-seed: on first preview render of monthly mode, pin initial
+  // printing/mounting to the FIRST billing month only.
+  useEffect(() => {
+    if (billingMode !== 'monthly') return;
+    if (!totals.billingPeriods.length) return;
+    ensureMonthlySeeded(totals.billingPeriods[0].monthKey);
+  }, [billingMode, totals.billingPeriods, ensureMonthlySeeded]);
+
   // Fetch existing invoices for this campaign (both monthly split and single)
   useEffect(() => {
     fetchExistingInvoices();

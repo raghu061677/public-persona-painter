@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import { FileText, Eye, Loader2, Plus, CalendarDays } from "lucide-react";
  import { BillingPeriodInfo, CampaignTotalsResult, CampaignAsset, calculatePeriodAmountAssetWise, calculatePeriodAmountFromTotals } from "@/utils/computeCampaignTotals";
 import { BillingStatusBadge, BillingStatus, mapInvoiceStatusToBillingStatus } from "./BillingStatusBadge";
 import { cn } from "@/lib/utils";
+import type { CampaignChargeItem } from "./charges/useCampaignChargeItems";
 
 interface InvoiceRecord {
   id: string;
@@ -32,11 +33,18 @@ interface MonthlyBillingScheduleTableProps {
    totals: CampaignTotalsResult;
   campaignAssets?: CampaignAsset[];
   existingInvoices: InvoiceRecord[];
-  onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
+  onGenerateInvoice: (
+    period: BillingPeriodInfo,
+    includePrinting: boolean,
+    includeMounting: boolean,
+    chargeContext: { printingAmount: number; mountingAmount: number; chargeIds: string[] },
+  ) => void;
   onViewInvoice: (invoiceId: string) => void;
   isGenerating?: boolean;
   printingBilled?: boolean;
   mountingBilled?: boolean;
+  /** Per-month one-time/ad-hoc charge rows from campaign_charge_items. */
+  chargeItems?: CampaignChargeItem[];
 }
 
 export function MonthlyBillingScheduleTable({
@@ -49,10 +57,41 @@ export function MonthlyBillingScheduleTable({
   isGenerating = false,
   printingBilled = false,
   mountingBilled = false,
+  chargeItems = [],
 }: MonthlyBillingScheduleTableProps) {
   const [selectedOneTimeCharges, setSelectedOneTimeCharges] = useState<{
     [monthKey: string]: { printing: boolean; mounting: boolean };
   }>({});
+
+  /**
+   * Group pending (uninvoiced) charges per month so the schedule never invents
+   * recurring printing/mounting numbers. Display lines stay in the recurring
+   * cycle; only charges actually assigned to a month show up there.
+   */
+  const pendingByMonth = useMemo(() => {
+    const map = new Map<
+      string,
+      { printing: number; mounting: number; chargeIds: string[] }
+    >();
+    for (const it of chargeItems) {
+      if (it.is_invoiced) continue;
+      const key = it.billing_month_key;
+      if (!key) continue;
+      const cur = map.get(key) || { printing: 0, mounting: 0, chargeIds: [] };
+      const amt = Number(it.amount || 0);
+      if (it.charge_type === "printing" || it.charge_type === "reprinting") {
+        cur.printing += amt;
+      } else if (it.charge_type === "mounting" || it.charge_type === "remounting") {
+        cur.mounting += amt;
+      } else {
+        // misc — bucket into printing column for now (visual only)
+        cur.printing += amt;
+      }
+      cur.chargeIds.push(it.id);
+      map.set(key, cur);
+    }
+    return map;
+  }, [chargeItems]);
 
   // Check if one-time charges have been applied to any invoice
   const oneTimeChargesApplied = existingInvoices.some(inv => {
@@ -73,9 +112,15 @@ export function MonthlyBillingScheduleTable({
     });
   };
 
-  // Get one-time charge selection for a period
+  // Get one-time charge selection for a period — defaults to ON only when a
+  // pending charge exists for that month. Months with no assignment show no charges.
   const getChargeSelection = (monthKey: string) => {
-    return selectedOneTimeCharges[monthKey] || { printing: true, mounting: true };
+    const pending = pendingByMonth.get(monthKey);
+    const defaults = {
+      printing: !!(pending && pending.printing > 0),
+      mounting: !!(pending && pending.mounting > 0),
+    };
+    return selectedOneTimeCharges[monthKey] ?? defaults;
   };
 
   // Toggle one-time charge

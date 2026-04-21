@@ -170,6 +170,10 @@
           items = items.map((item: any) => {
             // Skip discount/adjustment line items (no asset association)
             if (!item.campaign_asset_id && !item.asset_id) return item;
+            // Skip charge-line items (printing/mounting/reprint/remount/misc one-time charges).
+            // These are flat charges attached to a cycle invoice and must NOT inherit
+            // asset booking dates or be treated as display-rent lines.
+            if (item.charge_type || item.charge_item_id) return item;
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
@@ -232,7 +236,20 @@
         // Prorate line items so Display/Line Total match the invoice sub_total
         // This reconciles old invoices where JSONB stored monthly rates instead of prorated values
         const invoiceSubTotal = parseFloat(String(invoice.sub_total)) || 0;
-        const proratedItems = invoiceSubTotal > 0 ? prorateInvoiceLineItems(items, invoiceSubTotal) : items;
+        // Separate charge-line items (printing/mounting/reprint/etc.) from display lines.
+        // Charge items are flat one-time amounts and must NOT be prorated. We prorate
+        // only the display lines against the display-only subtotal, then re-merge.
+        const chargeItems = items.filter((it: any) => it.charge_type || it.charge_item_id);
+        const displayItems = items.filter((it: any) => !(it.charge_type || it.charge_item_id));
+        const chargeTotal: number = chargeItems.reduce<number>(
+          (s, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
+          0,
+        );
+        const displaySubTotal = Math.max(0, invoiceSubTotal - chargeTotal);
+        const proratedDisplay = displaySubTotal > 0
+          ? prorateInvoiceLineItems(displayItems, displaySubTotal)
+          : displayItems;
+        const proratedItems = [...proratedDisplay, ...chargeItems];
 
         setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount }, client, company, campaign, items: proratedItems });
       } catch (error) {
@@ -333,6 +350,40 @@
                 const mountingCharges = item.display_mounting ?? item.mounting_charges ?? item.mounting_cost ?? 0;
                 // Use prorated line total if available, else recalculate
                 const lineTotal = item.prorated_line_total ?? ((rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0));
+
+                // Charge-line items (printing/mounting/reprint/remount/misc): render as a flat
+                // single-amount row without booking dates or asset metadata. Keeps cycle
+                // invoices accurate when one-time charges are attached to a billing window.
+                if (item.charge_type || item.charge_item_id) {
+                  const chargeAmount = Number(item.amount ?? item.total ?? item.rate ?? 0);
+                  const ct = String(item.charge_type || 'misc').toLowerCase();
+                  const labelMap: Record<string, string> = {
+                    printing: 'Printing',
+                    reprinting: 'Re-printing',
+                    mounting: 'Mounting',
+                    remounting: 'Re-mounting',
+                    misc: 'Charge',
+                  };
+                  const chargeLabel = labelMap[ct] || (ct.charAt(0).toUpperCase() + ct.slice(1));
+                  const chargeAssetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
+                  return (
+                    <tr key={index} className="border-t border-border">
+                      <td className="p-2 align-top">{index + 1}</td>
+                      <td className="p-2 align-top">
+                        <div className="font-medium">{chargeLabel} Charge{chargeAssetCode ? ` — [${chargeAssetCode}]` : ''}</div>
+                        {item.description && (
+                          <div className="text-muted-foreground text-[10px]">{item.description}</div>
+                        )}
+                      </td>
+                      <td className="p-2 text-center align-top text-[10px]">—</td>
+                      <td className="p-2 text-center align-top text-[10px]">One-time</td>
+                      <td className="p-2 text-right align-top text-[10px]">
+                        <div>{chargeLabel}: {formatINR(chargeAmount)}</div>
+                      </td>
+                      <td className="p-2 text-right align-top font-medium">{formatINR(chargeAmount)}</td>
+                    </tr>
+                  );
+                }
 
                 // Detect discount/adjustment lines: negative amount or no real asset association
                 const isDiscountLine = (lineTotal < 0) || (rentAmount < 0) ||

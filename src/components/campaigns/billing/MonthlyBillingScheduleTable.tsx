@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import { FileText, Eye, Loader2, Plus, CalendarDays } from "lucide-react";
  import { BillingPeriodInfo, CampaignTotalsResult, CampaignAsset, calculatePeriodAmountAssetWise, calculatePeriodAmountFromTotals } from "@/utils/computeCampaignTotals";
 import { BillingStatusBadge, BillingStatus, mapInvoiceStatusToBillingStatus } from "./BillingStatusBadge";
 import { cn } from "@/lib/utils";
+import type { CampaignChargeItem } from "./charges/useCampaignChargeItems";
 
 interface InvoiceRecord {
   id: string;
@@ -37,6 +38,8 @@ interface MonthlyBillingScheduleTableProps {
   isGenerating?: boolean;
   printingBilled?: boolean;
   mountingBilled?: boolean;
+  /** Per-month one-time/ad-hoc charge rows from campaign_charge_items. */
+  chargeItems?: CampaignChargeItem[];
 }
 
 export function MonthlyBillingScheduleTable({
@@ -49,10 +52,41 @@ export function MonthlyBillingScheduleTable({
   isGenerating = false,
   printingBilled = false,
   mountingBilled = false,
+  chargeItems = [],
 }: MonthlyBillingScheduleTableProps) {
   const [selectedOneTimeCharges, setSelectedOneTimeCharges] = useState<{
     [monthKey: string]: { printing: boolean; mounting: boolean };
   }>({});
+
+  /**
+   * Group pending (uninvoiced) charges per month so the schedule never invents
+   * recurring printing/mounting numbers. Display lines stay in the recurring
+   * cycle; only charges actually assigned to a month show up there.
+   */
+  const pendingByMonth = useMemo(() => {
+    const map = new Map<
+      string,
+      { printing: number; mounting: number; chargeIds: string[] }
+    >();
+    for (const it of chargeItems) {
+      if (it.is_invoiced) continue;
+      const key = it.billing_month_key;
+      if (!key) continue;
+      const cur = map.get(key) || { printing: 0, mounting: 0, chargeIds: [] };
+      const amt = Number(it.amount || 0);
+      if (it.charge_type === "printing" || it.charge_type === "reprinting") {
+        cur.printing += amt;
+      } else if (it.charge_type === "mounting" || it.charge_type === "remounting") {
+        cur.mounting += amt;
+      } else {
+        // misc — bucket into printing column for now (visual only)
+        cur.printing += amt;
+      }
+      cur.chargeIds.push(it.id);
+      map.set(key, cur);
+    }
+    return map;
+  }, [chargeItems]);
 
   // Check if one-time charges have been applied to any invoice
   const oneTimeChargesApplied = existingInvoices.some(inv => {
@@ -73,9 +107,15 @@ export function MonthlyBillingScheduleTable({
     });
   };
 
-  // Get one-time charge selection for a period
+  // Get one-time charge selection for a period — defaults to ON only when a
+  // pending charge exists for that month. Months with no assignment show no charges.
   const getChargeSelection = (monthKey: string) => {
-    return selectedOneTimeCharges[monthKey] || { printing: true, mounting: true };
+    const pending = pendingByMonth.get(monthKey);
+    const defaults = {
+      printing: !!(pending && pending.printing > 0),
+      mounting: !!(pending && pending.mounting > 0),
+    };
+    return selectedOneTimeCharges[monthKey] ?? defaults;
   };
 
   // Toggle one-time charge
@@ -114,21 +154,30 @@ export function MonthlyBillingScheduleTable({
             const invoice = getInvoiceForPeriod(period);
             const hasInvoice = !!invoice;
             const selection = getChargeSelection(period.monthKey);
+            const pending = pendingByMonth.get(period.monthKey);
+            const monthPrinting = pending?.printing || 0;
+            const monthMounting = pending?.mounting || 0;
+            const printingForRow = selection.printing ? monthPrinting : 0;
+            const mountingForRow = selection.mounting ? monthMounting : 0;
              // Use asset-wise calculation when campaignAssets available (matches actual invoice generation)
              const amounts = campaignAssets && campaignAssets.length > 0
                ? calculatePeriodAmountAssetWise(
                    period,
                    campaignAssets,
                    totals,
-                   selection.printing && !printingBilled,
-                   selection.mounting && !mountingBilled
+                   false,
+                   false,
                  )
                : calculatePeriodAmountFromTotals(
                    period,
                    totals,
-                   selection.printing && !printingBilled,
-                   selection.mounting && !mountingBilled
+                   false,
+                   false,
                  );
+            // Recompute totals using only this month's pending charges
+            const subtotal = amounts.baseRent + printingForRow + mountingForRow;
+            const gstAmount = totals.gstRate > 0 ? Math.round(subtotal * totals.gstRate) / 100 : 0;
+            const grandTotal = Math.round((subtotal + gstAmount) * 100) / 100;
 
             const isDraftInvoice = hasInvoice && invoice.status === 'Draft';
             const isLockedInvoice = hasInvoice && !isDraftInvoice;
@@ -178,37 +227,25 @@ export function MonthlyBillingScheduleTable({
                 {/* One-Time Charges */}
                 <TableCell>
                 <div className="flex items-center justify-center gap-4">
-                       {totals.printingCost > 0 && (
+                       {monthPrinting > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.printing}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'printing')}
-                            disabled={printingBilled}
                           />
-                          <span className={printingBilled ? 'line-through text-muted-foreground' : ''}>
-                            Printing
-                          </span>
-                          {printingBilled && (
-                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
-                          )}
+                          <span>Printing {formatCurrency(monthPrinting)}</span>
                         </label>
                       )}
-                       {totals.mountingCost > 0 && (
+                       {monthMounting > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.mounting}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'mounting')}
-                            disabled={mountingBilled}
                           />
-                          <span className={mountingBilled ? 'line-through text-muted-foreground' : ''}>
-                            Mounting
-                          </span>
-                          {mountingBilled && (
-                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
-                          )}
+                          <span>Mounting {formatCurrency(monthMounting)}</span>
                         </label>
                       )}
-                       {totals.printingCost === 0 && totals.mountingCost === 0 && (
+                       {monthPrinting === 0 && monthMounting === 0 && (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </div>
@@ -216,12 +253,12 @@ export function MonthlyBillingScheduleTable({
 
                 {/* GST */}
                 <TableCell className="text-right text-sm">
-                   {totals.gstRate > 0 ? formatCurrency(amounts.gstAmount) : "—"}
+                   {totals.gstRate > 0 ? formatCurrency(gstAmount) : "—"}
                 </TableCell>
 
                 {/* Total */}
                 <TableCell className="text-right font-semibold">
-                  {formatCurrency(amounts.total)}
+                  {formatCurrency(grandTotal)}
                 </TableCell>
 
                 {/* Status */}

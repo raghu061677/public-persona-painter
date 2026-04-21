@@ -236,7 +236,20 @@
         // Prorate line items so Display/Line Total match the invoice sub_total
         // This reconciles old invoices where JSONB stored monthly rates instead of prorated values
         const invoiceSubTotal = parseFloat(String(invoice.sub_total)) || 0;
-        const proratedItems = invoiceSubTotal > 0 ? prorateInvoiceLineItems(items, invoiceSubTotal) : items;
+        // Separate charge-line items (printing/mounting/reprint/etc.) from display lines.
+        // Charge items are flat one-time amounts and must NOT be prorated. We prorate
+        // only the display lines against the display-only subtotal, then re-merge.
+        const chargeItems = items.filter((it: any) => it.charge_type || it.charge_item_id);
+        const displayItems = items.filter((it: any) => !(it.charge_type || it.charge_item_id));
+        const chargeTotal = chargeItems.reduce(
+          (s: number, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
+          0,
+        );
+        const displaySubTotal = Math.max(0, invoiceSubTotal - chargeTotal);
+        const proratedDisplay = displaySubTotal > 0
+          ? prorateInvoiceLineItems(displayItems, displaySubTotal)
+          : displayItems;
+        const proratedItems = [...proratedDisplay, ...chargeItems];
 
         setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount }, client, company, campaign, items: proratedItems });
       } catch (error) {

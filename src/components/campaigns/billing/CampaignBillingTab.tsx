@@ -813,6 +813,7 @@ export function CampaignBillingTab({
             isGenerating={generating}
             printingBilled={campaignAssets.some(a => a.printing_billed)}
             mountingBilled={campaignAssets.some(a => a.mounting_billed)}
+            chargeItems={chargeItems}
           />
         </>
       )}

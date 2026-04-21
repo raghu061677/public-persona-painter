@@ -13,6 +13,8 @@ export interface CampaignChargeItem {
   gst_percent: number;
   charge_date: string;
   billing_cycle_no: number | null;
+  /** YYYY-MM key when assigned to a Calendar Monthly invoice. */
+  billing_month_key: string | null;
   invoice_id: string | null;
   is_invoiced: boolean;
   created_from: string | null;

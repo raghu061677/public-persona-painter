@@ -2434,6 +2434,7 @@ export type Database = {
         Row: {
           amount: number
           billing_cycle_no: number | null
+          billing_month_key: string | null
           campaign_asset_id: string | null
           campaign_id: string
           charge_date: string
@@ -2453,6 +2454,7 @@ export type Database = {
         Insert: {
           amount?: number
           billing_cycle_no?: number | null
+          billing_month_key?: string | null
           campaign_asset_id?: string | null
           campaign_id: string
           charge_date?: string
@@ -2472,6 +2474,7 @@ export type Database = {
         Update: {
           amount?: number
           billing_cycle_no?: number | null
+          billing_month_key?: string | null
           campaign_asset_id?: string | null
           campaign_id?: string
           charge_date?: string

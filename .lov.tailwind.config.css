@@ -1,4 +1,4 @@
-/* node_modules/daisyui/daisyui.css */
+/* node_modules/.bun/daisyui@5.5.5/node_modules/daisyui/daisyui.css */
 @layer base {
   :root,
   :root:has(input.theme-controller[value=light]:checked),

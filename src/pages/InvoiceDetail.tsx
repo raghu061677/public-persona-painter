@@ -132,6 +132,14 @@ export default function InvoiceDetail() {
 
     if (!confirm("Are you sure you want to delete this draft invoice? This action cannot be undone.")) return;
 
+    // Release any linked cycle-billing charge items back to "pending" so they
+    // can be re-included when the same cycle is regenerated. The DB trigger
+    // also enforces this, but we run it from the app for immediate UX.
+    await supabase
+      .from('campaign_charge_items')
+      .update({ is_invoiced: false, invoice_id: null })
+      .eq('invoice_id', invoiceId);
+
     const { error } = await supabase
       .from('invoices')
       .delete()

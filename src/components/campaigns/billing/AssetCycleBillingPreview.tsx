@@ -214,9 +214,48 @@ export function AssetCycleBillingPreview({
       const cycleCharges = pendingChargesByCycle.get(bucket.cycleNumber) || [];
       const chargesTotal = cycleCharges.reduce((s, c) => s + Number(c.amount || 0), 0);
 
-      // Append charge lines to invoice items
+      // Merge printing/mounting charges into the matching asset's display row
+      // when possible — so the invoice shows ONE row per asset with stacked
+      // Display + Printing + Installation values. Unattached / misc charges
+      // still get appended as their own line below.
       let sno = items.length;
       for (const ch of cycleCharges) {
+        const amt = Number(ch.amount || 0);
+        const matched = ch.campaign_asset_id
+          ? items.find(
+              (it: any) =>
+                !it.charge_type &&
+                it.campaign_asset_id === ch.campaign_asset_id,
+            )
+          : null;
+
+        if (
+          matched &&
+          (ch.charge_type === "printing" || ch.charge_type === "reprinting")
+        ) {
+          matched.printing_charges = Number(matched.printing_charges || 0) + amt;
+          matched.amount = Number(matched.rent_amount || 0) +
+            Number(matched.printing_charges || 0) +
+            Number(matched.mounting_charges || 0);
+          matched.total = matched.amount;
+          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
+          continue;
+        }
+
+        if (
+          matched &&
+          (ch.charge_type === "mounting" || ch.charge_type === "remounting")
+        ) {
+          matched.mounting_charges = Number(matched.mounting_charges || 0) + amt;
+          matched.amount = Number(matched.rent_amount || 0) +
+            Number(matched.printing_charges || 0) +
+            Number(matched.mounting_charges || 0);
+          matched.total = matched.amount;
+          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
+          continue;
+        }
+
+        // Fallback: misc / unattached → append as standalone charge line
         sno += 1;
         const ca = ch.campaign_asset_id
           ? campaignAssets.find((c) => c.id === ch.campaign_asset_id)
@@ -233,9 +272,9 @@ export function AssetCycleBillingPreview({
           area: ca?.area || null,
           media_type: ca?.media_type || null,
           quantity: 1,
-          rate: Number(ch.amount),
-          amount: Number(ch.amount),
-          total: Number(ch.amount),
+          rate: amt,
+          amount: amt,
+          total: amt,
           charge_type: ch.charge_type,
           charge_item_id: ch.id,
           hsn_sac: "998361",

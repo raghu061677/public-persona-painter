@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
 
 interface CampaignBillingTabProps {
   campaign: {

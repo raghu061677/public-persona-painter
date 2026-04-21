@@ -2430,6 +2430,200 @@ export type Database = {
           },
         ]
       }
+      campaign_charge_items: {
+        Row: {
+          amount: number
+          billing_cycle_no: number | null
+          campaign_asset_id: string | null
+          campaign_id: string
+          charge_date: string
+          charge_scope: string
+          charge_type: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          created_from: string | null
+          description: string | null
+          gst_percent: number
+          id: string
+          invoice_id: string | null
+          is_invoiced: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billing_cycle_no?: number | null
+          campaign_asset_id?: string | null
+          campaign_id: string
+          charge_date?: string
+          charge_scope?: string
+          charge_type: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_from?: string | null
+          description?: string | null
+          gst_percent?: number
+          id?: string
+          invoice_id?: string | null
+          is_invoiced?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_cycle_no?: number | null
+          campaign_asset_id?: string | null
+          campaign_id?: string
+          charge_date?: string
+          charge_scope?: string
+          charge_type?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_from?: string | null
+          description?: string | null
+          gst_percent?: number
+          id?: string
+          invoice_id?: string | null
+          is_invoiced?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_charge_items_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2b_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_b2c_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_documents_v"
+            referencedColumns: ["invoice_no"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "gst_invoice_register_v"
+            referencedColumns: ["document_no"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_charge_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
+        ]
+      }
       campaign_creatives: {
         Row: {
           approved_at: string | null

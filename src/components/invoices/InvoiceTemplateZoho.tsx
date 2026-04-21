@@ -241,8 +241,8 @@
         // only the display lines against the display-only subtotal, then re-merge.
         const chargeItems = items.filter((it: any) => it.charge_type || it.charge_item_id);
         const displayItems = items.filter((it: any) => !(it.charge_type || it.charge_item_id));
-        const chargeTotal = chargeItems.reduce(
-          (s: number, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
+        const chargeTotal: number = chargeItems.reduce<number>(
+          (s, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
           0,
         );
         const displaySubTotal = Math.max(0, invoiceSubTotal - chargeTotal);

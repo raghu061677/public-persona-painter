@@ -154,21 +154,30 @@ export function MonthlyBillingScheduleTable({
             const invoice = getInvoiceForPeriod(period);
             const hasInvoice = !!invoice;
             const selection = getChargeSelection(period.monthKey);
+            const pending = pendingByMonth.get(period.monthKey);
+            const monthPrinting = pending?.printing || 0;
+            const monthMounting = pending?.mounting || 0;
+            const printingForRow = selection.printing ? monthPrinting : 0;
+            const mountingForRow = selection.mounting ? monthMounting : 0;
              // Use asset-wise calculation when campaignAssets available (matches actual invoice generation)
              const amounts = campaignAssets && campaignAssets.length > 0
                ? calculatePeriodAmountAssetWise(
                    period,
                    campaignAssets,
                    totals,
-                   selection.printing && !printingBilled,
-                   selection.mounting && !mountingBilled
+                   false,
+                   false,
                  )
                : calculatePeriodAmountFromTotals(
                    period,
                    totals,
-                   selection.printing && !printingBilled,
-                   selection.mounting && !mountingBilled
+                   false,
+                   false,
                  );
+            // Recompute totals using only this month's pending charges
+            const subtotal = amounts.baseRent + printingForRow + mountingForRow;
+            const gstAmount = totals.gstRate > 0 ? Math.round(subtotal * totals.gstRate) / 100 : 0;
+            const grandTotal = Math.round((subtotal + gstAmount) * 100) / 100;
 
             const isDraftInvoice = hasInvoice && invoice.status === 'Draft';
             const isLockedInvoice = hasInvoice && !isDraftInvoice;
@@ -218,37 +227,25 @@ export function MonthlyBillingScheduleTable({
                 {/* One-Time Charges */}
                 <TableCell>
                 <div className="flex items-center justify-center gap-4">
-                       {totals.printingCost > 0 && (
+                       {monthPrinting > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.printing}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'printing')}
-                            disabled={printingBilled}
                           />
-                          <span className={printingBilled ? 'line-through text-muted-foreground' : ''}>
-                            Printing
-                          </span>
-                          {printingBilled && (
-                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
-                          )}
+                          <span>Printing {formatCurrency(monthPrinting)}</span>
                         </label>
                       )}
-                       {totals.mountingCost > 0 && (
+                       {monthMounting > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.mounting}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'mounting')}
-                            disabled={mountingBilled}
                           />
-                          <span className={mountingBilled ? 'line-through text-muted-foreground' : ''}>
-                            Mounting
-                          </span>
-                          {mountingBilled && (
-                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
-                          )}
+                          <span>Mounting {formatCurrency(monthMounting)}</span>
                         </label>
                       )}
-                       {totals.printingCost === 0 && totals.mountingCost === 0 && (
+                       {monthPrinting === 0 && monthMounting === 0 && (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </div>
@@ -256,12 +253,12 @@ export function MonthlyBillingScheduleTable({
 
                 {/* GST */}
                 <TableCell className="text-right text-sm">
-                   {totals.gstRate > 0 ? formatCurrency(amounts.gstAmount) : "—"}
+                   {totals.gstRate > 0 ? formatCurrency(gstAmount) : "—"}
                 </TableCell>
 
                 {/* Total */}
                 <TableCell className="text-right font-semibold">
-                  {formatCurrency(amounts.total)}
+                  {formatCurrency(grandTotal)}
                 </TableCell>
 
                 {/* Status */}

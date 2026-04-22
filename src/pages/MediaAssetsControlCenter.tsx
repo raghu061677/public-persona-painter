@@ -250,20 +250,45 @@ export default function MediaAssetsControlCenter() {
       const cutoff = current ? current.end : today;
       const next = items.find(i => i.start > cutoff && i !== current) || null;
 
-      const dynamicStatus = current
-        ? (current.kind === 'hold' ? 'Booked' : 'Booked') // keep existing badge semantics
+      // Base status from booking activity (campaign / hold). Source of truth
+      // for actual live bookings.
+      let resolvedCurrentStatus: string = current
+        ? (current.kind === 'hold' ? 'Held' : 'Booked')
         : 'Available';
+      let dynamicStatus: string = current ? 'Booked' : 'Available';
 
-      // Next available date: day after current.end if currently blocked
+      // Next available date: day after current.end if currently blocked by a booking
       let nextAvailable: string | null = null;
       if (current) {
         nextAvailable = addDays(current.end, 1);
       }
 
+      // Operational override — applies ONLY when there is no live campaign/hold.
+      // Priority: removed > maintenance > inactive > manual Blocked.
+      // Removed/maintenance/inactive/blocked assets are not bookable, so we
+      // null out current_end_date and next_available_date.
+      const opStatus = (asset as any).operational_status as string | null | undefined;
+      const storedStatus = (asset as any).status as string | null | undefined;
+      let operationalOverride: string | null = null;
+      if (!current) {
+        if (opStatus === 'removed') {
+          operationalOverride = 'Removed';
+        } else if (opStatus === 'maintenance' || storedStatus === 'Under Maintenance') {
+          operationalOverride = 'Under Maintenance';
+        } else if (opStatus === 'inactive') {
+          operationalOverride = 'Inactive';
+        } else if (storedStatus === 'Blocked') {
+          operationalOverride = 'Blocked';
+        }
+      }
+      if (operationalOverride) {
+        resolvedCurrentStatus = operationalOverride;
+        dynamicStatus = operationalOverride;
+        nextAvailable = null;
+      }
+
       const booking_hover_info = {
-        current_status: current
-          ? (current.kind === 'hold' ? 'Held' : 'Booked')
-          : 'Available',
+        current_status: resolvedCurrentStatus,
         current_booking_type: current ? current.kind : null,
         current_campaign_name: current?.campaign_name ?? null,
         current_client_name: current?.client_name ?? null,

@@ -39,7 +39,7 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2, Search } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
 import { useClientRegistrations } from "@/hooks/useClientRegistrations";

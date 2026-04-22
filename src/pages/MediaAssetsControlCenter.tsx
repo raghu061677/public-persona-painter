@@ -235,11 +235,20 @@ export default function MediaAssetsControlCenter() {
       const latestPhoto = latestPhotoMap.get(asset.id);
       const items = (itemsByAsset.get(asset.id) || []).sort((a, b) => a.start.localeCompare(b.start));
 
-      // Current = first item that overlaps today (start<=today<=end)
-      const current = items.find(i => i.start <= today && i.end >= today) || null;
-      // Next = first item starting strictly after the current's end (or after today if none current)
+      // Resolve CURRENT explicitly by business priority (not by sort order):
+      //   1. running campaign overlapping today
+      //   2. active hold overlapping today
+      //   3. otherwise no current blocker
+      const overlapping = items.filter(i => i.start <= today && i.end >= today);
+      const current =
+        overlapping.find(i => i.kind === 'campaign') ||
+        overlapping.find(i => i.kind === 'hold') ||
+        null;
+
+      // Resolve NEXT separately: earliest future item AFTER current (or after today if free).
+      // Excludes the chosen current item; type-agnostic (campaign or hold, whichever is sooner).
       const cutoff = current ? current.end : today;
-      const next = items.find(i => i.start > cutoff) || null;
+      const next = items.find(i => i.start > cutoff && i !== current) || null;
 
       const dynamicStatus = current
         ? (current.kind === 'hold' ? 'Booked' : 'Booked') // keep existing badge semantics

@@ -9,7 +9,7 @@
  */
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Briefcase, CheckCircle2, Lock, CalendarCheck } from "lucide-react";
+import { CheckCircle2, Lock, CalendarCheck, CalendarClock } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
 export type HoverBookingType = "campaign" | "hold" | null;
@@ -37,6 +37,8 @@ interface AssetBookingHoverCardProps {
   children: React.ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
+  /** Optional small descriptor under the header title (e.g. asset code). */
+  subtitle?: string | null;
 }
 
 function safeDate(s?: string | null): Date | null {

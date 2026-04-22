@@ -156,10 +156,19 @@ export default function PaymentsControlCenter() {
   // Overdue invoices
   const overdueInvoices = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
-    return invoices.filter(
+    let result = invoices.filter(
       (inv) => inv.due_date && inv.due_date.substring(0, 10) < today && inv.balance_due > 0
     );
-  }, [invoices]);
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (inv) =>
+          inv.id?.toLowerCase().includes(term) ||
+          inv.client_name?.toLowerCase().includes(term)
+      );
+    }
+    return result;
+  }, [invoices, searchTerm]);
 
   // Summary
   const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balance_due || 0), 0);

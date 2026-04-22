@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
+import { CommercialEntryDialog, type CommercialAssetRow, type CommercialEntryResult } from "./CommercialEntryDialog";
 
 interface CampaignBillingTabProps {
   campaign: {
@@ -79,6 +80,14 @@ export function CampaignBillingTab({
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
   const [lockedBillingMode, setLockedBillingMode] = useState<BillingMode | null>(null);
   const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
+
+  // Commercial Entry dialog state (Hybrid override layer for Single + Monthly)
+  const [ceOpen, setCeOpen] = useState(false);
+  const [cePending, setCePending] = useState<
+    | { kind: 'single' }
+    | { kind: 'monthly'; period: BillingPeriodInfo; includePrinting: boolean; includeMounting: boolean }
+    | null
+  >(null);
    
    // Only use actual manual_discount_amount from database - no auto-derivation
    const storedDiscount = Number(campaign.manual_discount_amount) || 0;

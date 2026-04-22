@@ -256,15 +256,17 @@ const DraggableHeader = ({ header, table, isFrozen, onToggleFreeze }: {
 interface MediaAssetsTableProps {
   assets: Asset[];
   onRefresh: () => void;
+  onOpenCustomExport?: () => void;
 }
 
-export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
+export function MediaAssetsTable({ assets, onRefresh, onOpenCustomExport }: MediaAssetsTableProps) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<Asset[]>(assets);
+  const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
 
   // Asset holds map for block/release actions
   const [holdsMap, setHoldsMap] = useState<Record<string, any>>({});

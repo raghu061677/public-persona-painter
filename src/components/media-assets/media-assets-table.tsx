@@ -502,7 +502,23 @@ export function MediaAssetsTable({ assets, onRefresh, onOpenCustomExport }: Medi
         },
       },
       { accessorKey: "gst_percent", header: "GST %" },
-      { accessorKey: "status", header: "Booking Status" },
+      {
+        accessorKey: "status",
+        header: "Booking Status",
+        cell: ({ row }) => {
+          const info = (row.original as any).booking_hover_info;
+          const { bucket, text } = getBookingStatusLabel(info, row.original.status);
+          const cls = BOOKING_STATUS_BUCKET_CLASS[bucket];
+          return (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${cls}`}
+              title={text}
+            >
+              {text}
+            </span>
+          );
+        },
+      },
       {
         accessorKey: "operational_status",
         header: "Ops Status",

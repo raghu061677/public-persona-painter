@@ -471,7 +471,8 @@ export function CampaignBillingTab({
   const handleGenerateInvoice = async (
     period: BillingPeriodInfo, 
     includePrinting: boolean, 
-    includeMounting: boolean
+    includeMounting: boolean,
+    override?: CommercialEntryResult,
   ) => {
     setGenerating(true);
 
@@ -509,9 +510,13 @@ export function CampaignBillingTab({
       // Build per-asset detailed items for this period
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
         // CRITICAL: Use prorated rent_amount, never raw negotiated_rate
-        const rentAmt = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-        const printAmt = (includePrinting ? (ca.printing_charges || ca.printing_cost || 0) : 0);
-        const mountAmt = (includeMounting ? (ca.mounting_charges || ca.mounting_cost || 0) : 0);
+        const autoRent = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
+        const autoPrint = (includePrinting ? (ca.printing_charges || ca.printing_cost || 0) : 0);
+        const autoMount = (includeMounting ? (ca.mounting_charges || ca.mounting_cost || 0) : 0);
+        const ovr = override?.rows?.[ca.id];
+        const rentAmt = ovr ? Number(ovr.display_amount || 0) : autoRent;
+        const printAmt = ovr ? Number(ovr.printing_charges || 0) : autoPrint;
+        const mountAmt = ovr ? Number(ovr.mounting_charges || 0) : autoMount;
         const lineTotal = rentAmt + printAmt + mountAmt;
         const resolvedCode = maCodeMap.get(ca.asset_id) || null;
         return {
@@ -528,8 +533,8 @@ export function CampaignBillingTab({
           illumination_type: ca.illumination_type || null,
           dimensions: ca.dimensions || null,
           total_sqft: ca.total_sqft || 0,
-          booking_start_date: format(period.periodStart, 'yyyy-MM-dd'),
-          booking_end_date: format(period.periodEnd, 'yyyy-MM-dd'),
+          booking_start_date: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
+          booking_end_date: override?.billing_end_date || format(period.periodEnd, 'yyyy-MM-dd'),
           booked_days: ca.booked_days,
           daily_rate: ca.daily_rate,
           quantity: 1,
@@ -542,6 +547,7 @@ export function CampaignBillingTab({
           total: lineTotal,
           hsn_sac: '998361',
           merged_charge_ids: [] as string[],
+          is_overridden: !!ovr,
         };
       });
 

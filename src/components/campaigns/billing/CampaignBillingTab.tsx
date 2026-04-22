@@ -1083,6 +1083,68 @@ export function CampaignBillingTab({
           onRefresh?.();
         }}
       />
+
+      {/* Commercial Entry Dialog — manual override layer for Single + Monthly */}
+      {cePending && (
+        <CommercialEntryDialog
+          open={ceOpen}
+          onOpenChange={(o) => {
+            setCeOpen(o);
+            if (!o) setCePending(null);
+          }}
+          title={cePending.kind === 'single' ? 'Generate Single Invoice' : 'Generate Monthly Invoice'}
+          contextLabel={
+            cePending.kind === 'single'
+              ? `${campaign.campaign_name} • Entire Campaign Period`
+              : `${campaign.campaign_name} • ${cePending.period.label}`
+          }
+          defaultStartDate={
+            cePending.kind === 'single'
+              ? campaign.start_date
+              : format(cePending.period.periodStart, 'yyyy-MM-dd')
+          }
+          defaultEndDate={
+            cePending.kind === 'single'
+              ? campaign.end_date
+              : format(cePending.period.periodEnd, 'yyyy-MM-dd')
+          }
+          rows={campaignAssets.map((ca: any): CommercialAssetRow => {
+            const includeP = cePending.kind === 'monthly' ? cePending.includePrinting : true;
+            const includeM = cePending.kind === 'monthly' ? cePending.includeMounting : true;
+            return {
+              key: ca.id,
+              asset_code: ca.asset_code || ca.media_asset_code || null,
+              city: ca.city,
+              area: ca.area,
+              location: ca.location,
+              media_type: ca.media_type,
+              dimensions: ca.dimensions,
+              illumination_type: ca.illumination_type,
+              display_amount:
+                ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0,
+              printing_charges: includeP ? (ca.printing_charges || ca.printing_cost || 0) : 0,
+              mounting_charges: includeM ? (ca.mounting_charges || ca.mounting_cost || 0) : 0,
+            };
+          })}
+          gstRate={totals.gstRate}
+          discountAmount={totals.manualDiscountAmount}
+          submitting={generating}
+          onConfirm={async (result) => {
+            if (cePending.kind === 'single') {
+              await handleGenerateSingleInvoice(result);
+            } else {
+              await handleGenerateInvoice(
+                cePending.period,
+                cePending.includePrinting,
+                cePending.includeMounting,
+                result,
+              );
+            }
+            setCeOpen(false);
+            setCePending(null);
+          }}
+        />
+      )}
     </div>
   );
 }

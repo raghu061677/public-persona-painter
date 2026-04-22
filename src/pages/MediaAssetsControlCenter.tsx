@@ -172,7 +172,7 @@ export default function MediaAssetsControlCenter() {
       allAssetIds.length > 0
         ? supabase
             .from('campaign_assets')
-            .select('asset_id, effective_start_date, effective_end_date, campaigns:campaign_id!inner(id, name, client_name, status, is_deleted)')
+            .select('asset_id, effective_start_date, effective_end_date, campaigns:campaign_id!inner(id, campaign_name, client_name, status, is_deleted)')
             .in('asset_id', allAssetIds)
             .eq('is_removed', false)
             .gte('effective_end_date', today)
@@ -208,7 +208,7 @@ export default function MediaAssetsControlCenter() {
         kind: 'campaign',
         start: b.effective_start_date,
         end: b.effective_end_date,
-        campaign_name: c.name || null,
+        campaign_name: c.campaign_name || null,
         client_name: c.client_name || null,
       });
       itemsByAsset.set(b.asset_id, list);

@@ -41,7 +41,7 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2, Search } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
 import { useClientRegistrations } from "@/hooks/useClientRegistrations";
@@ -66,6 +66,7 @@ export default function PlanNew() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [selectedAssetsSearch, setSelectedAssetsSearch] = useState("");
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
   type TaxType = 'CGST_SGST' | 'IGST';
@@ -1085,15 +1086,50 @@ export default function PlanNew() {
           {/* Selected Assets - Full Width */}
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary-glow/5">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-                Selected Media Assets ({selectedAssets.size})
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1.5">Review and adjust pricing for selected assets</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
+                    <div className="h-2 w-2 rounded-full bg-primary"></div>
+                    Selected Media Assets ({selectedAssets.size})
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1.5">Review and adjust pricing for selected assets</p>
+                </div>
+                {selectedAssets.size > 0 && (
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="search"
+                      value={selectedAssetsSearch}
+                      onChange={(e) => setSelectedAssetsSearch(e.target.value)}
+                      placeholder="Search code, city, area, location..."
+                      className="pl-8 h-9"
+                      aria-label="Search selected assets"
+                    />
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
               <SelectedAssetsTable
-                assets={selectedAssetsArray}
+                assets={(() => {
+                  const q = selectedAssetsSearch.trim().toLowerCase();
+                  if (!q) return selectedAssetsArray;
+                  return selectedAssetsArray.filter((a: any) => {
+                    const haystack = [
+                      a?.media_asset_code,
+                      a?.id,
+                      a?.city,
+                      a?.area,
+                      a?.location,
+                      a?.media_type,
+                      a?.direction,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                      .toLowerCase();
+                    return haystack.includes(q);
+                  });
+                })()}
                 assetPricing={assetPricing}
                 onRemove={removeAsset}
                 onPricingUpdate={updateAssetPricing}

@@ -9,11 +9,18 @@
  */
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Lock, CalendarCheck, CalendarClock } from "lucide-react";
+import { CheckCircle2, Lock, CalendarCheck, CalendarClock, Wrench, Ban, PowerOff } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
 export type HoverBookingType = "campaign" | "hold" | null;
-export type HoverStatus = "Available" | "Booked" | "Held" | "Blocked";
+export type HoverStatus =
+  | "Available"
+  | "Booked"
+  | "Held"
+  | "Blocked"
+  | "Removed"
+  | "Under Maintenance"
+  | "Inactive";
 
 export interface AssetBookingHoverInfo {
   current_status: HoverStatus;
@@ -76,6 +83,24 @@ function statusBadge(status: HoverStatus) {
           <Lock className="h-3 w-3" /> {status}
         </Badge>
       );
+    case "Removed":
+      return (
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800">
+          <Ban className="h-3 w-3" /> Removed
+        </Badge>
+      );
+    case "Under Maintenance":
+      return (
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+          <Wrench className="h-3 w-3" /> Maintenance
+        </Badge>
+      );
+    case "Inactive":
+      return (
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700">
+          <PowerOff className="h-3 w-3" /> Inactive
+        </Badge>
+      );
   }
 }
 
@@ -105,6 +130,11 @@ export function AssetBookingHoverCard({
 
   const isAvailable = info.current_status === "Available";
   const hasNext = !!(nextStart || nextEnd || info.next_campaign_name || info.next_hold_type);
+  const isNonBookable =
+    info.current_status === "Removed" ||
+    info.current_status === "Under Maintenance" ||
+    info.current_status === "Inactive" ||
+    info.current_status === "Blocked";
 
   // Header title reflects the asset's current state
   const headerTitle = isAvailable
@@ -113,6 +143,12 @@ export function AssetBookingHoverCard({
     ? "Currently Held"
     : info.current_status === "Blocked"
     ? "Currently Blocked"
+    : info.current_status === "Removed"
+    ? "Removed"
+    : info.current_status === "Under Maintenance"
+    ? "Under Maintenance"
+    : info.current_status === "Inactive"
+    ? "Inactive"
     : "Currently Booked";
 
   // Current section meta
@@ -217,6 +253,18 @@ export function AssetBookingHoverCard({
                 {hasNext ? "No active booking" : "Ready for planning"}
               </p>
             )}
+
+            {isNonBookable && !currentName && (
+              <p className="text-sm text-muted-foreground italic">
+                {info.current_status === "Removed"
+                  ? "Asset removed from inventory"
+                  : info.current_status === "Under Maintenance"
+                  ? "Asset under maintenance"
+                  : info.current_status === "Inactive"
+                  ? "Asset is inactive"
+                  : "Asset is blocked"}
+              </p>
+            )}
           </section>
 
           {/* Next section */}
@@ -254,7 +302,7 @@ export function AssetBookingHoverCard({
         </div>
 
         {/* Footer: Next available */}
-        {!isAvailable && nextAvail && (
+        {!isAvailable && !isNonBookable && nextAvail && (
           <div className="px-4 py-2 border-t bg-muted/40 flex items-center gap-2">
             <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <p className="text-[11px] flex-1 leading-tight">

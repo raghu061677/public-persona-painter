@@ -113,6 +113,59 @@ export function QuickFilterBar({
             </Select>
           </div>
 
+          {/* Media Type Dropdown */}
+          {onMediaTypeChange && mediaTypeOptions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={selectedMediaType || "__all__"}
+                onValueChange={(val) =>
+                  onMediaTypeChange(val === "__all__" ? "" : val)
+                }
+              >
+                <SelectTrigger className="w-[170px] h-8 text-sm">
+                  <SelectValue placeholder="All Media Types" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="__all__">All Media Types</SelectItem>
+                  {mediaTypeOptions.map((mt) => (
+                    <SelectItem key={mt} value={mt}>
+                      {mt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Date Range */}
+          {onDateRangeChange && (
+            <DateRangeFilter
+              label=""
+              value={selectedDateRange}
+              onChange={onDateRangeChange}
+              placeholder="Created date"
+            />
+          )}
+
+          {/* More Filters Button */}
+          {onMoreFiltersClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onMoreFiltersClick}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              More Filters
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
+          )}
+
           {/* Clear All Button */}
           {hasActiveFilters && (
             <>

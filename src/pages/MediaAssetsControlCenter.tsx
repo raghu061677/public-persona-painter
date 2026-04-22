@@ -13,8 +13,8 @@ import { RightPanel } from "@/components/media-assets/control-center/RightPanel"
 import { CommandPalette } from "@/components/media-assets/control-center/CommandPalette";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings2, Filter } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { MediaAssetsCustomExportDialog } from "@/components/media-assets/MediaAssetsCustomExportDialog";
 import { BulkQRGenerationButton } from "@/components/media-assets/BulkQRGenerationButton";
 import { useNavigate } from "react-router-dom";
@@ -317,8 +317,6 @@ export default function MediaAssetsControlCenter() {
             onViewChange={setCurrentView}
             currentTheme={currentTheme}
             onThemeChange={handleThemeChange}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
             onAIFilterClick={() => setIsPanelOpen(true)}
             isGodModeVisible={isGodModeVisible}
             onToggleGodMode={() => setIsGodModeVisible(!isGodModeVisible)}
@@ -326,7 +324,18 @@ export default function MediaAssetsControlCenter() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            <div className="h-full overflow-auto pr-6 py-1 space-y-2">
+            <div className="h-full overflow-auto pl-6 pr-6 py-3 space-y-3">
+              {/* Page Search Bar */}
+              <div className="relative max-w-2xl">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search assets, location, area, code, media type… (Press / to focus)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 h-10 bg-card"
+                />
+              </div>
+
               {/* Summary Cards */}
               <SummaryCards
                 totalAssets={stats.totalAssets}
@@ -338,52 +347,14 @@ export default function MediaAssetsControlCenter() {
                 totalValue={stats.totalValue}
               />
 
-              {/* Quick Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Badge
-                  variant={statusFilter === null ? "default" : "outline"}
-                  className="cursor-pointer select-none"
-                  onClick={() => setStatusFilter(null)}
-                >
-                  All ({assets.length})
-                </Badge>
-                {statusOptions.map(([status, count]) => (
-                  <Badge
-                    key={status}
-                    variant={statusFilter === status ? "default" : "outline"}
-                    className="cursor-pointer select-none"
-                    onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-                  >
-                    {status} ({count})
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => setCustomExportOpen(true)} className="gap-2">
-                  <Settings2 className="h-4 w-4" />
-                  Custom Fields Export
-                </Button>
-                <BulkQRGenerationButton />
-                <ActionGuard module="media_assets" action="create">
-                <Button onClick={() => navigate("/admin/media-assets/new")} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add New Asset
-                </Button>
-                </ActionGuard>
-              </div>
-
               {/* View Content */}
               {currentView === "table" && (
-                <div className="bg-card rounded-lg border">
-                  <MediaAssetsTable 
-                    key={`table-${filteredAssets.length}-${loading}`}
-                    assets={filteredAssets} 
-                    onRefresh={fetchAssets} 
-                  />
-                </div>
+                <MediaAssetsTable
+                  key={`table-${filteredAssets.length}-${loading}`}
+                  assets={filteredAssets}
+                  onRefresh={fetchAssets}
+                  onOpenCustomExport={() => setCustomExportOpen(true)}
+                />
               )}
 
               {currentView === "gallery" && (

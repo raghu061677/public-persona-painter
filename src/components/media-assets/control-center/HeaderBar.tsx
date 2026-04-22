@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Search, Grid3x3, Table2, Map, Sparkles, Sun, Moon, Palette, Copy } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Grid3x3, Table2, Map, Sparkles, Sun, Moon, Palette, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -27,8 +26,6 @@ interface HeaderBarProps {
   onViewChange: (view: ViewMode) => void;
   currentTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   onAIFilterClick: () => void;
   isGodModeVisible?: boolean;
   onToggleGodMode?: () => void;
@@ -39,8 +36,6 @@ export function HeaderBar({
   onViewChange,
   currentTheme,
   onThemeChange,
-  searchQuery,
-  onSearchChange,
   onAIFilterClick,
   isGodModeVisible,
   onToggleGodMode,
@@ -60,16 +55,7 @@ export function HeaderBar({
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Global Search */}
-      <div className="flex-1 max-w-md relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search assets... (Press / to focus)"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-4"
-        />
-      </div>
+      <div className="flex-1" />
 
       {/* AI Filter Button */}
       <Button

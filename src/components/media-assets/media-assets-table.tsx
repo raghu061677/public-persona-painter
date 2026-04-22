@@ -57,6 +57,7 @@ import {
   PinOff,
   MoreVertical,
 } from "lucide-react";
+import { Plus, Download, LayoutList, Settings2 } from "lucide-react";
 import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";

@@ -876,7 +876,10 @@ export function CampaignBillingTab({
              totals={totals}
             campaignAssets={campaignAssets}
             existingInvoices={existingInvoices}
-            onGenerateInvoice={handleGenerateInvoice}
+            onGenerateInvoice={(period, includePrinting, includeMounting) => {
+              setCePending({ kind: 'monthly', period, includePrinting, includeMounting });
+              setCeOpen(true);
+            }}
             onViewInvoice={handleViewInvoice}
             isGenerating={generating}
             printingBilled={campaignAssets.some(a => a.printing_billed)}
@@ -999,7 +1002,10 @@ export function CampaignBillingTab({
                   No invoices generated yet for this campaign.
                 </p>
                 <Button
-                  onClick={handleGenerateSingleInvoice}
+                  onClick={() => {
+                    setCePending({ kind: 'single' });
+                    setCeOpen(true);
+                  }}
                   disabled={generating}
                 >
                   {generating ? (

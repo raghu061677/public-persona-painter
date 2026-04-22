@@ -66,6 +66,7 @@ export default function PlanNew() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [selectedAssetsSearch, setSelectedAssetsSearch] = useState("");
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
   type TaxType = 'CGST_SGST' | 'IGST';

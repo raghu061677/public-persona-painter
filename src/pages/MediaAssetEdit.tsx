@@ -477,7 +477,7 @@ export default function MediaAssetEdit() {
                         <SelectItem value="Available">Available</SelectItem>
                         <SelectItem value="Booked">Booked</SelectItem>
                         <SelectItem value="Blocked">Blocked</SelectItem>
-                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                        <SelectItem value="Under Maintenance">Under Maintenance</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1142,7 +1142,7 @@ export default function MediaAssetEdit() {
                         <SelectItem value="Available">Available</SelectItem>
                         <SelectItem value="Booked">Booked</SelectItem>
                         <SelectItem value="Blocked">Blocked</SelectItem>
-                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                        <SelectItem value="Under Maintenance">Under Maintenance</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

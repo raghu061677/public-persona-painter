@@ -1,85 +1,74 @@
 
 
-## Fix: Cycle invoice charges — single-row display + delete-aware re-attachment
+## Goal
+Redesign `/admin/media-assets` into a single, professional, enterprise-grade layout with **one** search box, **one** unified quick filter bar, an always-visible advanced filter panel, and a streamlined column/settings menu — without removing any existing functionality.
 
-Two real defects to fix, both in the cycle billing → invoice path. No schema breakage, no impact on existing finalized invoices.
+## Issues found in current page
 
-### Defect 1 — Two rows for one asset (display + printing on separate lines)
+| # | Problem | Where |
+|---|---------|-------|
+| 1 | Two search boxes (top app-shell `Quick search ⌘K` + page `Search assets…`) | Global topbar + `HeaderBar.tsx` |
+| 2 | Two Quick-Filter rows (status badges in page + `QuickFilterBar` All Status / Available / Booked / Cities inside table) | `MediaAssetsControlCenter.tsx` + `quick-filter-bar.tsx` |
+| 3 | Advanced filters (Location, Area, Media Type, Status, Date) hidden inside collapsible `Filters & Columns` toggle | `table-filters.tsx` |
+| 4 | "Table Settings" modal (pagination, refresh, date format, currency, compact numbers) is duplicate noise — these are already global app settings | `table-settings-panel.tsx` |
+| 5 | Two action button rows (`Custom Fields Export / Generate QR / Add New Asset` + bulk actions) scattered | Page + table |
 
-**Why it happens:** When generating a cycle invoice, the printing/mounting charge is appended as an *independent* line item with `charge_type = "printing"`, then `InvoiceTemplateZoho.tsx` renders charge-typed items as their own row (lines 357-386). Result: the asset appears twice — once as Display, once as Printing.
+## Proposed Layout (single source of truth)
 
-**Desired behavior (per screenshot 1 reference):** A single row per asset showing `Display: ₹1,00,000` + `Printing: ₹8,000` stacked under the PRICING column, and `Line Total` = ₹1,08,000.
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│ Breadcrumb: Home › Admin › Media Assets                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ [🔍 Search assets, location, area, code…              ⌘K ]   ← ONE  │
+│                                          [AI] [Dup] [Map|Grid|Table] │
+├──────────────────────────────────────────────────────────────────────┤
+│  KPI Cards: 113 Total · 82 Available · 31 Booked · 2 Cities · 89 Lit │
+├──────────────────────────────────────────────────────────────────────┤
+│ Quick Filters: [All] [Available] [Booked] [Maintenance] | City ▾ |   │
+│                Media Type ▾ | Date ▾ | + More Filters | × Clear (n)  │
+├──────────────────────────────────────────────────────────────────────┤
+│ 113 results       [Columns ▾] [Export ▾] [+ Add New Asset]           │
+├──────────────────────────────────────────────────────────────────────┤
+│ ☐ Asset ID | Image | Location | Area | City | Type | Rate | Status…  │
+│ … rows …                                                              │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-### Defect 2 — Charge stuck as "Invoiced" after draft deletion
+### Key decisions
+1. **Remove the page-level search box** in `HeaderBar.tsx`. The global app-shell `Quick search ⌘K` stays as the only global search. Add a dedicated **page search bar** directly above the Quick-Filters row that searches *only this page's assets* (location, area, city, code, media type). The `/` keyboard shortcut focuses it.
+2. **Delete the duplicate quick-filter row.** Use one `QuickFilterBar` directly above the table containing: Status chips · City dropdown · Media Type dropdown · Date Range · "+ More Filters" (opens advanced sheet) · Clear All.
+3. **Remove the collapsible "Filters & Columns" card.** Move Location / Area / Created Date filters into a right-side **"More Filters" Sheet** (drawer) opened from the quick-filter bar — only shown when needed. This eliminates the always-open accordion clutter.
+4. **Remove the "Table Settings" button** (pagination, refresh interval, date format, currency, compact numbers). These belong under the user's profile / company settings, not on every list page. Keep `Density` toggle inline on the toolbar.
+5. **Consolidate columns control:** keep just one `[Columns 8/24 ▾]` button on the right-side of the toolbar (above the table).
+6. **Consolidate action buttons** into one toolbar row above the table:
+   `[N results]   [Columns ▾]  [Density ▾]  [Export ▾ → Excel / PDF / Custom Fields]  [Bulk QR]  [+ Add New Asset]`
+7. Bulk-actions card (when rows selected) stays as-is, appearing between the toolbar and the table.
 
-**Why it happens:** In the migration, `campaign_charge_items.invoice_id` uses `ON DELETE SET NULL`, so when the draft invoice is deleted the FK is cleared — but `is_invoiced = true` is *not* reset. Result: regenerating the same cycle excludes the charge (filtered by `if (it.is_invoiced) continue` in `useCampaignChargeItems`’s grouping), and the panel shows the badge "Invoiced" forever.
+## Files to change
 
-The single existing affected charge for `CAM-202604-0024` is verified in DB: `invoice_id = NULL` but `is_invoiced = true`.
+| File | Change |
+|------|--------|
+| `src/components/media-assets/control-center/HeaderBar.tsx` | Remove the search `<Input>`. Keep breadcrumb + AI/Duplicates/God Mode/View switch/Theme. |
+| `src/pages/MediaAssetsControlCenter.tsx` | Add a single page-level search bar above KPI cards. Remove the duplicate status-badge row. Pass search state into the table's `globalFilter` so highlighting still works. Move "Add New Asset / Custom Fields Export / Bulk QR" into the table toolbar (so they sit just above the grid). |
+| `src/components/common/quick-filter-bar.tsx` | Extend with: Media Type dropdown, Date Range popover, "More Filters" button, active-filter count badge. |
+| `src/components/media-assets/media-assets-table.tsx` | Replace `<TableFilters>` collapsible card with a compact toolbar row: `[N results] [Columns] [Density] [Export ▾] [Add Asset]`. Move Location / Area / Created Date into a new `<MoreFiltersSheet>` opened via Quick-Filter bar. Remove the embedded `QuickFilterBar` (now lives at page level). |
+| `src/components/common/table-filters.tsx` | Keep file (used elsewhere) but no longer used here. Add prop to suppress "Table Settings" button. |
+| `src/components/media-assets/MoreFiltersSheet.tsx` *(new)* | Right-side sheet/drawer with Location, Area, Created Date inputs + Apply / Clear. |
 
----
+## Behaviour preserved
+- All existing filter logic (status, city, media_type, location, area, date range) continues to work — only the UI container changes.
+- `/` keyboard shortcut still focuses the page search.
+- Column visibility, density, frozen columns, bulk actions, exports, QR generation — all preserved.
+- Global app-shell search (`⌘K`) is untouched.
+- Table Settings panel removed from this page only; not deleted globally (other pages still use it).
 
-### Implementation
+## What gets removed (no behaviour loss)
+- Page-level second search box (redundant with new dedicated one).
+- Duplicate status-badge filter row at page level.
+- "Table Settings" button on this page (formatting prefs are global).
+- "Filters & Columns" collapsible accordion (replaced by always-visible quick-filter bar + on-demand More Filters sheet).
 
-**A. Merge printing/mounting into the asset row at invoice generation**
-*File:* `src/components/campaigns/billing/AssetCycleBillingPreview.tsx`
-
-Change the charge-append loop (around lines 217-243) so charges with `campaign_asset_id` matching a display line in the same cycle are **merged into that line** instead of pushed as new items:
-
-- For each pending cycle charge:
-  - If `charge_type ∈ {printing, reprinting}` AND `campaign_asset_id` matches an existing display item → set `displayItem.printing_charges += amount`, recompute `displayItem.amount/total = rent_amount + printing_charges + mounting_charges`, attach `charge_item_id` into a new `merged_charge_ids[]` field (so we still know which charge row contributed, for the post-insert "mark invoiced" step).
-  - Same for `mounting/remounting` → `mounting_charges`.
-  - For `misc` or charges with no matching asset → keep current behavior (append as a charge-line row).
-
-Result on the invoice JSONB items: one row per asset carrying the rent + printing + mounting amounts. The existing template already knows how to render this correctly (lines 428-432).
-
-**B. Template — keep the merged-row path, leave the "lonely charge row" path untouched**
-*File:* `src/components/invoices/InvoiceTemplateZoho.tsx`
-
-No structural change needed; the merged items will not have `charge_type` set on the asset row, so they fall through to the standard asset renderer that already displays `Display / Printing / Installation` stacked. The standalone charge-line branch stays for misc/unattached charges.
-
-**C. Reset `is_invoiced` when the linked invoice is deleted**
-
-Two complementary fixes (defense in depth):
-
-1. **App-level (immediate fix for current state and all future deletes):**
-   *File:* `src/pages/InvoiceDetail.tsx` — in `handleDelete` (lines 121-153), before `delete().eq('id', invoiceId)`, run:
-   ```ts
-   await supabase
-     .from('campaign_charge_items')
-     .update({ is_invoiced: false, invoice_id: null })
-     .eq('invoice_id', invoiceId);
-   ```
-
-2. **DB-level safety net (new migration):** Add a trigger on `invoices` `BEFORE DELETE` that resets `is_invoiced=false, invoice_id=null` for all charge items where `invoice_id = OLD.id`. Same migration also runs a one-time backfill:
-   ```sql
-   UPDATE public.campaign_charge_items
-      SET is_invoiced = false
-    WHERE is_invoiced = true AND invoice_id IS NULL;
-   ```
-   This unsticks the existing printing charge for `CAM-202604-0024` and any similar orphans.
-
-**D. Charges panel — refresh after generation already wired**
-
-`refetchCharges()` is already called after invoice insert (line 308). After fix C, regenerating a deleted draft will correctly find the charge as pending and re-attach it.
-
----
-
-### Guardrails
-
-- Only **draft cycle invoices** are deletable (existing rule in `handleDelete`). Finalized invoices remain immutable; their linked charges keep `is_invoiced=true` and never reset.
-- Single Invoice and Calendar Monthly billing modes are not touched.
-- Existing draft/finalized invoice JSONB items are not mutated — the merge logic only runs at *new* invoice generation time.
-- Backfill is conservative: only resets rows where `invoice_id IS NULL` (orphaned), never touches charges still linked to a live invoice.
-
-### Files changed
-
-1. `src/components/campaigns/billing/AssetCycleBillingPreview.tsx` — merge printing/mounting charges into matching asset display lines.
-2. `src/pages/InvoiceDetail.tsx` — reset charge items before deleting a draft invoice.
-3. New `supabase/migrations/<ts>_charge_items_release_on_invoice_delete.sql` — `BEFORE DELETE` trigger on `invoices` + one-time backfill of orphaned `is_invoiced=true, invoice_id=null` rows.
-
-### Expected result
-
-- Regenerate the deleted cycle-1 draft → printing ₹8,000 reappears, panel chip moves from "Invoiced" back to "Cycle 1".
-- New invoice renders **one row** for `MNS-HYD-PUB-0002` with Display ₹1,00,000, Printing ₹8,000, Line Total ₹1,08,000 — matching screenshot 1.
-- Sub Total ₹1,08,000 · GST ₹19,440 · Grand Total ₹1,27,440 unchanged.
+## Out of scope
+- Changes to other list pages (Plans, Campaigns, Invoices) — same pattern can be rolled out later if approved.
+- Backend / RPC / data-fetching logic — unchanged.
 

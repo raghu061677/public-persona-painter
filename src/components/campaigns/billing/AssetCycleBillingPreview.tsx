@@ -31,6 +31,11 @@ import { generateDraftInvoiceId } from "@/utils/finance";
 import { toast } from "@/hooks/use-toast";
 import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
 import { CycleChargesPanel } from "./charges/CycleChargesPanel";
+import {
+  CommercialEntryDialog,
+  type CommercialAssetRow,
+  type CommercialEntryResult,
+} from "./CommercialEntryDialog";
 
 interface CycleInvoice {
   id: string;
@@ -71,6 +76,8 @@ export function AssetCycleBillingPreview({
   const navigate = useNavigate();
   const [cycleInvoices, setCycleInvoices] = useState<CycleInvoice[]>([]);
   const [generatingBucket, setGeneratingBucket] = useState<string | null>(null);
+  const [commercialOpen, setCommercialOpen] = useState(false);
+  const [pendingBucket, setPendingBucket] = useState<GroupedCycleBucket | null>(null);
 
   const { groupedBuckets, totalAmount, totalCycles, allCycles } = useMemo(
     () => generateAssetCycles(campaignAssets, campaignEndDate),
@@ -127,8 +134,58 @@ export function AssetCycleBillingPreview({
     );
   };
 
-  // Generate invoice for a single cycle bucket
-  const handleGenerateCycleInvoice = async (bucket: GroupedCycleBucket) => {
+  // Open Commercial Entry dialog for a bucket (auto-pull seeds the form)
+  const handleOpenCommercialEntry = (bucket: GroupedCycleBucket) => {
+    setPendingBucket(bucket);
+    setCommercialOpen(true);
+  };
+
+  // Build seed rows for the Commercial Entry dialog from the bucket + pending charges
+  const buildSeedRows = useCallback(
+    (bucket: GroupedCycleBucket | null): CommercialAssetRow[] => {
+      if (!bucket) return [];
+      const cycleCharges = pendingChargesByCycle.get(bucket.cycleNumber) || [];
+      return bucket.assets.map((asset) => {
+        const ca = campaignAssets.find((c) => c.id === asset.campaignAssetId);
+        const printSeed = cycleCharges
+          .filter(
+            (ch) =>
+              ch.campaign_asset_id === asset.campaignAssetId &&
+              (ch.charge_type === "printing" || ch.charge_type === "reprinting"),
+          )
+          .reduce((s, ch) => s + Number(ch.amount || 0), 0);
+        const mountSeed = cycleCharges
+          .filter(
+            (ch) =>
+              ch.campaign_asset_id === asset.campaignAssetId &&
+              (ch.charge_type === "mounting" || ch.charge_type === "remounting"),
+          )
+          .reduce((s, ch) => s + Number(ch.amount || 0), 0);
+        return {
+          key: asset.campaignAssetId,
+          asset_code: ca?.asset_id || asset.assetId,
+          city: ca?.city || asset.city,
+          area: asset.area,
+          location: asset.location,
+          media_type: ca?.media_type || asset.mediaType,
+          dimensions: ca?.dimensions || null,
+          illumination_type: ca?.illumination_type || null,
+          display_amount: Number(asset.cycleAmount || 0),
+          printing_charges: printSeed,
+          mounting_charges: mountSeed,
+        };
+      });
+    },
+    [campaignAssets, pendingChargesByCycle],
+  );
+
+  const seedRows = useMemo(() => buildSeedRows(pendingBucket), [buildSeedRows, pendingBucket]);
+
+  // Generate invoice for a single cycle bucket using overrides from the dialog
+  const handleGenerateCycleInvoice = async (
+    bucket: GroupedCycleBucket,
+    override: CommercialEntryResult,
+  ) => {
     const bucketKey = `${bucket.cycleNumber}-${format(bucket.periodStart, "yyyyMMdd")}`;
     setGeneratingBucket(bucketKey);
 
@@ -136,8 +193,9 @@ export function AssetCycleBillingPreview({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      const bStart = format(bucket.periodStart, "yyyy-MM-dd");
-      const bEnd = format(bucket.periodEnd, "yyyy-MM-dd");
+      // Override window > bucket window (user can adjust dates per cycle)
+      const bStart = override.billing_start_date || format(bucket.periodStart, "yyyy-MM-dd");
+      const bEnd = override.billing_end_date || format(bucket.periodEnd, "yyyy-MM-dd");
 
       // Duplicate prevention using unified billing_window_key
       const windowKey = `cycle-${bucket.cycleNumber}`;
@@ -176,10 +234,12 @@ export function AssetCycleBillingPreview({
         : { data: [] };
       const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
 
-      // Build line items
+      // Build line items — apply per-asset display override if present
       const items: any[] = bucket.assets.map((asset, idx) => {
         const ca = campaignAssets.find((c) => c.id === asset.campaignAssetId);
         const resolvedCode = ca ? maCodeMap.get(ca.asset_id) || null : null;
+        const ovr = override.rows?.[asset.campaignAssetId];
+        const displayAmt = ovr ? Number(ovr.display_amount || 0) : Number(asset.cycleAmount || 0);
         return {
           sno: idx + 1,
           asset_id: ca?.asset_id || null,
@@ -198,90 +258,64 @@ export function AssetCycleBillingPreview({
           booking_end_date: bEnd,
           booked_days: bucket.cycleDays,
           quantity: 1,
-          rate: asset.cycleAmount,
-          rent_amount: asset.cycleAmount,
+          rate: displayAmt,
+          rent_amount: displayAmt,
           display_rate: asset.finalMonthlyRate,
           printing_charges: 0,
           mounting_charges: 0,
-          amount: asset.cycleAmount,
-          total: asset.cycleAmount,
+          amount: displayAmt,
+          total: displayAmt,
           hsn_sac: "998361",
+          is_overridden: !!ovr,
         };
       });
 
-      const subtotal = bucket.totalAmount;
       // Pending one-time / ad-hoc charges assigned to this cycle
       const cycleCharges = pendingChargesByCycle.get(bucket.cycleNumber) || [];
-      const chargesTotal = cycleCharges.reduce((s, c) => s + Number(c.amount || 0), 0);
 
-      // Merge printing/mounting charges into the matching asset's display row
-      // when possible — so the invoice shows ONE row per asset with stacked
-      // Display + Printing + Installation values. Unattached / misc charges
-      // still get appended as their own line below.
+      // Apply per-asset printing/mounting OVERRIDES directly to each row.
+      // These replace the pending-charge auto-merge values from the seed —
+      // user already saw the seed in the dialog and confirmed the final values.
       let sno = items.length;
-      for (const ch of cycleCharges) {
-        const amt = Number(ch.amount || 0);
-        const matched = ch.campaign_asset_id
-          ? items.find(
-              (it: any) =>
-                !it.charge_type &&
-                it.campaign_asset_id === ch.campaign_asset_id,
-            )
-          : null;
+      for (const it of items) {
+        const ovr = override.rows?.[it.campaign_asset_id];
+        if (!ovr) continue;
+        const printAmt = Number(ovr.printing_charges || 0);
+        const mountAmt = Number(ovr.mounting_charges || 0);
+        if (printAmt > 0) it.printing_charges = printAmt;
+        if (mountAmt > 0) it.mounting_charges = mountAmt;
+        it.amount = Number(it.rent_amount || 0) + printAmt + mountAmt;
+        it.total = it.amount;
+        // Track which pending charges this row absorbs (for invoiced linkage)
+        const absorbed = cycleCharges
+          .filter(
+            (ch) =>
+              ch.campaign_asset_id === it.campaign_asset_id &&
+              ((ch.charge_type === "printing" || ch.charge_type === "reprinting") ||
+                (ch.charge_type === "mounting" || ch.charge_type === "remounting")),
+          )
+          .map((ch) => ch.id);
+        if (absorbed.length) it.merged_charge_ids = absorbed;
+      }
 
-        if (
-          matched &&
-          (ch.charge_type === "printing" || ch.charge_type === "reprinting")
-        ) {
-          matched.printing_charges = Number(matched.printing_charges || 0) + amt;
-          matched.amount = Number(matched.rent_amount || 0) +
-            Number(matched.printing_charges || 0) +
-            Number(matched.mounting_charges || 0);
-          matched.total = matched.amount;
-          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
-          continue;
-        }
-
-        if (
-          matched &&
-          (ch.charge_type === "mounting" || ch.charge_type === "remounting")
-        ) {
-          matched.mounting_charges = Number(matched.mounting_charges || 0) + amt;
-          matched.amount = Number(matched.rent_amount || 0) +
-            Number(matched.printing_charges || 0) +
-            Number(matched.mounting_charges || 0);
-          matched.total = matched.amount;
-          matched.merged_charge_ids = [...(matched.merged_charge_ids || []), ch.id];
-          continue;
-        }
-
-        // Fallback: misc / unattached → append as standalone charge line
+      // Append invoice-level misc charge (not tied to any asset)
+      if (Number(override.misc_amount || 0) > 0) {
         sno += 1;
-        const ca = ch.campaign_asset_id
-          ? campaignAssets.find((c) => c.id === ch.campaign_asset_id)
-          : null;
+        const miscAmt = Number(override.misc_amount || 0);
         items.push({
           sno,
-          asset_id: ca?.asset_id || null,
-          asset_code: ca ? maCodeMap.get(ca.asset_id) || null : null,
-          campaign_asset_id: ch.campaign_asset_id || null,
-          description:
-            ch.description ||
-            `${ch.charge_type.charAt(0).toUpperCase() + ch.charge_type.slice(1)} charge`,
-          location: ca?.location || null,
-          area: ca?.area || null,
-          media_type: ca?.media_type || null,
+          campaign_asset_id: null,
+          description: override.misc_description?.trim() || "Misc charge",
           quantity: 1,
-          rate: amt,
-          amount: amt,
-          total: amt,
-          charge_type: ch.charge_type,
-          charge_item_id: ch.id,
+          rate: miscAmt,
+          amount: miscAmt,
+          total: miscAmt,
+          charge_type: "misc",
           hsn_sac: "998361",
         });
       }
 
-      const taxableSubtotal = subtotal + chargesTotal;
+      const taxableSubtotal = items.reduce((s, it) => s + Number(it.amount || 0), 0);
       const gstAmount = taxableSubtotal * (gstPercent / 100);
       const total = taxableSubtotal + gstAmount;
 
@@ -295,6 +329,11 @@ export function AssetCycleBillingPreview({
       // GST mode — use the resolved gstMode from parent
       const isIGST = gstMode === 'IGST';
       const gstHalf = gstPercent / 2;
+
+      const baseNote = `Asset Cycle Billing for ${campaignName} — Cycle #${bucket.cycleNumber} (${bStart} to ${bEnd})`;
+      const finalNotes = override.notes?.trim()
+        ? `${baseNote}\n${override.notes.trim()}`
+        : baseNote;
 
       const { error } = await supabase.from("invoices").insert({
         id: invoiceId,
@@ -328,7 +367,7 @@ export function AssetCycleBillingPreview({
         status: "Draft",
         is_draft: true,
         items,
-        notes: `Asset Cycle Billing for ${campaignName} — Cycle #${bucket.cycleNumber} (${bStart} to ${bEnd})`,
+        notes: finalNotes,
         created_by: userData.user.id,
         ...regSnapshot,
       });
@@ -354,6 +393,8 @@ export function AssetCycleBillingPreview({
 
       await fetchCycleInvoices();
       onInvoiceGenerated?.();
+      setCommercialOpen(false);
+      setPendingBucket(null);
     } catch (err: any) {
       console.error("Generate cycle invoice error:", err);
       toast({

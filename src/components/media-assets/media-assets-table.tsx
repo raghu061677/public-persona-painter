@@ -90,6 +90,7 @@ import { BulkEditDialog } from "./BulkEditDialog";
 // import { TableViewsDialog } from "./TableViewsDialog"; // Temporarily disabled until Supabase types regenerate
 import { ActionCell, ImageCell } from "./asset-table-cells";
 import { AssetBookingHoverCard } from "./AssetBookingHoverCard";
+import { getBookingStatusLabel, BOOKING_STATUS_BUCKET_CLASS } from "./bookingStatusLabel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";

@@ -59,21 +59,21 @@ function statusBadge(status: HoverStatus) {
   switch (status) {
     case "Available":
       return (
-        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800">
-          <CheckCircle2 className="h-3 w-3 mr-1" /> Available
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800">
+          <CheckCircle2 className="h-3 w-3" /> Available
         </Badge>
       );
     case "Booked":
       return (
-        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
-          <CalendarCheck className="h-3 w-3 mr-1" /> Booked
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+          <CalendarCheck className="h-3 w-3" /> Booked
         </Badge>
       );
     case "Held":
     case "Blocked":
       return (
-        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800">
-          <Lock className="h-3 w-3 mr-1" /> {status}
+        <Badge variant="outline" className="h-5 px-2 gap-1 rounded-full text-[10px] font-semibold tracking-wide bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800">
+          <Lock className="h-3 w-3" /> {status}
         </Badge>
       );
   }

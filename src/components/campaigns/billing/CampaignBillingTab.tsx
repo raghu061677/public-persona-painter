@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCampaignChargeItems } from "./charges/useCampaignChargeItems";
+import { CommercialEntryDialog, type CommercialAssetRow, type CommercialEntryResult } from "./CommercialEntryDialog";
 
 interface CampaignBillingTabProps {
   campaign: {
@@ -79,6 +80,14 @@ export function CampaignBillingTab({
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
   const [lockedBillingMode, setLockedBillingMode] = useState<BillingMode | null>(null);
   const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
+
+  // Commercial Entry dialog state (Hybrid override layer for Single + Monthly)
+  const [ceOpen, setCeOpen] = useState(false);
+  const [cePending, setCePending] = useState<
+    | { kind: 'single' }
+    | { kind: 'monthly'; period: BillingPeriodInfo; includePrinting: boolean; includeMounting: boolean }
+    | null
+  >(null);
    
    // Only use actual manual_discount_amount from database - no auto-derivation
    const storedDiscount = Number(campaign.manual_discount_amount) || 0;
@@ -287,7 +296,7 @@ export function CampaignBillingTab({
     .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
   // Generate single invoice for entire campaign
-  const handleGenerateSingleInvoice = async () => {
+  const handleGenerateSingleInvoice = async (override?: CommercialEntryResult) => {
     setGenerating(true);
 
     try {
@@ -311,9 +320,13 @@ export function CampaignBillingTab({
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
         // Prioritize pre-calculated rent_amount (prorated for actual booked days) over raw monthly rate
         // CRITICAL: Use nullish coalescing (??) so rent_amount=0 is respected, never fall back to negotiated_rate
-        const rentAmt = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-        const printAmt = ca.printing_charges || ca.printing_cost || 0;
-        const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
+        const autoRent = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
+        const autoPrint = ca.printing_charges || ca.printing_cost || 0;
+        const autoMount = ca.mounting_charges || ca.mounting_cost || 0;
+        const ovr = override?.rows?.[ca.id];
+        const rentAmt = ovr ? Number(ovr.display_amount || 0) : autoRent;
+        const printAmt = ovr ? Number(ovr.printing_charges || 0) : autoPrint;
+        const mountAmt = ovr ? Number(ovr.mounting_charges || 0) : autoMount;
         const lineTotal = rentAmt + printAmt + mountAmt;
         const resolvedCode = maCodeMap.get(ca.asset_id) || null;
         return {
@@ -344,8 +357,23 @@ export function CampaignBillingTab({
           amount: lineTotal,
           total: lineTotal,
           hsn_sac: '998361',
+          is_overridden: !!ovr,
         };
       });
+
+      // Append misc charge from manual entry (if any)
+      if (override && override.misc_amount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: override.misc_description || 'Misc charge',
+          quantity: 1,
+          rate: override.misc_amount,
+          amount: override.misc_amount,
+          total: override.misc_amount,
+          hsn_sac: '998361',
+          charge_type: 'misc',
+        });
+      }
 
       if (totals.manualDiscountAmount > 0) {
         items.push({
@@ -357,14 +385,28 @@ export function CampaignBillingTab({
         });
       }
 
-      // Default invoice date = campaign period start date
-      const invoiceDate = new Date(campaign.start_date);
+      // Default invoice date = campaign period start date (or override start)
+      const startDateStr = override?.billing_start_date || campaign.start_date;
+      const endDateStr = override?.billing_end_date || campaign.end_date;
+      const invoiceDate = new Date(startDateStr);
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
       // GST mode
       const isIGST = gstMode === 'IGST';
       const gstHalf = totals.gstRate / 2;
+
+      // Recompute monetary totals from the actual items list (so manual
+      // overrides + misc + discount flow into sub_total / gst / total).
+      const itemsSubtotal = items.reduce(
+        (s, it: any) => s + Number(it.amount || it.total || 0),
+        0,
+      );
+      const recomputedSubtotal = Math.max(0, itemsSubtotal);
+      const recomputedGst = totals.gstRate > 0
+        ? Math.round(recomputedSubtotal * totals.gstRate) / 100
+        : 0;
+      const recomputedTotal = Math.round((recomputedSubtotal + recomputedGst) * 100) / 100;
 
       // Create invoice
       const { error } = await supabase.from('invoices').insert({
@@ -375,28 +417,30 @@ export function CampaignBillingTab({
         company_id: campaign.company_id,
         invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
         due_date: format(dueDate, 'yyyy-MM-dd'),
-        invoice_period_start: campaign.start_date,
-        invoice_period_end: campaign.end_date,
+        invoice_period_start: startDateStr,
+        invoice_period_end: endDateStr,
         billing_mode: 'single_invoice',
         billing_window_key: 'campaign_full',
         is_monthly_split: false,
-        sub_total: totals.taxableAmount,
+        sub_total: recomputedSubtotal,
         gst_percent: totals.gstRate,
-        gst_amount: totals.gstAmount,
-        total_amount: totals.grandTotal,
-        balance_due: totals.grandTotal,
+        gst_amount: recomputedGst,
+        total_amount: recomputedTotal,
+        balance_due: recomputedTotal,
         tax_type: isIGST ? 'igst' : 'cgst_sgst',
         gst_mode: gstMode,
         cgst_percent: isIGST ? 0 : gstHalf,
         sgst_percent: isIGST ? 0 : gstHalf,
         igst_percent: isIGST ? totals.gstRate : 0,
-        cgst_amount: isIGST ? 0 : totals.gstAmount / 2,
-        sgst_amount: isIGST ? 0 : totals.gstAmount / 2,
-        igst_amount: isIGST ? totals.gstAmount : 0,
+        cgst_amount: isIGST ? 0 : recomputedGst / 2,
+        sgst_amount: isIGST ? 0 : recomputedGst / 2,
+        igst_amount: isIGST ? recomputedGst : 0,
         status: 'Draft',
         is_draft: true,
         items,
-        notes: `Single invoice for campaign: ${campaign.campaign_name}`,
+        notes: override?.notes
+          ? `Single invoice for campaign: ${campaign.campaign_name}\n${override.notes}`
+          : `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,
         ...regSnapshot,
       });
@@ -427,7 +471,8 @@ export function CampaignBillingTab({
   const handleGenerateInvoice = async (
     period: BillingPeriodInfo, 
     includePrinting: boolean, 
-    includeMounting: boolean
+    includeMounting: boolean,
+    override?: CommercialEntryResult,
   ) => {
     setGenerating(true);
 
@@ -465,9 +510,13 @@ export function CampaignBillingTab({
       // Build per-asset detailed items for this period
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
         // CRITICAL: Use prorated rent_amount, never raw negotiated_rate
-        const rentAmt = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-        const printAmt = (includePrinting ? (ca.printing_charges || ca.printing_cost || 0) : 0);
-        const mountAmt = (includeMounting ? (ca.mounting_charges || ca.mounting_cost || 0) : 0);
+        const autoRent = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
+        const autoPrint = (includePrinting ? (ca.printing_charges || ca.printing_cost || 0) : 0);
+        const autoMount = (includeMounting ? (ca.mounting_charges || ca.mounting_cost || 0) : 0);
+        const ovr = override?.rows?.[ca.id];
+        const rentAmt = ovr ? Number(ovr.display_amount || 0) : autoRent;
+        const printAmt = ovr ? Number(ovr.printing_charges || 0) : autoPrint;
+        const mountAmt = ovr ? Number(ovr.mounting_charges || 0) : autoMount;
         const lineTotal = rentAmt + printAmt + mountAmt;
         const resolvedCode = maCodeMap.get(ca.asset_id) || null;
         return {
@@ -484,8 +533,8 @@ export function CampaignBillingTab({
           illumination_type: ca.illumination_type || null,
           dimensions: ca.dimensions || null,
           total_sqft: ca.total_sqft || 0,
-          booking_start_date: format(period.periodStart, 'yyyy-MM-dd'),
-          booking_end_date: format(period.periodEnd, 'yyyy-MM-dd'),
+          booking_start_date: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
+          booking_end_date: override?.billing_end_date || format(period.periodEnd, 'yyyy-MM-dd'),
           booked_days: ca.booked_days,
           daily_rate: ca.daily_rate,
           quantity: 1,
@@ -498,6 +547,7 @@ export function CampaignBillingTab({
           total: lineTotal,
           hsn_sac: '998361',
           merged_charge_ids: [] as string[],
+          is_overridden: !!ovr,
         };
       });
 
@@ -545,6 +595,20 @@ export function CampaignBillingTab({
         consumedChargeIds.push(ch.id);
       }
 
+      // Append manual misc charge from override (if any)
+      if (override && override.misc_amount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: override.misc_description || 'Misc charge',
+          quantity: 1,
+          rate: override.misc_amount,
+          amount: override.misc_amount,
+          total: override.misc_amount,
+          hsn_sac: '998361',
+          charge_type: 'misc',
+        });
+      }
+
       // Recompute period totals to include the merged charges (so subtotal/GST
       // reflect the actual money on the invoice, not the static recurring totals).
       const itemsSubtotal = items.reduce((s, it) => s + Number(it.amount || it.total || 0), 0);
@@ -577,7 +641,9 @@ export function CampaignBillingTab({
           total_amount: recomputedTotal,
           balance_due: recomputedTotal,
           items,
-          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          notes: override?.notes
+            ? `Monthly billing for ${campaign.campaign_name} - ${period.label}\n${override.notes}`
+            : `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           updated_at: new Date().toISOString(),
         }).eq('id', existingInvoice.id);
 
@@ -609,10 +675,10 @@ export function CampaignBillingTab({
           client_id: campaign.client_id,
           client_name: campaign.client_name,
           company_id: campaign.company_id,
-          invoice_date: format(period.periodStart, 'yyyy-MM-dd'),
+          invoice_date: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
           due_date: format(dueDate, 'yyyy-MM-dd'),
-          invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
-          invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
+          invoice_period_start: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
+          invoice_period_end: override?.billing_end_date || format(period.periodEnd, 'yyyy-MM-dd'),
           billing_month: period.monthKey,
           billing_mode: 'calendar_monthly',
           billing_window_key: period.monthKey,
@@ -633,7 +699,9 @@ export function CampaignBillingTab({
           status: 'Draft',
           is_draft: true,
           items,
-          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          notes: override?.notes
+            ? `Monthly billing for ${campaign.campaign_name} - ${period.label}\n${override.notes}`
+            : `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,
           ...regSnapshot,
         });
@@ -808,7 +876,10 @@ export function CampaignBillingTab({
              totals={totals}
             campaignAssets={campaignAssets}
             existingInvoices={existingInvoices}
-            onGenerateInvoice={handleGenerateInvoice}
+            onGenerateInvoice={(period, includePrinting, includeMounting) => {
+              setCePending({ kind: 'monthly', period, includePrinting, includeMounting });
+              setCeOpen(true);
+            }}
             onViewInvoice={handleViewInvoice}
             isGenerating={generating}
             printingBilled={campaignAssets.some(a => a.printing_billed)}
@@ -931,7 +1002,10 @@ export function CampaignBillingTab({
                   No invoices generated yet for this campaign.
                 </p>
                 <Button
-                  onClick={handleGenerateSingleInvoice}
+                  onClick={() => {
+                    setCePending({ kind: 'single' });
+                    setCeOpen(true);
+                  }}
                   disabled={generating}
                 >
                   {generating ? (
@@ -1009,6 +1083,68 @@ export function CampaignBillingTab({
           onRefresh?.();
         }}
       />
+
+      {/* Commercial Entry Dialog — manual override layer for Single + Monthly */}
+      {cePending && (
+        <CommercialEntryDialog
+          open={ceOpen}
+          onOpenChange={(o) => {
+            setCeOpen(o);
+            if (!o) setCePending(null);
+          }}
+          title={cePending.kind === 'single' ? 'Generate Single Invoice' : 'Generate Monthly Invoice'}
+          contextLabel={
+            cePending.kind === 'single'
+              ? `${campaign.campaign_name} • Entire Campaign Period`
+              : `${campaign.campaign_name} • ${cePending.period.label}`
+          }
+          defaultStartDate={
+            cePending.kind === 'single'
+              ? campaign.start_date
+              : format(cePending.period.periodStart, 'yyyy-MM-dd')
+          }
+          defaultEndDate={
+            cePending.kind === 'single'
+              ? campaign.end_date
+              : format(cePending.period.periodEnd, 'yyyy-MM-dd')
+          }
+          rows={campaignAssets.map((ca: any): CommercialAssetRow => {
+            const includeP = cePending.kind === 'monthly' ? cePending.includePrinting : true;
+            const includeM = cePending.kind === 'monthly' ? cePending.includeMounting : true;
+            return {
+              key: ca.id,
+              asset_code: ca.asset_code || ca.media_asset_code || null,
+              city: ca.city,
+              area: ca.area,
+              location: ca.location,
+              media_type: ca.media_type,
+              dimensions: ca.dimensions,
+              illumination_type: ca.illumination_type,
+              display_amount:
+                ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0,
+              printing_charges: includeP ? (ca.printing_charges || ca.printing_cost || 0) : 0,
+              mounting_charges: includeM ? (ca.mounting_charges || ca.mounting_cost || 0) : 0,
+            };
+          })}
+          gstRate={totals.gstRate}
+          discountAmount={totals.manualDiscountAmount}
+          submitting={generating}
+          onConfirm={async (result) => {
+            if (cePending.kind === 'single') {
+              await handleGenerateSingleInvoice(result);
+            } else {
+              await handleGenerateInvoice(
+                cePending.period,
+                cePending.includePrinting,
+                cePending.includeMounting,
+                result,
+              );
+            }
+            setCeOpen(false);
+            setCePending(null);
+          }}
+        />
+      )}
     </div>
   );
 }

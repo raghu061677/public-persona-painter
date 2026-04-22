@@ -6,3 +6,5 @@ export { BillingStatusBadge, mapInvoiceStatusToBillingStatus } from './BillingSt
 export { computeCampaignTotals, calculatePeriodAmountFromTotals, calculatePeriodAmountAssetWise } from '@/utils/computeCampaignTotals';
 export type { BillingPeriodInfo, CampaignTotalsResult, CampaignAsset } from '@/utils/computeCampaignTotals';
 export type { BillingStatus } from './BillingStatusBadge';
+export { CommercialEntryDialog } from './CommercialEntryDialog';
+export type { CommercialAssetRow, CommercialEntryResult } from './CommercialEntryDialog';

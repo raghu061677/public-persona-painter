@@ -6,6 +6,7 @@ import { QRCodeButton } from "./QRCodeButton";
 import { AssetHoldDialog } from "@/components/reports/AssetHoldDialog";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { ReleaseHoldDialog } from "@/components/reports/ReleaseHoldDialog";
+import { AssetBookingHoverCard } from "./AssetBookingHoverCard";
 import {
   Tooltip,
   TooltipContent,
@@ -29,15 +30,18 @@ export function ImageCell({ row }: any) {
   const displayCode = asset.media_asset_code || asset.id;
   
   const imageUrl = asset.primary_photo_url || "/placeholder.svg";
+  const info = asset.booking_hover_info;
 
   return (
-    <img
-      src={imageUrl}
-      alt={displayCode}
-      className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-      onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
-      title="Click to view details"
-    />
+    <AssetBookingHoverCard info={info} side="right" align="start">
+      <img
+        src={imageUrl}
+        alt={displayCode}
+        className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
+        title="Click to view details"
+      />
+    </AssetBookingHoverCard>
   );
 }
 

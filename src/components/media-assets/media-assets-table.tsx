@@ -89,6 +89,7 @@ import AddPlanFromAssetsModal from "./add-plan-from-assets-modal";
 import { BulkEditDialog } from "./BulkEditDialog";
 // import { TableViewsDialog } from "./TableViewsDialog"; // Temporarily disabled until Supabase types regenerate
 import { ActionCell, ImageCell } from "./asset-table-cells";
+import { AssetBookingHoverCard } from "./AssetBookingHoverCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -392,13 +393,16 @@ export function MediaAssetsTable({ assets, onRefresh, onOpenCustomExport }: Medi
         cell: ({ row, table }) => {
           const globalFilter = (table.getState() as any).globalFilter || "";
           const displayCode = row.original.media_asset_code || row.original.id;
+          const info = (row.original as any).booking_hover_info;
           return (
-            <button
-              onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
-              className="hover:underline font-mono text-xs text-left"
-            >
-              {highlightText(displayCode, globalFilter)}
-            </button>
+            <AssetBookingHoverCard info={info} side="right" align="start">
+              <button
+                onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
+                className="hover:underline font-mono text-xs text-left"
+              >
+                {highlightText(displayCode, globalFilter)}
+              </button>
+            </AssetBookingHoverCard>
           );
         },
       },
@@ -441,14 +445,17 @@ export function MediaAssetsTable({ assets, onRefresh, onOpenCustomExport }: Medi
         cell: ({ row, table }) => {
           const globalFilter = (table.getState() as any).globalFilter || "";
           const displayCode = row.original.media_asset_code || row.original.id;
+          const info = (row.original as any).booking_hover_info;
           return (
-            <button
-              onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
-              className="hover:underline w-48 truncate block text-left"
-              title={row.original.location}
-            >
-              {highlightText(row.original.location, globalFilter)}
-            </button>
+            <AssetBookingHoverCard info={info} side="right" align="start">
+              <button
+                onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
+                className="hover:underline w-48 truncate block text-left"
+                title={row.original.location}
+              >
+                {highlightText(row.original.location, globalFilter)}
+              </button>
+            </AssetBookingHoverCard>
           );
         },
       },

@@ -166,47 +166,115 @@ export default function MediaAssetsControlCenter() {
     const today = new Date().toISOString().split('T')[0];
     const allAssetIds = (assetsData || []).map(a => a.id);
 
-    const [{ data: activeBookings }, { data: activeHolds }] = await Promise.all([
+    // Fetch BOTH currently-overlapping AND upcoming campaign_assets / holds.
+    // We deliberately pull only what we need to compute current + next item per asset.
+    const [{ data: campaignRows }, { data: holdRows }] = await Promise.all([
       allAssetIds.length > 0
         ? supabase
             .from('campaign_assets')
-            .select('asset_id, campaigns:campaign_id!inner(status, is_deleted)')
+            .select('asset_id, effective_start_date, effective_end_date, campaigns:campaign_id!inner(id, campaign_name, client_name, status, is_deleted)')
             .in('asset_id', allAssetIds)
             .eq('is_removed', false)
-            .lte('effective_start_date', today)
             .gte('effective_end_date', today)
+            .order('effective_start_date', { ascending: true })
         : Promise.resolve({ data: [] }),
       allAssetIds.length > 0
         ? supabase
             .from('asset_holds')
-            .select('asset_id')
+            .select('asset_id, hold_type, client_name, start_date, end_date, status')
             .in('asset_id', allAssetIds)
             .eq('status', 'ACTIVE')
-            .lte('start_date', today)
             .gte('end_date', today)
+            .order('start_date', { ascending: true })
         : Promise.resolve({ data: [] }),
     ]);
 
-    const dynamicBookedIds = new Set<string>();
-    (activeBookings as any[] || []).forEach((b: any) => {
-      const c = b.campaigns as any;
+    type Item = {
+      kind: 'campaign' | 'hold';
+      start: string;
+      end: string;
+      campaign_name?: string | null;
+      client_name?: string | null;
+      hold_type?: string | null;
+    };
+
+    const itemsByAsset = new Map<string, Item[]>();
+    (campaignRows as any[] || []).forEach((b: any) => {
+      const c = b.campaigns;
       if (!c || c.is_deleted) return;
-      if (['Draft', 'Upcoming', 'Running'].includes(c.status)) {
-        dynamicBookedIds.add(b.asset_id);
-      }
+      if (!['Draft', 'Upcoming', 'Running'].includes(c.status)) return;
+      const list = itemsByAsset.get(b.asset_id) || [];
+      list.push({
+        kind: 'campaign',
+        start: b.effective_start_date,
+        end: b.effective_end_date,
+        campaign_name: c.campaign_name || null,
+        client_name: c.client_name || null,
+      });
+      itemsByAsset.set(b.asset_id, list);
     });
-    (activeHolds as any[] || []).forEach((h: any) => {
-      dynamicBookedIds.add(h.asset_id);
+    (holdRows as any[] || []).forEach((h: any) => {
+      const list = itemsByAsset.get(h.asset_id) || [];
+      list.push({
+        kind: 'hold',
+        start: h.start_date,
+        end: h.end_date,
+        client_name: h.client_name || null,
+        hold_type: h.hold_type || null,
+      });
+      itemsByAsset.set(h.asset_id, list);
     });
+
+    const addDays = (iso: string, n: number): string => {
+      const d = new Date(iso + 'T00:00:00');
+      d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
 
     const enrichedAssets = (assetsData || []).map(asset => {
       const latestPhoto = latestPhotoMap.get(asset.id);
-      const dynamicStatus = dynamicBookedIds.has(asset.id) ? 'Booked' : 'Available';
-      
+      const items = (itemsByAsset.get(asset.id) || []).sort((a, b) => a.start.localeCompare(b.start));
+
+      // Current = first item that overlaps today (start<=today<=end)
+      const current = items.find(i => i.start <= today && i.end >= today) || null;
+      // Next = first item starting strictly after the current's end (or after today if none current)
+      const cutoff = current ? current.end : today;
+      const next = items.find(i => i.start > cutoff) || null;
+
+      const dynamicStatus = current
+        ? (current.kind === 'hold' ? 'Booked' : 'Booked') // keep existing badge semantics
+        : 'Available';
+
+      // Next available date: day after current.end if currently blocked
+      let nextAvailable: string | null = null;
+      if (current) {
+        nextAvailable = addDays(current.end, 1);
+      }
+
+      const booking_hover_info = {
+        current_status: current
+          ? (current.kind === 'hold' ? 'Held' : 'Booked')
+          : 'Available',
+        current_booking_type: current ? current.kind : null,
+        current_campaign_name: current?.campaign_name ?? null,
+        current_client_name: current?.client_name ?? null,
+        current_hold_type: current?.hold_type ?? null,
+        current_start_date: current?.start ?? null,
+        current_end_date: current?.end ?? null,
+        next_booking_type: next ? next.kind : null,
+        next_campaign_name: next?.campaign_name ?? null,
+        next_client_name: next?.client_name ?? null,
+        next_hold_type: next?.hold_type ?? null,
+        next_start_date: next?.start ?? null,
+        next_end_date: next?.end ?? null,
+        next_available_date: nextAvailable,
+      };
+
       return {
         ...asset,
         status: dynamicStatus,
         primary_photo_url: latestPhoto || asset.primary_photo_url || null,
+        booking_hover_info,
       };
     });
 

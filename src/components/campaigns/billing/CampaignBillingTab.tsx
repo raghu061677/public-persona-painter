@@ -595,6 +595,20 @@ export function CampaignBillingTab({
         consumedChargeIds.push(ch.id);
       }
 
+      // Append manual misc charge from override (if any)
+      if (override && override.misc_amount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: override.misc_description || 'Misc charge',
+          quantity: 1,
+          rate: override.misc_amount,
+          amount: override.misc_amount,
+          total: override.misc_amount,
+          hsn_sac: '998361',
+          charge_type: 'misc',
+        });
+      }
+
       // Recompute period totals to include the merged charges (so subtotal/GST
       // reflect the actual money on the invoice, not the static recurring totals).
       const itemsSubtotal = items.reduce((s, it) => s + Number(it.amount || it.total || 0), 0);
@@ -627,7 +641,9 @@ export function CampaignBillingTab({
           total_amount: recomputedTotal,
           balance_due: recomputedTotal,
           items,
-          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          notes: override?.notes
+            ? `Monthly billing for ${campaign.campaign_name} - ${period.label}\n${override.notes}`
+            : `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           updated_at: new Date().toISOString(),
         }).eq('id', existingInvoice.id);
 
@@ -659,10 +675,10 @@ export function CampaignBillingTab({
           client_id: campaign.client_id,
           client_name: campaign.client_name,
           company_id: campaign.company_id,
-          invoice_date: format(period.periodStart, 'yyyy-MM-dd'),
+          invoice_date: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
           due_date: format(dueDate, 'yyyy-MM-dd'),
-          invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
-          invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
+          invoice_period_start: override?.billing_start_date || format(period.periodStart, 'yyyy-MM-dd'),
+          invoice_period_end: override?.billing_end_date || format(period.periodEnd, 'yyyy-MM-dd'),
           billing_month: period.monthKey,
           billing_mode: 'calendar_monthly',
           billing_window_key: period.monthKey,
@@ -683,7 +699,9 @@ export function CampaignBillingTab({
           status: 'Draft',
           is_draft: true,
           items,
-          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          notes: override?.notes
+            ? `Monthly billing for ${campaign.campaign_name} - ${period.label}\n${override.notes}`
+            : `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
           created_by: userData.user.id,
           ...regSnapshot,
         });

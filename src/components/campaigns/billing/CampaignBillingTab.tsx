@@ -296,7 +296,7 @@ export function CampaignBillingTab({
     .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
   // Generate single invoice for entire campaign
-  const handleGenerateSingleInvoice = async () => {
+  const handleGenerateSingleInvoice = async (override?: CommercialEntryResult) => {
     setGenerating(true);
 
     try {
@@ -320,9 +320,13 @@ export function CampaignBillingTab({
       const items: any[] = campaignAssets.map((ca: any, idx: number) => {
         // Prioritize pre-calculated rent_amount (prorated for actual booked days) over raw monthly rate
         // CRITICAL: Use nullish coalescing (??) so rent_amount=0 is respected, never fall back to negotiated_rate
-        const rentAmt = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
-        const printAmt = ca.printing_charges || ca.printing_cost || 0;
-        const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
+        const autoRent = ca.rent_amount ?? ca.rate ?? ca.amount ?? ca.negotiated_rate ?? ca.card_rate ?? 0;
+        const autoPrint = ca.printing_charges || ca.printing_cost || 0;
+        const autoMount = ca.mounting_charges || ca.mounting_cost || 0;
+        const ovr = override?.rows?.[ca.id];
+        const rentAmt = ovr ? Number(ovr.display_amount || 0) : autoRent;
+        const printAmt = ovr ? Number(ovr.printing_charges || 0) : autoPrint;
+        const mountAmt = ovr ? Number(ovr.mounting_charges || 0) : autoMount;
         const lineTotal = rentAmt + printAmt + mountAmt;
         const resolvedCode = maCodeMap.get(ca.asset_id) || null;
         return {
@@ -353,8 +357,23 @@ export function CampaignBillingTab({
           amount: lineTotal,
           total: lineTotal,
           hsn_sac: '998361',
+          is_overridden: !!ovr,
         };
       });
+
+      // Append misc charge from manual entry (if any)
+      if (override && override.misc_amount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: override.misc_description || 'Misc charge',
+          quantity: 1,
+          rate: override.misc_amount,
+          amount: override.misc_amount,
+          total: override.misc_amount,
+          hsn_sac: '998361',
+          charge_type: 'misc',
+        });
+      }
 
       if (totals.manualDiscountAmount > 0) {
         items.push({
@@ -366,14 +385,28 @@ export function CampaignBillingTab({
         });
       }
 
-      // Default invoice date = campaign period start date
-      const invoiceDate = new Date(campaign.start_date);
+      // Default invoice date = campaign period start date (or override start)
+      const startDateStr = override?.billing_start_date || campaign.start_date;
+      const endDateStr = override?.billing_end_date || campaign.end_date;
+      const invoiceDate = new Date(startDateStr);
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30);
 
       // GST mode
       const isIGST = gstMode === 'IGST';
       const gstHalf = totals.gstRate / 2;
+
+      // Recompute monetary totals from the actual items list (so manual
+      // overrides + misc + discount flow into sub_total / gst / total).
+      const itemsSubtotal = items.reduce(
+        (s, it: any) => s + Number(it.amount || it.total || 0),
+        0,
+      );
+      const recomputedSubtotal = Math.max(0, itemsSubtotal);
+      const recomputedGst = totals.gstRate > 0
+        ? Math.round(recomputedSubtotal * totals.gstRate) / 100
+        : 0;
+      const recomputedTotal = Math.round((recomputedSubtotal + recomputedGst) * 100) / 100;
 
       // Create invoice
       const { error } = await supabase.from('invoices').insert({
@@ -384,28 +417,30 @@ export function CampaignBillingTab({
         company_id: campaign.company_id,
         invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
         due_date: format(dueDate, 'yyyy-MM-dd'),
-        invoice_period_start: campaign.start_date,
-        invoice_period_end: campaign.end_date,
+        invoice_period_start: startDateStr,
+        invoice_period_end: endDateStr,
         billing_mode: 'single_invoice',
         billing_window_key: 'campaign_full',
         is_monthly_split: false,
-        sub_total: totals.taxableAmount,
+        sub_total: recomputedSubtotal,
         gst_percent: totals.gstRate,
-        gst_amount: totals.gstAmount,
-        total_amount: totals.grandTotal,
-        balance_due: totals.grandTotal,
+        gst_amount: recomputedGst,
+        total_amount: recomputedTotal,
+        balance_due: recomputedTotal,
         tax_type: isIGST ? 'igst' : 'cgst_sgst',
         gst_mode: gstMode,
         cgst_percent: isIGST ? 0 : gstHalf,
         sgst_percent: isIGST ? 0 : gstHalf,
         igst_percent: isIGST ? totals.gstRate : 0,
-        cgst_amount: isIGST ? 0 : totals.gstAmount / 2,
-        sgst_amount: isIGST ? 0 : totals.gstAmount / 2,
-        igst_amount: isIGST ? totals.gstAmount : 0,
+        cgst_amount: isIGST ? 0 : recomputedGst / 2,
+        sgst_amount: isIGST ? 0 : recomputedGst / 2,
+        igst_amount: isIGST ? recomputedGst : 0,
         status: 'Draft',
         is_draft: true,
         items,
-        notes: `Single invoice for campaign: ${campaign.campaign_name}`,
+        notes: override?.notes
+          ? `Single invoice for campaign: ${campaign.campaign_name}\n${override.notes}`
+          : `Single invoice for campaign: ${campaign.campaign_name}`,
         created_by: userData.user.id,
         ...regSnapshot,
       });

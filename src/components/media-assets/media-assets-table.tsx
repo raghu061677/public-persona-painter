@@ -65,8 +65,9 @@ import { useTableDensity } from "@/hooks/use-table-density";
 import { useFrozenColumns } from "@/hooks/use-frozen-columns";
 import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
-import { TableFilters } from "@/components/common/table-filters";
 import { QuickFilterBar } from "@/components/common/quick-filter-bar";
+import { MoreFiltersSheet } from "@/components/media-assets/MoreFiltersSheet";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
 import { highlightText } from "@/components/common/global-search";
 import {

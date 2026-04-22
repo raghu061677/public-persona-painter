@@ -7,16 +7,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Filter, MapPin, X } from "lucide-react";
+import { Filter, MapPin, X, Layers, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DateRangeFilter } from "@/components/common/date-range-filter";
+import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 
 interface QuickFilterBarProps {
   statusOptions: string[];
   cityOptions: string[];
+  mediaTypeOptions?: string[];
   selectedStatus?: string;
   selectedCity?: string;
+  selectedMediaType?: string;
+  selectedDateRange?: DateRange;
   onStatusChange: (status: string) => void;
   onCityChange: (city: string) => void;
+  onMediaTypeChange?: (mediaType: string) => void;
+  onDateRangeChange?: (range: DateRange | undefined) => void;
+  onMoreFiltersClick?: () => void;
   onClearAll: () => void;
   activeFiltersCount?: number;
 }
@@ -24,14 +33,25 @@ interface QuickFilterBarProps {
 export function QuickFilterBar({
   statusOptions,
   cityOptions,
+  mediaTypeOptions = [],
   selectedStatus,
   selectedCity,
+  selectedMediaType,
+  selectedDateRange,
   onStatusChange,
   onCityChange,
+  onMediaTypeChange,
+  onDateRangeChange,
+  onMoreFiltersClick,
   onClearAll,
   activeFiltersCount = 0,
 }: QuickFilterBarProps) {
-  const hasActiveFilters = selectedStatus || selectedCity || activeFiltersCount > 0;
+  const hasActiveFilters =
+    selectedStatus ||
+    selectedCity ||
+    selectedMediaType ||
+    selectedDateRange?.from ||
+    activeFiltersCount > 0;
 
   return (
     <Card className="mb-4 shadow-sm border">

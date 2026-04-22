@@ -433,20 +433,35 @@ export default function PaymentsControlCenter() {
         <TabsContent value="overdue" className="space-y-4 mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                Overdue Invoices ({overdueInvoices.length})
-              </CardTitle>
-              <CardDescription>
-                Invoices past their due date with outstanding balance
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    Overdue Invoices ({overdueInvoices.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Invoices past their due date with outstanding balance
+                  </CardDescription>
+                </div>
+                <div className="relative w-full sm:w-[260px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search invoice or client..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {overdueInvoices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
                   <p className="text-lg font-medium">No overdue invoices</p>
-                  <p className="text-sm text-muted-foreground mt-2">All payments are on track!</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {searchTerm ? "No matches for your search" : "All payments are on track!"}
+                  </p>
                 </div>
               ) : (
                 <InvoiceTable data={overdueInvoices} />

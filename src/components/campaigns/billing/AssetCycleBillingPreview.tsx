@@ -570,7 +570,7 @@ export function AssetCycleBillingPreview({
                           variant="default"
                           className="text-xs"
                           disabled={isGenerating}
-                          onClick={() => handleGenerateCycleInvoice(bucket)}
+                          onClick={() => handleOpenCommercialEntry(bucket)}
                         >
                           {isGenerating ? (
                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -597,6 +597,28 @@ export function AssetCycleBillingPreview({
           charges assigned to that billing window.
         </span>
       </div>
+
+      {/* Commercial Entry override layer — opens before invoice generation */}
+      {pendingBucket && (
+        <CommercialEntryDialog
+          open={commercialOpen}
+          onOpenChange={(o) => {
+            setCommercialOpen(o);
+            if (!o) setPendingBucket(null);
+          }}
+          title={`Generate Cycle #${pendingBucket.cycleNumber} Invoice`}
+          contextLabel={`${campaignName} • ${format(pendingBucket.periodStart, "dd MMM yyyy")} → ${format(pendingBucket.periodEnd, "dd MMM yyyy")} • Asset Cycle Billing`}
+          defaultStartDate={format(pendingBucket.periodStart, "yyyy-MM-dd")}
+          defaultEndDate={format(pendingBucket.periodEnd, "yyyy-MM-dd")}
+          rows={seedRows}
+          gstRate={gstPercent}
+          submitting={
+            generatingBucket ===
+            `${pendingBucket.cycleNumber}-${format(pendingBucket.periodStart, "yyyyMMdd")}`
+          }
+          onConfirm={(result) => handleGenerateCycleInvoice(pendingBucket, result)}
+        />
+      )}
     </div>
   );
 }

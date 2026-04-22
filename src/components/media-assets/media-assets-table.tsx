@@ -862,36 +862,91 @@ export function MediaAssetsTable({ assets, onRefresh, onOpenCustomExport }: Medi
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        {/* Quick Filter Bar */}
+        {/* Unified Quick Filter Bar */}
         <QuickFilterBar
           statusOptions={statusOptions}
           cityOptions={cityOptions}
+          mediaTypeOptions={mediaTypes}
           selectedStatus={quickFilterStatus}
           selectedCity={quickFilterCity}
+          selectedMediaType={
+            (table.getColumn("media_type")?.getFilterValue() as string) ?? ""
+          }
+          selectedDateRange={dateRange}
           onStatusChange={handleQuickFilterStatusChange}
           onCityChange={handleQuickFilterCityChange}
+          onMediaTypeChange={handleMediaTypeFilterChange}
+          onDateRangeChange={setDateRange}
+          onMoreFiltersClick={() => setIsMoreFiltersOpen(true)}
           onClearAll={handleQuickClearAll}
-          activeFiltersCount={Object.values(filterValues).filter(v => 
-            Array.isArray(v) ? v.length > 0 : v !== "" && v !== undefined
-          ).length}
+          activeFiltersCount={
+            (filterValues.location ? 1 : 0) +
+            (filterValues.area ? 1 : 0) +
+            (dateRange?.from ? 1 : 0)
+          }
         />
 
-        {/* Advanced Filters */}
-        <TableFilters
-          filters={filterConfigs}
-          filterValues={filterValues}
-          onFilterChange={handleFilterChange}
-          onClearFilters={handleClearFilters}
-          allColumns={allColumnsForVisibilityButton}
-          visibleColumns={visibleKeys}
-          onColumnVisibilityChange={setVisibleKeys}
-          onResetColumns={resetColumnPrefs}
-          density={density}
-          onDensityChange={setDensity}
-          tableKey="media-assets"
-          settings={settings}
-          onUpdateSettings={updateSettings}
-          onResetSettings={resetSettings}
+        {/* Compact Toolbar (results count + actions) */}
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3 px-1">
+          <div className="text-sm font-medium text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} results
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={density} onValueChange={(v: any) => setDensity(v)}>
+              <SelectTrigger className="w-[130px] h-9 text-xs">
+                <LayoutList className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectItem value="compact">Compact</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="comfortable">Comfortable</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <ColumnVisibilityButton
+              allColumns={allColumnsForVisibilityButton}
+              visibleKeys={visibleKeys}
+              onChange={setVisibleKeys}
+              onReset={resetColumnPrefs}
+            />
+
+            {onOpenCustomExport && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenCustomExport}
+                className="h-9 gap-1.5 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </Button>
+            )}
+
+            <ActionGuard module="media_assets" action="create">
+              <Button
+                size="sm"
+                onClick={() => navigate("/admin/media-assets/new")}
+                className="h-9 gap-1.5 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add New Asset
+              </Button>
+            </ActionGuard>
+          </div>
+        </div>
+
+        {/* More Filters Sheet (Location, Area, Created Date) */}
+        <MoreFiltersSheet
+          open={isMoreFiltersOpen}
+          onOpenChange={setIsMoreFiltersOpen}
+          location={filterValues.location}
+          area={filterValues.area}
+          createdRange={dateRange}
+          onLocationChange={(v) => handleFilterChange("location", v)}
+          onAreaChange={(v) => handleFilterChange("area", v)}
+          onCreatedRangeChange={(v) => handleFilterChange("created_at", v)}
+          onClearAll={handleClearFilters}
         />
 
         {selectedAssetIds.length > 0 && (

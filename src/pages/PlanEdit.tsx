@@ -70,6 +70,7 @@ export default function PlanEdit() {
   const [companyState, setCompanyState] = useState<string>("");
   const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
+  const [selectedAssetsSearch, setSelectedAssetsSearch] = useState("");
   const submittingRef = useRef(false);
   const { trigger: triggerEmail } = useEmailTrigger();
   const { company } = useCompany();

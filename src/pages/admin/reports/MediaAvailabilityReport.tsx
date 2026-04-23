@@ -432,10 +432,11 @@ export default function MediaAvailabilityReport() {
         }
       }
 
-      // Build operational map: asset_id -> { operational_status, deactivation_reason }
-      const opsMap = new Map<string, { operational_status: string | null; deactivation_reason: string | null }>();
+      // Build operational map: asset_id -> full media_asset record (used for ops status + booked-row synthesis)
+      const opsMap = new Map<string, any>();
       for (const op of (opsResult.data || []) as any[]) {
         opsMap.set(op.id, {
+          ...op,
           operational_status: op.operational_status || 'active',
           deactivation_reason: op.deactivation_reason || null,
         });

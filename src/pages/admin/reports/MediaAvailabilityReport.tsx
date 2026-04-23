@@ -38,6 +38,7 @@ import {
   Unlock,
   Loader2,
 } from "lucide-react";
+import { Wrench, Ban, AlertTriangle, TrendingUp, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -62,7 +63,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { format, addDays, addMonths } from "date-fns";
+import { format, addDays, addMonths, startOfToday } from "date-fns";
 
 /** Format date string to Indian DD/MM/YYYY */
 function formatDateIN(dateStr: string | null | undefined): string {
@@ -104,7 +105,14 @@ interface AvailabilityRow {
   qr_code_url: string | null;
   latitude: number | null;
   longitude: number | null;
-  availability_status: 'VACANT_NOW' | 'AVAILABLE_SOON' | 'BOOKED_THROUGH_RANGE' | 'HELD';
+  availability_status:
+    | 'VACANT_NOW'
+    | 'AVAILABLE_SOON'
+    | 'BOOKED_THROUGH_RANGE'
+    | 'HELD'
+    | 'MAINTENANCE'
+    | 'REMOVED'
+    | 'INACTIVE';
   available_from: string;
   booked_till: string | null;
   current_campaign_id: string | null;
@@ -119,6 +127,10 @@ interface AvailabilityRow {
   hold_start_date?: string | null;
   hold_end_date?: string | null;
   hold_id?: string | null;
+  // Operational fields (computed client-side from media_assets)
+  operational_status?: 'active' | 'inactive' | 'removed' | 'maintenance' | null;
+  deactivation_reason?: string | null;
+  block_reason?: string | null;
 }
 
 interface ActiveHold {
@@ -214,10 +226,16 @@ export default function MediaAvailabilityReport() {
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
         r.availability_status === "AVAILABLE_SOON" ? `Available From (${formatDateIN(r.available_from)})` :
-        r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
+        r.availability_status === "HELD" ? "Held/Blocked" :
+        r.availability_status === "MAINTENANCE" ? "Under Maintenance" :
+        r.availability_status === "REMOVED" ? "Removed" :
+        r.availability_status === "INACTIVE" ? "Inactive" : "Booked",
       available_from: (r: any) => formatDateIN(r.available_from),
       booked_till: (r: any) => formatDateIN(r.booked_till),
-      campaign_name: (r: any) => r.current_campaign_name || (r.hold_type ? `Hold: ${r.hold_type}` : ''),
+      campaign_name: (r: any) =>
+        r.current_campaign_name ||
+        (r.hold_type ? `Hold: ${r.hold_type}` : '') ||
+        r.block_reason || '',
       client_name: (r: any) => r.current_client_name || r.hold_client_name || '',
     },
   });
@@ -265,8 +283,8 @@ export default function MediaAvailabilityReport() {
     }
     setLoading(true);
     try {
-      // Fetch availability + active holds in parallel
-      const [availResult, holdsResult] = await Promise.all([
+      // Fetch availability + active holds + operational status in parallel
+      const [availResult, holdsResult, opsResult] = await Promise.all([
         supabase.rpc('fn_media_availability_range', {
           p_company_id: company.id,
           p_start: trimmedStart,
@@ -281,6 +299,10 @@ export default function MediaAvailabilityReport() {
           .eq('status', 'ACTIVE')
           .lte('start_date', trimmedEnd)
           .gte('end_date', trimmedStart),
+        supabase
+          .from('media_assets')
+          .select('id, operational_status, deactivation_reason')
+          .eq('company_id', company.id),
       ]);
 
       if (availResult.error) throw availResult.error;
@@ -298,13 +320,59 @@ export default function MediaAvailabilityReport() {
         }
       }
 
+      // Build operational map: asset_id -> { operational_status, deactivation_reason }
+      const opsMap = new Map<string, { operational_status: string | null; deactivation_reason: string | null }>();
+      for (const op of (opsResult.data || []) as any[]) {
+        opsMap.set(op.id, {
+          operational_status: op.operational_status || 'active',
+          deactivation_reason: op.deactivation_reason || null,
+        });
+      }
+
       // Merge hold info into rows
       const mergedRows = rows.map((row) => {
         const hold = holdMap.get(row.asset_id);
+        const ops = opsMap.get(row.asset_id);
+        const opStatus = (ops?.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
+        const deactivationReason = ops?.deactivation_reason || null;
+
+        // Priority rules:
+        //   1. Active booking always shows as booked (operational issue noted via badge)
+        //   2. Operational unavailability (removed / maintenance / inactive) overrides "vacant"
+        //   3. Active hold overrides "vacant"
+        const isCurrentlyBooked = row.availability_status === 'BOOKED_THROUGH_RANGE';
+
+        // Apply operational override only if NOT currently booked
+        let workingRow: AvailabilityRow = {
+          ...row,
+          operational_status: opStatus,
+          deactivation_reason: deactivationReason,
+        };
+
+        if (!isCurrentlyBooked && opStatus !== 'active') {
+          const opsLabel: AvailabilityRow['availability_status'] =
+            opStatus === 'removed' ? 'REMOVED'
+            : opStatus === 'maintenance' ? 'MAINTENANCE'
+            : 'INACTIVE';
+          workingRow = {
+            ...workingRow,
+            availability_status: opsLabel,
+            // Operationally non-bookable assets do not have a derivable available_from
+            available_from: '',
+            block_reason: deactivationReason || (
+              opStatus === 'removed' ? 'Asset removed'
+              : opStatus === 'maintenance' ? 'Under maintenance'
+              : 'Inactive'
+            ),
+          };
+        }
+
         if (hold) {
-          // If asset was VACANT_NOW or AVAILABLE_SOON but has an active hold, mark as HELD
-          // If booked AND held, booking takes precedence in display but we still note the hold
-          const isCurrentlyBooked = row.availability_status === 'BOOKED_THROUGH_RANGE';
+          // If asset was VACANT_NOW/AVAILABLE_SOON/operational-issue but has an active hold,
+          // mark as HELD. Booking still wins.
+          const isOperationallyBlocked = workingRow.availability_status === 'REMOVED'
+            || workingRow.availability_status === 'MAINTENANCE'
+            || workingRow.availability_status === 'INACTIVE';
           const newAvailFrom = isCurrentlyBooked
             ? row.available_from
             : (hold.end_date > (row.booked_till || '') 
@@ -312,8 +380,12 @@ export default function MediaAvailabilityReport() {
                 : row.available_from);
           
           return {
-            ...row,
-            availability_status: isCurrentlyBooked ? row.availability_status : 'HELD' as const,
+            ...workingRow,
+            availability_status: isCurrentlyBooked
+              ? row.availability_status
+              : isOperationallyBlocked
+                ? workingRow.availability_status // operational issue still wins over hold
+                : 'HELD' as const,
             available_from: newAvailFrom,
             hold_status: 'ACTIVE',
             hold_type: hold.hold_type,
@@ -323,7 +395,7 @@ export default function MediaAvailabilityReport() {
             hold_id: hold.id,
           };
         }
-        return row;
+        return workingRow;
       });
 
       setAllRows(mergedRows);
@@ -425,11 +497,68 @@ export default function MediaAvailabilityReport() {
     const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
     const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
     const held = allRows.filter(r => r.availability_status === 'HELD').length;
+    const booked = allRows.filter(r => r.availability_status === 'BOOKED_THROUGH_RANGE').length;
+    const maintenance = allRows.filter(r => r.availability_status === 'MAINTENANCE').length;
+    const removed = allRows.filter(r => r.availability_status === 'REMOVED').length;
+    const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;
+    const atRisk = maintenance + removed + inactive;
     const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
     const potentialRevenue = allRows
       .filter(r => r.availability_status === 'VACANT_NOW')
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
-    return { total: allRows.length, vacantNow, availableSoon, held, totalSqft, potentialRevenue };
+    return {
+      total: allRows.length,
+      vacantNow, availableSoon, held, booked,
+      maintenance, removed, inactive, atRisk,
+      totalSqft, potentialRevenue,
+    };
+  }, [allRows]);
+
+  // ─── Grouped Summaries ─────────────────────────────────────
+  const summaries = useMemo(() => {
+    const today = startOfToday();
+    const sellable = allRows.filter(r =>
+      r.availability_status === 'VACANT_NOW' || r.availability_status === 'AVAILABLE_SOON'
+    );
+
+    // Top 5 cities by sellable vacant assets
+    const cityMap = new Map<string, number>();
+    for (const r of sellable) {
+      const k = r.city || '—';
+      cityMap.set(k, (cityMap.get(k) || 0) + 1);
+    }
+    const topCities = Array.from(cityMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    // Top 5 media types by sellable vacant assets
+    const typeMap = new Map<string, number>();
+    for (const r of sellable) {
+      const k = r.media_type || '—';
+      typeMap.set(k, (typeMap.get(k) || 0) + 1);
+    }
+    const topTypes = Array.from(typeMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    // Becoming free in next 7 / 15 / 30 days
+    const within = (days: number) => {
+      const cutoff = new Date(today);
+      cutoff.setDate(cutoff.getDate() + days);
+      return allRows.filter(r => {
+        if (r.availability_status !== 'AVAILABLE_SOON' || !r.available_from) return false;
+        const d = new Date(r.available_from);
+        return !isNaN(d.getTime()) && d >= today && d <= cutoff;
+      }).length;
+    };
+
+    return {
+      topCities,
+      topTypes,
+      freeIn7: within(7),
+      freeIn15: within(15),
+      freeIn30: within(30),
+    };
   }, [allRows]);
 
   // ─── Held rows for bulk selection ──────────────────────────
@@ -522,6 +651,57 @@ export default function MediaAvailabilityReport() {
                   {formatDateIN(row.hold_start_date)} → {formatDateIN(row.hold_end_date)}
                 </div>
               </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'MAINTENANCE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                  <Wrench className="h-3 w-3 mr-1" />Under Maintenance
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'REMOVED':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-rose-100 text-rose-800 border-rose-200">
+                  <Ban className="h-3 w-3 mr-1" />Removed
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'INACTIVE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-gray-200 text-gray-800 border-gray-300">
+                  <AlertTriangle className="h-3 w-3 mr-1" />Inactive
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
             </Tooltip>
           </TooltipProvider>
         );
@@ -770,6 +950,98 @@ export default function MediaAvailabilityReport() {
           </div>
         )}
 
+        {/* Secondary KPI row: Booked + At Risk + Becoming Free */}
+        {allRows.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
+            <Card
+              className={`cursor-pointer transition-colors ${statusFilter === 'BOOKED_THROUGH_RANGE' ? 'ring-2 ring-red-500' : 'hover:border-red-400'}`}
+              onClick={() => setStatusFilter(statusFilter === 'BOOKED_THROUGH_RANGE' ? 'all' : 'BOOKED_THROUGH_RANGE')}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-sm text-muted-foreground">Booked</span>
+                </div>
+                <div className="text-3xl font-bold mt-1 text-red-600">{counts.booked}</div>
+                <div className="text-xs text-muted-foreground mt-1">Held: {counts.held}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-amber-400 transition-colors">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <span className="text-sm text-muted-foreground">At Risk / Non-Bookable</span>
+                </div>
+                <div className="text-3xl font-bold mt-1 text-amber-600">{counts.atRisk}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Maint: {counts.maintenance} · Removed: {counts.removed} · Inactive: {counts.inactive}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm text-muted-foreground">Becoming Free</span>
+                </div>
+                <div className="flex items-baseline gap-3 mt-1">
+                  <div><span className="text-2xl font-bold">{summaries.freeIn7}</span><span className="text-xs text-muted-foreground ml-1">in 7d</span></div>
+                  <div><span className="text-2xl font-bold">{summaries.freeIn15}</span><span className="text-xs text-muted-foreground ml-1">in 15d</span></div>
+                  <div><span className="text-2xl font-bold">{summaries.freeIn30}</span><span className="text-xs text-muted-foreground ml-1">in 30d</span></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Grouped summaries: Top Cities & Top Media Types by sellable vacancy */}
+        {allRows.length > 0 && (summaries.topCities.length > 0 || summaries.topTypes.length > 0) && (
+          <div className="grid gap-4 md:grid-cols-2 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Building2 className="h-4 w-4" /> Top Cities by Vacant Inventory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {summaries.topCities.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {summaries.topCities.map(([city, count]) => (
+                      <div key={city} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{city}</span>
+                        <Badge variant="secondary">{count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Top Media Types by Vacant Inventory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {summaries.topTypes.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {summaries.topTypes.map(([type, count]) => (
+                      <div key={type} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{type}</span>
+                        <Badge variant="secondary">{count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Search bar + Column toggle */}
         {allRows.length > 0 && (
           <div className="flex items-center gap-3 mb-4">
@@ -791,7 +1063,11 @@ export default function MediaAvailabilityReport() {
                 <SelectItem value="all">All Statuses ({allRows.length})</SelectItem>
                 <SelectItem value="VACANT_NOW">Vacant Now ({counts.vacantNow})</SelectItem>
                 <SelectItem value="AVAILABLE_SOON">Available Soon ({counts.availableSoon})</SelectItem>
+                {counts.booked > 0 && <SelectItem value="BOOKED_THROUGH_RANGE">Booked ({counts.booked})</SelectItem>}
                 {counts.held > 0 && <SelectItem value="HELD">Held/Blocked ({counts.held})</SelectItem>}
+                {counts.maintenance > 0 && <SelectItem value="MAINTENANCE">Under Maintenance ({counts.maintenance})</SelectItem>}
+                {counts.removed > 0 && <SelectItem value="REMOVED">Removed ({counts.removed})</SelectItem>}
+                {counts.inactive > 0 && <SelectItem value="INACTIVE">Inactive ({counts.inactive})</SelectItem>}
               </SelectContent>
             </Select>
 

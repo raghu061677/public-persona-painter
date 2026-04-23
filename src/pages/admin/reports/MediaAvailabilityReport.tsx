@@ -358,8 +358,14 @@ export default function MediaAvailabilityReport() {
     }
     setLoading(true);
     try {
-      // Fetch availability + active holds + operational status in parallel
-      const [availResult, holdsResult, opsResult] = await Promise.all([
+      // Fetch availability + active holds + operational status + booked-in-range in parallel.
+      //
+      // NOTE: fn_media_availability_range only returns VACANT_NOW / AVAILABLE_SOON rows
+      // (booked assets are excluded at source). To accurately power the
+      // "Booked / Occupied" KPI we additionally fetch booked assets from
+      // campaign_assets ⨝ campaigns and synthesize BOOKED_THROUGH_RANGE rows
+      // for any asset not already present in the vacancy result set.
+      const [availResult, holdsResult, opsResult, bookedResult] = await Promise.all([
         supabase.rpc('fn_media_availability_range', {
           p_company_id: company.id,
           p_start: trimmedStart,
@@ -378,6 +384,23 @@ export default function MediaAvailabilityReport() {
           .from('media_assets')
           .select('id, operational_status, deactivation_reason')
           .eq('company_id', company.id),
+        supabase
+          .from('campaign_assets')
+          .select(`
+            asset_id,
+            booking_start_date,
+            booking_end_date,
+            effective_start_date,
+            effective_end_date,
+            start_date,
+            end_date,
+            is_removed,
+            campaigns!inner(id, name, company_id, client_id, clients(name))
+          `)
+          .eq('campaigns.company_id', company.id)
+          .eq('is_removed', false)
+          .lte('booking_start_date', trimmedEnd)
+          .gte('booking_end_date', trimmedStart),
       ]);
 
       if (availResult.error) throw availResult.error;

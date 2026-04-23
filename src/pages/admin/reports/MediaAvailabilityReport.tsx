@@ -1513,6 +1513,29 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('sqft') && <TableCell className="whitespace-nowrap">{row.sqft || '-'}</TableCell>}
                         {isColumnVisible('illumination') && <TableCell className="whitespace-nowrap">{row.illumination || '-'}</TableCell>}
                         {isColumnVisible('status') && <TableCell>{getStatusBadge(row)}</TableCell>}
+                        {isColumnVisible('availability_timeline') && (
+                          <TableCell className="align-top py-2">
+                            <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px]">
+                              {buildAvailabilityTimeline(row).lines.map((ln, i) => (
+                                <div key={i} className="flex gap-1">
+                                  {ln.label && (
+                                    <span className="text-muted-foreground">{ln.label}:</span>
+                                  )}
+                                  <span
+                                    className={
+                                      ln.label
+                                        ? 'font-medium text-foreground truncate max-w-[140px]'
+                                        : 'font-semibold text-foreground'
+                                    }
+                                    title={ln.value}
+                                  >
+                                    {ln.value}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                        )}
                         {isColumnVisible('available_from') && (
                           <TableCell>
                             {row.availability_status === 'VACANT_NOW' ? (

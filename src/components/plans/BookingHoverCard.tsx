@@ -4,7 +4,7 @@
  */
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Briefcase, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, User, Briefcase, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { format, differenceInDays, isAfter } from "date-fns";
 import type { AssetAvailabilitySummary } from "@/lib/availability";
 
@@ -20,6 +20,57 @@ export function BookingHoverCard({ summary, children }: BookingHoverCardProps) {
   const bookingStart = summary.booking_start ? new Date(summary.booking_start + 'T00:00:00') : null;
   const bookingEnd = summary.booking_end ? new Date(summary.booking_end + 'T00:00:00') : null;
   const nextAvail = summary.next_available_date ? new Date(summary.next_available_date + 'T00:00:00') : null;
+
+  // ── AVAILABLE state — render a positive popup instead of "Unavailable"
+  if (summary.availability_status === 'AVAILABLE' || summary.is_available_for_range) {
+    const upcoming = (summary.all_bookings || []).find(b => {
+      const start = b.booking_start_date ? new Date(b.booking_start_date + 'T00:00:00') : null;
+      return start && isAfter(start, today);
+    });
+    const upcomingStart = upcoming?.booking_start_date ? new Date(upcoming.booking_start_date + 'T00:00:00') : null;
+    const upcomingEnd = upcoming?.booking_end_date ? new Date(upcoming.booking_end_date + 'T00:00:00') : null;
+
+    return (
+      <HoverCard openDelay={200} closeDelay={100}>
+        <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+        <HoverCardContent side="left" align="start" className="w-80 p-0">
+          <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900">
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+              Asset Available
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-2.5">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Ready for planning</p>
+                <p className="text-xs text-muted-foreground">No active booking for the selected window</p>
+              </div>
+            </div>
+            {upcoming && upcomingStart && upcomingEnd && (
+              <div className="flex items-start gap-2 pt-2 border-t">
+                <Calendar className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground uppercase">Upcoming Booking</p>
+                  <p className="text-sm truncate">
+                    {upcoming.current_campaign_name || upcoming.current_plan_name || upcoming.display_label || 'Scheduled booking'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(upcomingStart, "dd MMM yyyy")} → {format(upcomingEnd, "dd MMM yyyy")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-2 border-t bg-muted/30">
+            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              Available Now
+            </p>
+          </div>
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }
 
   const totalDuration = bookingStart && bookingEnd
     ? differenceInDays(bookingEnd, bookingStart) + 1

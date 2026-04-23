@@ -382,7 +382,7 @@ export default function MediaAvailabilityReport() {
           .gte('end_date', trimmedStart),
         supabase
           .from('media_assets')
-          .select('id, operational_status, deactivation_reason')
+          .select('id, media_asset_code, area, location, direction, dimension, total_sqft, illumination_type, card_rate, city, media_type, primary_photo_url, qr_code_url, latitude, longitude, operational_status, deactivation_reason')
           .eq('company_id', company.id),
         supabase
           .from('campaign_assets')

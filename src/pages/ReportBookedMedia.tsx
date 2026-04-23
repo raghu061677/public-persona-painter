@@ -864,6 +864,9 @@ export default function ReportBookedMedia() {
                       {col.label}
                     </SortableTableHead>
                   ))}
+                  <TableHead className="w-32 text-right whitespace-nowrap sticky right-0 bg-background border-l">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -875,6 +878,67 @@ export default function ReportBookedMedia() {
                         {getCellValue(row, col.key)}
                       </TableCell>
                     ))}
+                    <TableCell className="w-32 text-right whitespace-nowrap sticky right-0 bg-background border-l">
+                      <TooltipProvider delayDuration={150}>
+                        <div className="inline-flex items-center gap-1 justify-end">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => row.asset_id && navigate(ROUTES.MEDIA_ASSETS_DETAIL(row.asset_id))}
+                                disabled={!row.asset_id}
+                                aria-label="Open Asset"
+                              >
+                                <MapPin className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Open Asset {row.asset_code ? `(${row.asset_code})` : ""}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => row.campaign_id && navigate(ROUTES.CAMPAIGNS_DETAIL(row.campaign_id))}
+                                disabled={!row.campaign_id}
+                                aria-label="Open Campaign"
+                              >
+                                <Briefcase className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Open Campaign {row.campaign_name ? `– ${row.campaign_name}` : ""}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() =>
+                                  navigate(
+                                    `${ROUTES.INVOICES}?search=${encodeURIComponent(row.campaign_name || row.campaign_id || "")}`
+                                  )
+                                }
+                                disabled={!row.campaign_id && !row.campaign_name}
+                                aria-label="Open Invoices"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Invoices for this campaign
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -503,14 +503,20 @@ export default function MediaAvailabilityReport() {
     const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;
     const atRisk = maintenance + removed + inactive;
     const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
+    const sellableSqft = allRows
+      .filter(r => r.availability_status === 'VACANT_NOW')
+      .reduce((s, r) => s + (Number(r.sqft) || 0), 0);
     const potentialRevenue = allRows
       .filter(r => r.availability_status === 'VACANT_NOW')
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
+    const vacantRatio = allRows.length > 0
+      ? Math.round((vacantNow / allRows.length) * 100)
+      : 0;
     return {
       total: allRows.length,
       vacantNow, availableSoon, held, booked,
       maintenance, removed, inactive, atRisk,
-      totalSqft, potentialRevenue,
+      totalSqft, sellableSqft, potentialRevenue, vacantRatio,
     };
   }, [allRows]);
 
@@ -552,9 +558,23 @@ export default function MediaAvailabilityReport() {
       }).length;
     };
 
+    // Soonest availability — next 5 assets becoming free
+    const soonest = allRows
+      .filter(r => r.availability_status === 'AVAILABLE_SOON' && r.available_from)
+      .map(r => ({
+        asset_id: r.asset_id,
+        code: r.media_asset_code || r.asset_id,
+        location: r.location || r.area || '—',
+        city: r.city || '—',
+        available_from: r.available_from,
+      }))
+      .sort((a, b) => a.available_from.localeCompare(b.available_from))
+      .slice(0, 5);
+
     return {
       topCities,
       topTypes,
+      soonest,
       freeIn7: within(7),
       freeIn15: within(15),
       freeIn30: within(30),

@@ -53,7 +53,7 @@ export function BookingHoverCard({ summary, children }: BookingHoverCardProps) {
                 <div className="min-w-0">
                   <p className="text-[10px] text-muted-foreground uppercase">Upcoming Booking</p>
                   <p className="text-sm truncate">
-                    {upcoming.blocking_entity_name || 'Scheduled booking'}
+                    {upcoming.current_campaign_name || upcoming.current_plan_name || upcoming.display_label || 'Scheduled booking'}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {format(upcomingStart, "dd MMM yyyy")} → {format(upcomingEnd, "dd MMM yyyy")}

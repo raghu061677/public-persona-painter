@@ -305,6 +305,13 @@ export default function MediaAvailabilityReport() {
         (r.hold_type ? `Hold: ${r.hold_type}` : '') ||
         r.block_reason || '',
       client_name: (r: any) => r.current_client_name || r.hold_client_name || '',
+      // Operational/inventory fields — included in Excel/PDF/Custom exports when field is present
+      operational_status: (r: any) => operationalStatusLabel(r.operational_status),
+      deactivation_reason: (r: any) => r.deactivation_reason || '-',
+      block_reason: (r: any) => r.block_reason || r.deactivation_reason || '-',
+      hold_end_date: (r: any) => formatDateIN(r.hold_end_date),
+      // Single-cell business explanation for Availability Timeline column
+      availability_timeline: (r: any) => timelineAsText(r),
     },
   });
   // Column visibility

@@ -214,6 +214,8 @@ export default function ReportBookedMedia() {
           illumination_type,
           latitude, longitude,
           campaign_id, is_removed,
+          billing_mode, billing_mode_override,
+          negotiated_rate, printing_charges, mounting_charges, total_price,
           campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
         `)
         .eq("campaigns.company_id", company.id)
@@ -224,14 +226,14 @@ export default function ReportBookedMedia() {
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
-      let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number }>();
+      let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number; operational_status: string }>();
 
       if (assetIds.length > 0) {
         for (let i = 0; i < assetIds.length; i += 100) {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code, status, direction, dimensions, illumination_type, total_sqft")
+            .select("id, media_asset_code, status, direction, dimensions, illumination_type, total_sqft, operational_status")
             .in("id", chunk);
           maData?.forEach((ma: any) => {
             assetCodeMap.set(ma.id, ma.media_asset_code || `ASSET-${ma.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
@@ -241,16 +243,91 @@ export default function ReportBookedMedia() {
               dimensions: ma.dimensions || "-",
               illumination_type: ma.illumination_type || "-",
               total_sqft: ma.total_sqft || 0,
+              operational_status: ma.operational_status || "active",
             });
           });
         }
       }
+
+      // Batch-fetch invoice statuses by campaign_id (latest per campaign)
+      const campaignIds = [...new Set((caData || []).map((r: any) => r.campaigns?.id).filter(Boolean))];
+      const invoiceStatusMap = new Map<string, string>();
+      if (campaignIds.length > 0) {
+        for (let i = 0; i < campaignIds.length; i += 100) {
+          const chunk = campaignIds.slice(i, i + 100);
+          const { data: invData } = await supabase
+            .from("invoices")
+            .select("campaign_id, status, balance_due")
+            .in("campaign_id", chunk);
+          invData?.forEach((inv: any) => {
+            if (!inv.campaign_id) return;
+            const prev = invoiceStatusMap.get(inv.campaign_id);
+            // Priority: Overdue > Partially Paid > Sent > Paid > Draft > Cancelled
+            const rank = (s: string) => {
+              if (s === 'Overdue') return 6;
+              if (s === 'Partially Paid') return 5;
+              if (s === 'Sent' || s === 'Issued') return 4;
+              if (s === 'Paid') return 3;
+              if (s === 'Draft') return 2;
+              return 1;
+            };
+            if (!prev || rank(inv.status) > rank(prev)) {
+              invoiceStatusMap.set(inv.campaign_id, inv.status);
+            }
+          });
+        }
+      }
+
+      // Build per-asset booking timeline to derive booked_till + available_from
+      // Group all bookings by asset to find chained next-booking dates
+      const bookingsByAsset = new Map<string, Array<{ start: string; end: string }>>();
+      (caData || []).forEach((r: any) => {
+        const s = r.effective_start_date || r.booking_start_date || r.start_date || r.campaigns?.start_date;
+        const e = r.effective_end_date || r.booking_end_date || r.end_date || r.campaigns?.end_date;
+        if (!s || !e) return;
+        if (!bookingsByAsset.has(r.asset_id)) bookingsByAsset.set(r.asset_id, []);
+        bookingsByAsset.get(r.asset_id)!.push({ start: s, end: e });
+      });
+      // Sort each asset's bookings ascending
+      bookingsByAsset.forEach((arr) => arr.sort((a, b) => a.start.localeCompare(b.start)));
 
       const rows: BookedMediaRow[] = (caData || []).map((r: any) => {
         const campaign = r.campaigns;
         const startDate = r.effective_start_date || r.booking_start_date || r.start_date || campaign.start_date;
         const endDate = r.effective_end_date || r.booking_end_date || r.end_date || campaign.end_date;
         const maExtra = assetExtraMap.get(r.asset_id);
+
+        // booked_till = current row end date
+        const bookedTill = endDate;
+        // available_from = day after booked_till, unless next chained booking continues
+        let availableFrom = "";
+        try {
+          const list = bookingsByAsset.get(r.asset_id) || [];
+          // Find the latest end among bookings overlapping or starting before our end
+          let chainedEnd = endDate;
+          let extended = true;
+          while (extended) {
+            extended = false;
+            for (const b of list) {
+              if (b.start <= chainedEnd && b.end > chainedEnd) {
+                chainedEnd = b.end;
+                extended = true;
+              }
+            }
+          }
+          if (chainedEnd) {
+            const d = new Date(chainedEnd + "T00:00:00");
+            d.setDate(d.getDate() + 1);
+            availableFrom = d.toISOString().split("T")[0];
+          }
+        } catch {
+          availableFrom = "";
+        }
+
+        const negotiated = Number(r.negotiated_rate || 0);
+        const printing = Number(r.printing_charges || 0);
+        const mounting = Number(r.mounting_charges || 0);
+        const totalValue = Number(r.total_price || 0) || (negotiated + printing + mounting);
 
         return {
           asset_id: r.asset_id,
@@ -267,13 +344,23 @@ export default function ReportBookedMedia() {
           latitude: r.latitude || null,
           longitude: r.longitude || null,
           asset_status: maExtra?.status || "-",
+          operational_status: maExtra?.operational_status || "active",
           campaign_name: campaign.campaign_name || "-",
+          campaign_id: campaign.id,
           client_name: campaign.client_name || "-",
           start_date: startDate,
           end_date: endDate,
           duration_days: diffDays(startDate, endDate),
           campaign_status: campaign.status || "-",
           installation_status: r.status || "-",
+          booked_till: bookedTill,
+          available_from: availableFrom,
+          billing_type: r.billing_mode_override || r.billing_mode || "-",
+          negotiated_rate: negotiated,
+          printing_charges: printing,
+          mounting_charges: mounting,
+          total_booking_value: totalValue,
+          invoice_status: invoiceStatusMap.get(campaign.id) || "Not Invoiced",
         };
       });
 

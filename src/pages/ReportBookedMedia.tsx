@@ -488,6 +488,8 @@ export default function ReportBookedMedia() {
     const avgDuration = filteredData.length > 0
       ? Math.round(filteredData.reduce((s, r) => s + r.duration_days, 0) / filteredData.length)
       : 0;
+    const totalValue = filteredData.reduce((s, r) => s + (r.total_booking_value || 0), 0);
+    const atRisk = filteredData.filter((r) => r.operational_status && r.operational_status !== "active").length;
 
     return [
       { label: "Total Bookings", value: filteredData.length, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
@@ -496,7 +498,36 @@ export default function ReportBookedMedia() {
       { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" />, color: 'danger' as const },
       { label: "Cities", value: uniqueCities, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
       { label: "Avg Duration", value: `${avgDuration} days`, icon: <Clock className="h-5 w-5" />, color: 'default' as const },
+      { label: "Booking Value", value: `₹${Math.round(totalValue).toLocaleString('en-IN')}`, icon: <IndianRupee className="h-5 w-5" />, color: 'success' as const },
+      { label: "At Risk Assets", value: atRisk, icon: <AlertTriangle className="h-5 w-5" />, color: atRisk > 0 ? 'danger' as const : 'default' as const },
     ];
+  }, [filteredData]);
+
+  // Grouped summaries — Top Cities & Top Clients
+  const topCities = useMemo(() => {
+    const map = new Map<string, { count: number; value: number }>();
+    filteredData.forEach((r) => {
+      const cur = map.get(r.city) || { count: 0, value: 0 };
+      cur.count += 1;
+      cur.value += r.total_booking_value || 0;
+      map.set(r.city, cur);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5);
+  }, [filteredData]);
+
+  const topClients = useMemo(() => {
+    const map = new Map<string, { count: number; value: number }>();
+    filteredData.forEach((r) => {
+      const cur = map.get(r.client_name) || { count: 0, value: 0 };
+      cur.count += 1;
+      cur.value += r.total_booking_value || 0;
+      map.set(r.client_name, cur);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1].value - a[1].value)
+      .slice(0, 5);
   }, [filteredData]);
 
   // Status badge
@@ -516,6 +547,50 @@ export default function ReportBookedMedia() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const getOperationalBadge = (status: string) => {
+    const s = (status || "active").toLowerCase();
+    switch (s) {
+      case "active":
+        return <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50">Active</Badge>;
+      case "removed":
+        return <Badge variant="destructive">Removed</Badge>;
+      case "maintenance":
+        return <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">Maintenance</Badge>;
+      case "inactive":
+        return <Badge variant="outline" className="border-slate-400 text-slate-600">Inactive</Badge>;
+      case "blocked":
+        return <Badge variant="destructive">Blocked</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getInvoiceBadge = (status: string) => {
+    switch (status) {
+      case "Paid":
+        return <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50">Paid</Badge>;
+      case "Partially Paid":
+        return <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">Partial</Badge>;
+      case "Sent":
+      case "Issued":
+        return <Badge variant="outline" className="border-indigo-500 text-indigo-700 bg-indigo-50">{status}</Badge>;
+      case "Overdue":
+        return <Badge variant="destructive">Overdue</Badge>;
+      case "Draft":
+        return <Badge variant="secondary">Draft</Badge>;
+      case "Cancelled":
+        return <Badge variant="outline" className="border-red-400 text-red-600">Cancelled</Badge>;
+      case "Not Invoiced":
+      default:
+        return <Badge variant="outline" className="text-muted-foreground">Not Invoiced</Badge>;
+    }
+  };
+
+  const formatCurrency = (n: number) => {
+    if (!n || n === 0) return "-";
+    return `₹${Math.round(n).toLocaleString("en-IN")}`;
   };
 
   // Excel export

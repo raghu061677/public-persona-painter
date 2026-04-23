@@ -606,9 +606,11 @@ export function AssetSelectionTable({
                       return (
                         <TableCell key={key}>
                           {availability.available ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
-                              Available Now
-                            </Badge>
+                            <BookingHoverCard summary={getStatus(asset.id)}>
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800 cursor-help">
+                                Available Now
+                              </Badge>
+                            </BookingHoverCard>
                           ) : availability.availableFrom ? (
                             <BookingHoverCard summary={getStatus(asset.id)}>
                                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 cursor-help">

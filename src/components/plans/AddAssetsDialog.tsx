@@ -316,9 +316,11 @@ export function AddAssetsDialog({
                             </Badge>
                           </BookingHoverCard>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">
-                              Available
-                            </Badge>
+                            <BookingHoverCard summary={result}>
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px] cursor-help">
+                                Available
+                              </Badge>
+                            </BookingHoverCard>
                           )}
                         </TableCell>
                       </TableRow>

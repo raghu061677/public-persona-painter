@@ -859,14 +859,22 @@ export function AddCampaignAssetsDialog({
                           {index + 1}
                         </TableCell>
                         <TableCell className="font-medium font-mono text-sm">
-                          {formatAssetDisplayCode({
-                            mediaAssetCode: asset.media_asset_code,
-                            fallbackId: asset.id,
-                            companyName: companyPrefix
-                          })}
+                          <AssetAvailabilityHoverCard data={fromCampaignConflict(info)}>
+                            <span className="cursor-help underline-offset-2 hover:underline">
+                              {formatAssetDisplayCode({
+                                mediaAssetCode: asset.media_asset_code,
+                                fallbackId: asset.id,
+                                companyName: companyPrefix
+                              })}
+                            </span>
+                          </AssetAvailabilityHoverCard>
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={asset.location}>
-                          {asset.location}
+                        <TableCell className="max-w-[200px]">
+                          <AssetAvailabilityHoverCard data={fromCampaignConflict(info)}>
+                            <span className="cursor-help block truncate" title={asset.location}>
+                              {asset.location}
+                            </span>
+                          </AssetAvailabilityHoverCard>
                         </TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>{asset.area}</TableCell>

@@ -405,9 +405,14 @@ export default function MediaAvailabilityReport() {
 
       if (availResult.error) throw availResult.error;
 
+      if (holdsResult.error) console.warn('[VacantMedia] holds query error:', holdsResult.error);
+      if (opsResult.error) console.warn('[VacantMedia] ops query error:', opsResult.error);
+      if (bookedResult.error) console.warn('[VacantMedia] booked query error:', bookedResult.error);
+
       const rows = (availResult.data as AvailabilityRow[]) || [];
       const holds = (holdsResult.data as ActiveHold[]) || [];
       const bookedCampaignAssets = (bookedResult.data as any[]) || [];
+      console.log('[VacantMedia] booked campaign_assets fetched:', bookedCampaignAssets.length);
 
       // Build map: asset_id -> latest active booking covering range
       const bookedMap = new Map<string, any>();
@@ -606,10 +611,20 @@ export default function MediaAvailabilityReport() {
   // ─── Filtering ─────────────────────────────────────────────
   const filteredRows = useMemo(() => {
     let rows = allRows;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
 
     // Status filter
     if (statusFilter !== 'all') {
-      rows = rows.filter(r => r.availability_status === statusFilter);
+      if (statusFilter === 'BOOKED_THROUGH_RANGE') {
+        // "Booked / Occupied" virtual filter — currently occupied right now
+        rows = rows.filter(r => {
+          if (r.availability_status === 'BOOKED_THROUGH_RANGE') return true;
+          if (r.availability_status === 'AVAILABLE_SOON' && r.booked_till && r.booked_till >= todayStr) return true;
+          return false;
+        });
+      } else {
+        rows = rows.filter(r => r.availability_status === statusFilter);
+      }
     }
 
     // Search term
@@ -662,10 +677,18 @@ export default function MediaAvailabilityReport() {
 
   // ─── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
     const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
     const held = allRows.filter(r => r.availability_status === 'HELD').length;
-    const booked = allRows.filter(r => r.availability_status === 'BOOKED_THROUGH_RANGE').length;
+    // "Booked / Occupied" = assets currently occupied by a campaign right now.
+    // This includes both BOOKED_THROUGH_RANGE (booked the whole window) AND
+    // AVAILABLE_SOON rows whose booking is still active today (booked_till >= today).
+    const booked = allRows.filter(r => {
+      if (r.availability_status === 'BOOKED_THROUGH_RANGE') return true;
+      if (r.availability_status === 'AVAILABLE_SOON' && r.booked_till && r.booked_till >= todayStr) return true;
+      return false;
+    }).length;
     const maintenance = allRows.filter(r => r.availability_status === 'MAINTENANCE').length;
     const removed = allRows.filter(r => r.availability_status === 'REMOVED').length;
     const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;

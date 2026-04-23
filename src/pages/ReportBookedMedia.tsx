@@ -610,17 +610,25 @@ export default function ReportBookedMedia() {
           key: c.key,
           label: c.label,
           width: c.key === "location" || c.key === "address" ? 30 : 18,
-          type: (c.key === "total_sqft" || c.key === "duration_days" ? "number" : c.key === "start_date" || c.key === "end_date" ? "date" : "text") as any,
-          value: c.key === "start_date"
-            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
-            : c.key === "end_date"
-            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+          type: (
+            ["total_sqft", "duration_days", "negotiated_rate", "printing_charges", "mounting_charges", "total_booking_value"].includes(c.key)
+              ? "number"
+              : ["start_date", "end_date", "booked_till", "available_from"].includes(c.key)
+              ? "date"
+              : "text"
+          ) as any,
+          value:
+            c.key === "start_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
+            : c.key === "end_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+            : c.key === "booked_till" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.booked_till)
+            : c.key === "available_from" ? (row: BookedMediaRow) => row.available_from ? formatDateDDMMYYYY(row.available_from) : "-"
             : undefined,
         })),
         rows: filteredData,
         rowStyleRules: [
           { when: (r: BookedMediaRow) => r.campaign_status === "Completed", fill: { argb: "FFD1FAE5" } },
           { when: (r: BookedMediaRow) => r.campaign_status === "Cancelled", fill: { argb: "FFFEE2E2" } },
+          { when: (r: BookedMediaRow) => r.operational_status && r.operational_status !== "active", fill: { argb: "FFFEF3C7" } },
         ],
         fileName: `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
       });
@@ -631,12 +639,63 @@ export default function ReportBookedMedia() {
     }
   };
 
+  // PDF export
+  const handleExportPDF = async () => {
+    const cols = COLUMNS.filter((c) => visibleColumns.includes(c.key));
+    try {
+      await exportListPdf({
+        branding: {
+          companyName: company?.name || "GO-ADS 360°",
+          title: "Booked Media Report",
+          subtitle: dateRange?.from && dateRange?.to
+            ? `Period: ${formatDateDDMMYYYY(dateRange.from.toISOString())} – ${formatDateDDMMYYYY(dateRange.to.toISOString())} | ${filteredData.length} bookings`
+            : `${filteredData.length} bookings | Generated ${formatDateDDMMYYYY(new Date().toISOString())}`,
+          themeColor: company?.theme_color || undefined,
+          logoUrl: company?.logo_url || undefined,
+        },
+        fields: cols.map((c) => ({
+          key: c.key,
+          label: c.label,
+          value:
+            c.key === "start_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
+            : c.key === "end_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+            : c.key === "booked_till" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.booked_till)
+            : c.key === "available_from" ? (row: BookedMediaRow) => row.available_from ? formatDateDDMMYYYY(row.available_from) : "-"
+            : ["negotiated_rate", "printing_charges", "mounting_charges", "total_booking_value"].includes(c.key)
+              ? (row: BookedMediaRow) => formatCurrency((row as any)[c.key])
+            : undefined,
+        })),
+        rows: filteredData,
+        orientation: "l",
+        rowStyleRules: [
+          { when: (r: BookedMediaRow) => r.operational_status && r.operational_status !== "active", fillColor: [254, 243, 199] },
+          { when: (r: BookedMediaRow) => r.campaign_status === "Cancelled", fillColor: [254, 226, 226] },
+        ],
+        fileName: `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.pdf`,
+      });
+      toast({ title: "PDF Exported", description: `Exported ${filteredData.length} rows.` });
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast({ title: "PDF Export Failed", variant: "destructive" });
+    }
+  };
+
   const getCellValue = (row: BookedMediaRow, key: string) => {
     switch (key) {
       case "start_date": return formatDateDDMMYYYY(row.start_date);
       case "end_date": return formatDateDDMMYYYY(row.end_date);
+      case "booked_till": return formatDateDDMMYYYY(row.booked_till);
+      case "available_from": return row.available_from ? formatDateDDMMYYYY(row.available_from) : <span className="text-muted-foreground">-</span>;
       case "campaign_status": return getStatusBadge(row.campaign_status);
       case "installation_status": return <Badge variant="outline">{row.installation_status}</Badge>;
+      case "operational_status": return getOperationalBadge(row.operational_status);
+      case "invoice_status": return getInvoiceBadge(row.invoice_status);
+      case "billing_type": return row.billing_type && row.billing_type !== "-" ? <Badge variant="secondary" className="capitalize">{row.billing_type}</Badge> : "-";
+      case "negotiated_rate":
+      case "printing_charges":
+      case "mounting_charges":
+      case "total_booking_value":
+        return <span className="tabular-nums">{formatCurrency((row as any)[key])}</span>;
       default: return row[key as keyof BookedMediaRow] || "-";
     }
   };

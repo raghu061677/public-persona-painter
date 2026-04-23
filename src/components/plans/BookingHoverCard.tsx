@@ -24,11 +24,11 @@ export function BookingHoverCard({ summary, children }: BookingHoverCardProps) {
   // ── AVAILABLE state — render a positive popup instead of "Unavailable"
   if (summary.availability_status === 'AVAILABLE' || summary.is_available_for_range) {
     const upcoming = (summary.all_bookings || []).find(b => {
-      const start = b.start_date ? new Date(b.start_date + 'T00:00:00') : null;
+      const start = b.booking_start_date ? new Date(b.booking_start_date + 'T00:00:00') : null;
       return start && isAfter(start, today);
     });
-    const upcomingStart = upcoming?.start_date ? new Date(upcoming.start_date + 'T00:00:00') : null;
-    const upcomingEnd = upcoming?.end_date ? new Date(upcoming.end_date + 'T00:00:00') : null;
+    const upcomingStart = upcoming?.booking_start_date ? new Date(upcoming.booking_start_date + 'T00:00:00') : null;
+    const upcomingEnd = upcoming?.booking_end_date ? new Date(upcoming.booking_end_date + 'T00:00:00') : null;
 
     return (
       <HoverCard openDelay={200} closeDelay={100}>
@@ -53,7 +53,7 @@ export function BookingHoverCard({ summary, children }: BookingHoverCardProps) {
                 <div className="min-w-0">
                   <p className="text-[10px] text-muted-foreground uppercase">Upcoming Booking</p>
                   <p className="text-sm truncate">
-                    {(upcoming as any).blocking_entity_name || (upcoming as any).entity_name || 'Scheduled booking'}
+                    {upcoming.blocking_entity_name || 'Scheduled booking'}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {format(upcomingStart, "dd MMM yyyy")} → {format(upcomingEnd, "dd MMM yyyy")}

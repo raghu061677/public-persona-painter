@@ -226,10 +226,16 @@ export default function MediaAvailabilityReport() {
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
         r.availability_status === "AVAILABLE_SOON" ? `Available From (${formatDateIN(r.available_from)})` :
-        r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
+        r.availability_status === "HELD" ? "Held/Blocked" :
+        r.availability_status === "MAINTENANCE" ? "Under Maintenance" :
+        r.availability_status === "REMOVED" ? "Removed" :
+        r.availability_status === "INACTIVE" ? "Inactive" : "Booked",
       available_from: (r: any) => formatDateIN(r.available_from),
       booked_till: (r: any) => formatDateIN(r.booked_till),
-      campaign_name: (r: any) => r.current_campaign_name || (r.hold_type ? `Hold: ${r.hold_type}` : ''),
+      campaign_name: (r: any) =>
+        r.current_campaign_name ||
+        (r.hold_type ? `Hold: ${r.hold_type}` : '') ||
+        r.block_reason || '',
       client_name: (r: any) => r.current_client_name || r.hold_client_name || '',
     },
   });

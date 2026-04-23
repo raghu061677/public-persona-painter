@@ -729,7 +729,7 @@ export default function ReportBookedMedia() {
           </Button>
           <ReportExportMenu
             onExportExcel={handleExportExcel}
-            onExportPDF={async () => {}}
+            onExportPDF={handleExportPDF}
             metadata={{
               reportName: "Booked Media Report",
               generatedAt: new Date(),
@@ -766,6 +766,60 @@ export default function ReportBookedMedia() {
       />
 
       <ReportKPICards kpis={kpis} columns={6} />
+
+      {filteredData.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" /> Top Cities by Booked Assets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topCities.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-2">
+                  {topCities.map(([city, info]) => (
+                    <div key={city} className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate">{city}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-muted-foreground tabular-nums">{info.count} bookings</span>
+                        <span className="font-semibold tabular-nums">{formatCurrency(info.value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Top Clients by Booking Value
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topClients.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-2">
+                  {topClients.map(([client, info]) => (
+                    <div key={client} className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate">{client}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-muted-foreground tabular-nums">{info.count} bookings</span>
+                        <span className="font-semibold tabular-nums">{formatCurrency(info.value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">

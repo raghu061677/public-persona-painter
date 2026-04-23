@@ -146,13 +146,13 @@ interface ActiveHold {
 // ─── Column definitions ──────────────────────────────────────
 const ALL_COLUMNS = [
   'area', 'location', 'direction', 'dimensions', 'sqft',
-  'illumination', 'status', 'available_from', 'card_rate',
+  'illumination', 'status', 'availability_timeline', 'available_from', 'card_rate',
   'asset_id', 'type', 'city', 'booked_till', 'campaign',
 ] as const;
 
 const DEFAULT_VISIBLE = [
   'area', 'location', 'direction', 'dimensions', 'sqft',
-  'illumination', 'status', 'available_from',
+  'illumination', 'status', 'availability_timeline', 'available_from',
 ];
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -170,6 +170,7 @@ const COLUMN_LABELS: Record<string, string> = {
   available_from: 'Available From',
   booked_till: 'Booked Till',
   campaign: 'Campaign',
+  availability_timeline: 'Availability Timeline',
 };
 
 type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | 'direction' | 'dimensions' | 'sqft' | 'illumination' | 'status' | 'card_rate' | 'type' | 'city' | 'booked_till' | 'campaign' | null;

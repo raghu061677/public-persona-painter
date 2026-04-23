@@ -1441,7 +1441,7 @@ export default function PlanDetail() {
   return (
     <ModuleGuard module="plans">
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/plans')}

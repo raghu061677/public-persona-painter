@@ -87,7 +87,7 @@ export default function OperationsDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 sm:px-6 py-6 max-w-7xl">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Operations Dashboard</h1>
           <p className="text-muted-foreground">

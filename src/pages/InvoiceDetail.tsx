@@ -300,7 +300,7 @@ export default function InvoiceDetail() {
   return (
     <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 space-y-6">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8 space-y-6">
         {/* Draft Invoice Number Preview */}
         {isDraft && previewNumber && (
           <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">

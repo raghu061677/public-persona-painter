@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { WorkspaceContainer } from "@/components/layout/WorkspaceContainer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEmailTrigger, buildPlanPayload, buildAssetTableHtml } from "@/hooks/useEmailTrigger";
@@ -881,7 +882,7 @@ export default function PlanNew() {
   return (
     <ModuleGuard module="plans">
     <div className="min-h-screen bg-background">
-      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
+      <WorkspaceContainer>
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/plans')}
@@ -1227,7 +1228,7 @@ export default function PlanNew() {
           onOpenChange={setShowTemplateDialog}
           onSelectTemplate={handleSelectTemplate}
         />
-      </div>
+      </WorkspaceContainer>
     </div>
     </ModuleGuard>
   );

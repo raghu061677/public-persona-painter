@@ -440,7 +440,7 @@ export default function ExpensesList() {
   return (
     <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Expenses</h1>

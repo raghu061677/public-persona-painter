@@ -291,7 +291,7 @@ export default function MediaAssetEdit() {
   return (
     <TooltipProvider>
       <form onSubmit={handleSubmit} className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
           {/* Enhanced Header */}
           <div className="mb-8 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-2xl p-8 border border-primary/20 shadow-lg">
             <div className="flex items-center justify-between">

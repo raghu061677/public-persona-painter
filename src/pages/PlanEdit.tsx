@@ -41,6 +41,7 @@ import {
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2, Search } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
+import { WorkspaceContainer } from "@/components/layout/WorkspaceContainer";
 import { ClientRegistrationSelect } from "@/components/plans/ClientRegistrationSelect";
 import { useClientRegistrations } from "@/hooks/useClientRegistrations";
 import { cn } from "@/lib/utils";
@@ -899,7 +900,7 @@ export default function PlanEdit() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
+      <WorkspaceContainer>
         <Button
           variant="ghost"
           onClick={() => navigate(`/admin/plans/${id}`)}
@@ -1281,7 +1282,7 @@ export default function PlanEdit() {
           </div>
           )}
         </form>
-      </div>
+      </WorkspaceContainer>
     </div>
   );
 }

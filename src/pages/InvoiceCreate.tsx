@@ -270,7 +270,7 @@ export default function InvoiceCreate() {
   return (
     <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 space-y-6">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin/invoices')}>

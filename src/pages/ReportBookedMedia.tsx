@@ -9,8 +9,12 @@ import {
   Briefcase,
   Clock,
   Settings2,
+  IndianRupee,
+  AlertTriangle,
+  CalendarClock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -29,6 +33,7 @@ import { useReportFilters } from "@/hooks/useReportFilters";
 import { usePagination } from "@/hooks/usePagination";
 import { Button } from "@/components/ui/button";
 import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
+import { exportListPdf } from "@/utils/exports/pdf/exportListPdf";
 import { BookedMediaCustomExportDialog } from "@/components/reports/BookedMediaCustomExportDialog";
 
 interface BookedMediaRow {
@@ -46,13 +51,25 @@ interface BookedMediaRow {
   latitude: number | null;
   longitude: number | null;
   asset_status: string;
+  operational_status: string;
   campaign_name: string;
+  campaign_id: string;
   client_name: string;
   start_date: string;
   end_date: string;
   duration_days: number;
   campaign_status: string;
   installation_status: string;
+  // Booking intelligence
+  booked_till: string;
+  available_from: string;
+  billing_type: string;
+  // Commercial
+  negotiated_rate: number;
+  printing_charges: number;
+  mounting_charges: number;
+  total_booking_value: number;
+  invoice_status: string;
 }
 
 const DATE_TYPES = [

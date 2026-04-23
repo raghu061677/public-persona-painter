@@ -6,11 +6,17 @@ export const vacantMediaExcelRules: RowStyleRule[] = [
   { when: (r) => r.availability_status === "VACANT_NOW", fill: { argb: "FFE8F5E9" } },
   { when: (r) => r.availability_status === "AVAILABLE_SOON", fill: { argb: "FFFFF3E0" } },
   { when: (r) => r.availability_status === "HELD", fill: { argb: "FFF3E8FF" } },
+  { when: (r) => r.availability_status === "MAINTENANCE", fill: { argb: "FFFEF3C7" } },
+  { when: (r) => r.availability_status === "REMOVED", fill: { argb: "FFFFE4E6" } },
+  { when: (r) => r.availability_status === "INACTIVE", fill: { argb: "FFE5E7EB" } },
 ];
 export const vacantMediaPdfRules: PdfRowStyleRule[] = [
   { when: (r) => r.availability_status === "VACANT_NOW", fillColor: [232, 245, 233] },
   { when: (r) => r.availability_status === "AVAILABLE_SOON", fillColor: [255, 243, 224] },
   { when: (r) => r.availability_status === "HELD", fillColor: [243, 232, 255] },
+  { when: (r) => r.availability_status === "MAINTENANCE", fillColor: [254, 243, 199] },
+  { when: (r) => r.availability_status === "REMOVED", fillColor: [255, 228, 230] },
+  { when: (r) => r.availability_status === "INACTIVE", fillColor: [229, 231, 235] },
 ];
 
 // ============= Invoices =============

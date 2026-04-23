@@ -626,6 +626,15 @@ export function AssetSelectionTable({
                         </TableCell>
                       );
                     }
+                    if (key === 'location') {
+                      return (
+                        <TableCell key={key}>
+                          <BookingHoverCard summary={getStatus(asset.id)}>
+                            <span className="cursor-help">{asset.location || '-'}</span>
+                          </BookingHoverCard>
+                        </TableCell>
+                      );
+                    }
                     return <TableCell key={key}>{asset[key] || '-'}</TableCell>;
                   })}
                   <TableCell className="text-right">

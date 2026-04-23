@@ -511,10 +511,65 @@ export default function MediaAvailabilityReport() {
         return workingRow;
       });
 
-      setAllRows(mergedRows);
+      // ─── Synthesize BOOKED_THROUGH_RANGE rows for assets not returned by RPC ───
+      // The vacancy RPC excludes booked assets, so we add them here so the
+      // "Booked / Occupied" KPI and status filter reflect reality.
+      const existingIds = new Set(mergedRows.map(r => r.asset_id));
+      const cityFilter = selectedCity === 'all' ? null : selectedCity;
+      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType;
+
+      const syntheticBookedRows: AvailabilityRow[] = [];
+      bookedMap.forEach((ba, assetId) => {
+        if (existingIds.has(assetId)) return; // already in vacancy set (shouldn't happen, but safe)
+        const asset = opsMap.get(assetId);
+        if (!asset) return;
+        // Respect city / media_type filters (RPC applies them; we mirror here)
+        if (cityFilter && asset.city !== cityFilter) return;
+        if (typeFilter && asset.media_type !== typeFilter) return;
+
+        const opStatus = (asset.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
+        const bookingEnd = ba.booking_end_date || ba.effective_end_date || ba.end_date || null;
+        const bookingStart = ba.booking_start_date || ba.effective_start_date || ba.start_date || null;
+        const availableFrom = bookingEnd
+          ? format(addDays(new Date(bookingEnd), 1), 'yyyy-MM-dd')
+          : '';
+        const campaign = ba.campaigns || {};
+        const client = campaign?.clients || {};
+
+        syntheticBookedRows.push({
+          asset_id: assetId,
+          media_asset_code: asset.media_asset_code || null,
+          area: asset.area || '',
+          location: asset.location || '',
+          direction: asset.direction || null,
+          dimension: asset.dimension || null,
+          sqft: Number(asset.total_sqft) || 0,
+          illumination: asset.illumination_type || null,
+          card_rate: Number(asset.card_rate) || 0,
+          city: asset.city || '',
+          media_type: asset.media_type || '',
+          primary_photo_url: asset.primary_photo_url || null,
+          qr_code_url: asset.qr_code_url || null,
+          latitude: asset.latitude ?? null,
+          longitude: asset.longitude ?? null,
+          availability_status: 'BOOKED_THROUGH_RANGE',
+          available_from: availableFrom,
+          booked_till: bookingEnd,
+          current_campaign_id: campaign?.id || null,
+          current_campaign_name: campaign?.name || null,
+          current_client_name: client?.name || null,
+          booking_start: bookingStart,
+          booking_end: bookingEnd,
+          operational_status: opStatus,
+          deactivation_reason: asset.deactivation_reason || null,
+        });
+      });
+
+      const finalRows = [...mergedRows, ...syntheticBookedRows];
+      setAllRows(finalRows);
       toast({
         title: "Report Updated",
-        description: `Found ${mergedRows.length} assets in range (${holds.length} with holds)`,
+        description: `Found ${finalRows.length} assets in range (${syntheticBookedRows.length} booked, ${holds.length} with holds)`,
       });
     } catch (error: any) {
       console.error('Error loading availability:', error);

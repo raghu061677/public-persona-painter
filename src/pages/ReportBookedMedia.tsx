@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
 import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { DateRange } from "react-day-picker";
@@ -12,6 +13,8 @@ import {
   IndianRupee,
   AlertTriangle,
   CalendarClock,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +35,8 @@ import { ReportControls, ReportKPICards, ReportEmptyState, ReportExportMenu } fr
 import { useReportFilters } from "@/hooks/useReportFilters";
 import { usePagination } from "@/hooks/usePagination";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ROUTES } from "@/lib/routes";
 import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
 import { exportListPdf } from "@/utils/exports/pdf/exportListPdf";
 import { BookedMediaCustomExportDialog } from "@/components/reports/BookedMediaCustomExportDialog";

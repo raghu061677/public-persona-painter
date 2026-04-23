@@ -46,6 +46,25 @@ export const ALL_BOOKED_EXPORT_FIELDS: BookedExportField[] = [
   // Geo Coordinates
   { key: "latitude", label: "Latitude", group: "Geo Coordinates", getValue: (r) => r.latitude ?? "", width: 14, numFmt: "0.000000" },
   { key: "longitude", label: "Longitude", group: "Geo Coordinates", getValue: (r) => r.longitude ?? "", width: 14, numFmt: "0.000000" },
+
+  // Booking intelligence
+  { key: "booked_till", label: "Booked Till", group: "Booking", getValue: (r) => {
+    try { return r.booked_till ? format(new Date(r.booked_till), "dd/MM/yyyy") : ""; } catch { return r.booked_till || ""; }
+  }, width: 14 },
+  { key: "available_from", label: "Available From", group: "Booking", getValue: (r) => {
+    try { return r.available_from ? format(new Date(r.available_from), "dd/MM/yyyy") : ""; } catch { return r.available_from || ""; }
+  }, width: 14 },
+  { key: "billing_type", label: "Billing Type", group: "Booking", getValue: (r) => r.billing_type || "", width: 14 },
+
+  // Commercial
+  { key: "negotiated_rate", label: "Negotiated Rate", group: "Commercial", getValue: (r) => r.negotiated_rate || 0, width: 14, numFmt: "#,##0" },
+  { key: "printing_charges", label: "Printing Charges", group: "Commercial", getValue: (r) => r.printing_charges || 0, width: 14, numFmt: "#,##0" },
+  { key: "mounting_charges", label: "Mounting Charges", group: "Commercial", getValue: (r) => r.mounting_charges || 0, width: 14, numFmt: "#,##0" },
+  { key: "total_booking_value", label: "Booking Value", group: "Commercial", getValue: (r) => r.total_booking_value || 0, width: 16, numFmt: "#,##0" },
+  { key: "invoice_status", label: "Invoice Status", group: "Commercial", getValue: (r) => r.invoice_status || "Not Invoiced", width: 16 },
+
+  // Operations
+  { key: "operational_status", label: "Ops Status", group: "Operations", getValue: (r) => r.operational_status || "active", width: 14 },
 ];
 
 /**

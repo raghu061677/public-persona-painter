@@ -667,10 +667,18 @@ export default function MediaAvailabilityReport() {
 
   // ─── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
     const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
     const held = allRows.filter(r => r.availability_status === 'HELD').length;
-    const booked = allRows.filter(r => r.availability_status === 'BOOKED_THROUGH_RANGE').length;
+    // "Booked / Occupied" = assets currently occupied by a campaign right now.
+    // This includes both BOOKED_THROUGH_RANGE (booked the whole window) AND
+    // AVAILABLE_SOON rows whose booking is still active today (booked_till >= today).
+    const booked = allRows.filter(r => {
+      if (r.availability_status === 'BOOKED_THROUGH_RANGE') return true;
+      if (r.availability_status === 'AVAILABLE_SOON' && r.booked_till && r.booked_till >= todayStr) return true;
+      return false;
+    }).length;
     const maintenance = allRows.filter(r => r.availability_status === 'MAINTENANCE').length;
     const removed = allRows.filter(r => r.availability_status === 'REMOVED').length;
     const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;

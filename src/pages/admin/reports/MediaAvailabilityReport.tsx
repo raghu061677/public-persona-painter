@@ -414,15 +414,46 @@ export default function MediaAvailabilityReport() {
       const bookedCampaignAssets = (bookedResult.data as any[]) || [];
       console.log('[VacantMedia] booked campaign_assets fetched:', bookedCampaignAssets.length);
 
-      // Build map: asset_id -> latest active booking covering range
+      // ─── Build map: asset_id -> single authoritative active booking ───
+      // Precedence (mirrors resolveAssetBookingWindow):
+      //   end:   effective_end_date → booking_end_date → end_date
+      //   start: effective_start_date → booking_start_date → start_date
+      // When multiple bookings overlap the requested range for the same asset,
+      // we pick a winner using the following ranked rules:
+      //   1. Booking that is currently active today (start ≤ today ≤ end)
+      //      — this is what the "Booked / Occupied" KPI represents.
+      //   2. Booking with the latest authoritative end date (covers most of range).
+      //   3. Booking with the earliest start date (longest tenure as tiebreaker).
+      const todayStrLocal = format(new Date(), 'yyyy-MM-dd');
+      const resolveEnd = (b: any): string | null =>
+        b?.effective_end_date || b?.booking_end_date || b?.end_date || null;
+      const resolveStart = (b: any): string | null =>
+        b?.effective_start_date || b?.booking_start_date || b?.start_date || null;
+      const isActiveToday = (b: any): boolean => {
+        const s = resolveStart(b);
+        const e = resolveEnd(b);
+        return !!s && !!e && s <= todayStrLocal && e >= todayStrLocal;
+      };
+      const bookingBeats = (candidate: any, current: any): boolean => {
+        if (!current) return true;
+        const cActive = isActiveToday(candidate);
+        const eActive = isActiveToday(current);
+        if (cActive !== eActive) return cActive; // active-today wins
+        const cEnd = resolveEnd(candidate);
+        const eEnd = resolveEnd(current);
+        if (cEnd && eEnd && cEnd !== eEnd) return cEnd > eEnd; // later end wins
+        if (cEnd && !eEnd) return true;
+        const cStart = resolveStart(candidate);
+        const eStart = resolveStart(current);
+        if (cStart && eStart && cStart !== eStart) return cStart < eStart; // earlier start wins
+        return false;
+      };
+
       const bookedMap = new Map<string, any>();
       for (const ba of bookedCampaignAssets) {
+        if (!ba?.asset_id) continue;
         const existing = bookedMap.get(ba.asset_id);
-        const endDateVal = ba.booking_end_date || ba.effective_end_date || ba.end_date;
-        const existingEnd = existing
-          ? (existing.booking_end_date || existing.effective_end_date || existing.end_date)
-          : null;
-        if (!existing || (endDateVal && existingEnd && endDateVal > existingEnd)) {
+        if (bookingBeats(ba, existing)) {
           bookedMap.set(ba.asset_id, ba);
         }
       }
@@ -519,22 +550,28 @@ export default function MediaAvailabilityReport() {
       // ─── Synthesize BOOKED_THROUGH_RANGE rows for assets not returned by RPC ───
       // The vacancy RPC excludes booked assets, so we add them here so the
       // "Booked / Occupied" KPI and status filter reflect reality.
+      // We honor the same server-side filters the RPC received (city, media_type)
+      // using case-insensitive comparison so trivial casing diffs don't drop rows.
       const existingIds = new Set(mergedRows.map(r => r.asset_id));
-      const cityFilter = selectedCity === 'all' ? null : selectedCity;
-      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType;
+      const cityFilter = selectedCity === 'all' ? null : selectedCity?.trim().toLowerCase() || null;
+      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType?.trim().toLowerCase() || null;
 
       const syntheticBookedRows: AvailabilityRow[] = [];
       bookedMap.forEach((ba, assetId) => {
         if (existingIds.has(assetId)) return; // already in vacancy set (shouldn't happen, but safe)
         const asset = opsMap.get(assetId);
         if (!asset) return;
+
         // Respect city / media_type filters (RPC applies them; we mirror here)
-        if (cityFilter && asset.city !== cityFilter) return;
-        if (typeFilter && asset.media_type !== typeFilter) return;
+        const assetCity = (asset.city || '').trim().toLowerCase();
+        const assetType = (asset.media_type || '').trim().toLowerCase();
+        if (cityFilter && assetCity !== cityFilter) return;
+        if (typeFilter && assetType !== typeFilter) return;
 
         const opStatus = (asset.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
-        const bookingEnd = ba.booking_end_date || ba.effective_end_date || ba.end_date || null;
-        const bookingStart = ba.booking_start_date || ba.effective_start_date || ba.start_date || null;
+        // Use the same precedence helpers as bookedMap construction to stay consistent
+        const bookingEnd = resolveEnd(ba);
+        const bookingStart = resolveStart(ba);
         const availableFrom = bookingEnd
           ? format(addDays(new Date(bookingEnd), 1), 'yyyy-MM-dd')
           : '';

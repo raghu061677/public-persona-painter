@@ -588,7 +588,15 @@ export function AssetSelectionTable({
                   </TableCell>
                   {visibleKeys.map((key) => {
                     if (key === 'asset_id') {
-                      return <TableCell key={key} className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>;
+                      return (
+                        <TableCell key={key} className="font-medium font-mono text-sm">
+                          <BookingHoverCard summary={getStatus(asset.id)}>
+                            <span className="cursor-help underline-offset-2 hover:underline">
+                              {asset.media_asset_code || asset.id}
+                            </span>
+                          </BookingHoverCard>
+                        </TableCell>
+                      );
                     }
                     if (key === 'card_rate' || key === 'base_rate' || key === 'printing_rate_default' || key === 'mounting_rate_default') {
                       return <TableCell key={key} className="text-right">{formatCurrency(asset[key] || 0)}</TableCell>;

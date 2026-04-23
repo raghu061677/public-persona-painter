@@ -38,6 +38,7 @@ import {
   Unlock,
   Loader2,
 } from "lucide-react";
+import { Wrench, Ban, AlertTriangle, TrendingUp, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,

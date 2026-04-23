@@ -550,22 +550,28 @@ export default function MediaAvailabilityReport() {
       // ─── Synthesize BOOKED_THROUGH_RANGE rows for assets not returned by RPC ───
       // The vacancy RPC excludes booked assets, so we add them here so the
       // "Booked / Occupied" KPI and status filter reflect reality.
+      // We honor the same server-side filters the RPC received (city, media_type)
+      // using case-insensitive comparison so trivial casing diffs don't drop rows.
       const existingIds = new Set(mergedRows.map(r => r.asset_id));
-      const cityFilter = selectedCity === 'all' ? null : selectedCity;
-      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType;
+      const cityFilter = selectedCity === 'all' ? null : selectedCity?.trim().toLowerCase() || null;
+      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType?.trim().toLowerCase() || null;
 
       const syntheticBookedRows: AvailabilityRow[] = [];
       bookedMap.forEach((ba, assetId) => {
         if (existingIds.has(assetId)) return; // already in vacancy set (shouldn't happen, but safe)
         const asset = opsMap.get(assetId);
         if (!asset) return;
+
         // Respect city / media_type filters (RPC applies them; we mirror here)
-        if (cityFilter && asset.city !== cityFilter) return;
-        if (typeFilter && asset.media_type !== typeFilter) return;
+        const assetCity = (asset.city || '').trim().toLowerCase();
+        const assetType = (asset.media_type || '').trim().toLowerCase();
+        if (cityFilter && assetCity !== cityFilter) return;
+        if (typeFilter && assetType !== typeFilter) return;
 
         const opStatus = (asset.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
-        const bookingEnd = ba.booking_end_date || ba.effective_end_date || ba.end_date || null;
-        const bookingStart = ba.booking_start_date || ba.effective_start_date || ba.start_date || null;
+        // Use the same precedence helpers as bookedMap construction to stay consistent
+        const bookingEnd = resolveEnd(ba);
+        const bookingStart = resolveStart(ba);
         const availableFrom = bookingEnd
           ? format(addDays(new Date(bookingEnd), 1), 'yyyy-MM-dd')
           : '';

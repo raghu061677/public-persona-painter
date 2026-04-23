@@ -405,9 +405,14 @@ export default function MediaAvailabilityReport() {
 
       if (availResult.error) throw availResult.error;
 
+      if (holdsResult.error) console.warn('[VacantMedia] holds query error:', holdsResult.error);
+      if (opsResult.error) console.warn('[VacantMedia] ops query error:', opsResult.error);
+      if (bookedResult.error) console.warn('[VacantMedia] booked query error:', bookedResult.error);
+
       const rows = (availResult.data as AvailabilityRow[]) || [];
       const holds = (holdsResult.data as ActiveHold[]) || [];
       const bookedCampaignAssets = (bookedResult.data as any[]) || [];
+      console.log('[VacantMedia] booked campaign_assets fetched:', bookedCampaignAssets.length);
 
       // Build map: asset_id -> latest active booking covering range
       const bookedMap = new Map<string, any>();

@@ -1432,6 +1432,11 @@ export default function MediaAvailabilityReport() {
                           <div className="flex items-center">Status {getSortIcon('status')}</div>
                         </TableHead>
                       )}
+                      {isColumnVisible('availability_timeline') && (
+                        <TableHead className="whitespace-nowrap min-w-[180px]">
+                          Availability Timeline
+                        </TableHead>
+                      )}
                       {isColumnVisible('available_from') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('available_from')}>
                           <TooltipProvider>

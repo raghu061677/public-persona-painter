@@ -444,7 +444,7 @@ export default function MediaAvailabilityReport() {
         if (cEnd && eEnd && cEnd !== eEnd) return cEnd > eEnd; // later end wins
         if (cEnd && !eEnd) return true;
         const cStart = resolveStart(candidate);
-        const eStart = resolveEnd(current);
+        const eStart = resolveStart(current);
         if (cStart && eStart && cStart !== eStart) return cStart < eStart; // earlier start wins
         return false;
       };

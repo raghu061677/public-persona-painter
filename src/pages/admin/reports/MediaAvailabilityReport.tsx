@@ -497,11 +497,68 @@ export default function MediaAvailabilityReport() {
     const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
     const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
     const held = allRows.filter(r => r.availability_status === 'HELD').length;
+    const booked = allRows.filter(r => r.availability_status === 'BOOKED_THROUGH_RANGE').length;
+    const maintenance = allRows.filter(r => r.availability_status === 'MAINTENANCE').length;
+    const removed = allRows.filter(r => r.availability_status === 'REMOVED').length;
+    const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;
+    const atRisk = maintenance + removed + inactive;
     const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
     const potentialRevenue = allRows
       .filter(r => r.availability_status === 'VACANT_NOW')
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
-    return { total: allRows.length, vacantNow, availableSoon, held, totalSqft, potentialRevenue };
+    return {
+      total: allRows.length,
+      vacantNow, availableSoon, held, booked,
+      maintenance, removed, inactive, atRisk,
+      totalSqft, potentialRevenue,
+    };
+  }, [allRows]);
+
+  // ─── Grouped Summaries ─────────────────────────────────────
+  const summaries = useMemo(() => {
+    const today = startOfToday();
+    const sellable = allRows.filter(r =>
+      r.availability_status === 'VACANT_NOW' || r.availability_status === 'AVAILABLE_SOON'
+    );
+
+    // Top 5 cities by sellable vacant assets
+    const cityMap = new Map<string, number>();
+    for (const r of sellable) {
+      const k = r.city || '—';
+      cityMap.set(k, (cityMap.get(k) || 0) + 1);
+    }
+    const topCities = Array.from(cityMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    // Top 5 media types by sellable vacant assets
+    const typeMap = new Map<string, number>();
+    for (const r of sellable) {
+      const k = r.media_type || '—';
+      typeMap.set(k, (typeMap.get(k) || 0) + 1);
+    }
+    const topTypes = Array.from(typeMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    // Becoming free in next 7 / 15 / 30 days
+    const within = (days: number) => {
+      const cutoff = new Date(today);
+      cutoff.setDate(cutoff.getDate() + days);
+      return allRows.filter(r => {
+        if (r.availability_status !== 'AVAILABLE_SOON' || !r.available_from) return false;
+        const d = new Date(r.available_from);
+        return !isNaN(d.getTime()) && d >= today && d <= cutoff;
+      }).length;
+    };
+
+    return {
+      topCities,
+      topTypes,
+      freeIn7: within(7),
+      freeIn15: within(15),
+      freeIn30: within(30),
+    };
   }, [allRows]);
 
   // ─── Held rows for bulk selection ──────────────────────────

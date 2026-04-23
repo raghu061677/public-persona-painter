@@ -407,6 +407,20 @@ export default function MediaAvailabilityReport() {
 
       const rows = (availResult.data as AvailabilityRow[]) || [];
       const holds = (holdsResult.data as ActiveHold[]) || [];
+      const bookedCampaignAssets = (bookedResult.data as any[]) || [];
+
+      // Build map: asset_id -> latest active booking covering range
+      const bookedMap = new Map<string, any>();
+      for (const ba of bookedCampaignAssets) {
+        const existing = bookedMap.get(ba.asset_id);
+        const endDateVal = ba.booking_end_date || ba.effective_end_date || ba.end_date;
+        const existingEnd = existing
+          ? (existing.booking_end_date || existing.effective_end_date || existing.end_date)
+          : null;
+        if (!existing || (endDateVal && existingEnd && endDateVal > existingEnd)) {
+          bookedMap.set(ba.asset_id, ba);
+        }
+      }
 
       // Build a map: asset_id -> hold that overlaps report range
       const holdMap = new Map<string, ActiveHold>();

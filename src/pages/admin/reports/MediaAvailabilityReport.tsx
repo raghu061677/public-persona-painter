@@ -358,8 +358,14 @@ export default function MediaAvailabilityReport() {
     }
     setLoading(true);
     try {
-      // Fetch availability + active holds + operational status in parallel
-      const [availResult, holdsResult, opsResult] = await Promise.all([
+      // Fetch availability + active holds + operational status + booked-in-range in parallel.
+      //
+      // NOTE: fn_media_availability_range only returns VACANT_NOW / AVAILABLE_SOON rows
+      // (booked assets are excluded at source). To accurately power the
+      // "Booked / Occupied" KPI we additionally fetch booked assets from
+      // campaign_assets ⨝ campaigns and synthesize BOOKED_THROUGH_RANGE rows
+      // for any asset not already present in the vacancy result set.
+      const [availResult, holdsResult, opsResult, bookedResult] = await Promise.all([
         supabase.rpc('fn_media_availability_range', {
           p_company_id: company.id,
           p_start: trimmedStart,
@@ -376,14 +382,45 @@ export default function MediaAvailabilityReport() {
           .gte('end_date', trimmedStart),
         supabase
           .from('media_assets')
-          .select('id, operational_status, deactivation_reason')
+          .select('id, media_asset_code, area, location, direction, dimension, total_sqft, illumination_type, card_rate, city, media_type, primary_photo_url, qr_code_url, latitude, longitude, operational_status, deactivation_reason')
           .eq('company_id', company.id),
+        supabase
+          .from('campaign_assets')
+          .select(`
+            asset_id,
+            booking_start_date,
+            booking_end_date,
+            effective_start_date,
+            effective_end_date,
+            start_date,
+            end_date,
+            is_removed,
+            campaigns!inner(id, name, company_id, client_id, clients(name))
+          `)
+          .eq('campaigns.company_id', company.id)
+          .eq('is_removed', false)
+          .lte('booking_start_date', trimmedEnd)
+          .gte('booking_end_date', trimmedStart),
       ]);
 
       if (availResult.error) throw availResult.error;
 
       const rows = (availResult.data as AvailabilityRow[]) || [];
       const holds = (holdsResult.data as ActiveHold[]) || [];
+      const bookedCampaignAssets = (bookedResult.data as any[]) || [];
+
+      // Build map: asset_id -> latest active booking covering range
+      const bookedMap = new Map<string, any>();
+      for (const ba of bookedCampaignAssets) {
+        const existing = bookedMap.get(ba.asset_id);
+        const endDateVal = ba.booking_end_date || ba.effective_end_date || ba.end_date;
+        const existingEnd = existing
+          ? (existing.booking_end_date || existing.effective_end_date || existing.end_date)
+          : null;
+        if (!existing || (endDateVal && existingEnd && endDateVal > existingEnd)) {
+          bookedMap.set(ba.asset_id, ba);
+        }
+      }
 
       // Build a map: asset_id -> hold that overlaps report range
       const holdMap = new Map<string, ActiveHold>();
@@ -395,10 +432,11 @@ export default function MediaAvailabilityReport() {
         }
       }
 
-      // Build operational map: asset_id -> { operational_status, deactivation_reason }
-      const opsMap = new Map<string, { operational_status: string | null; deactivation_reason: string | null }>();
+      // Build operational map: asset_id -> full media_asset record (used for ops status + booked-row synthesis)
+      const opsMap = new Map<string, any>();
       for (const op of (opsResult.data || []) as any[]) {
         opsMap.set(op.id, {
+          ...op,
           operational_status: op.operational_status || 'active',
           deactivation_reason: op.deactivation_reason || null,
         });
@@ -473,10 +511,65 @@ export default function MediaAvailabilityReport() {
         return workingRow;
       });
 
-      setAllRows(mergedRows);
+      // ─── Synthesize BOOKED_THROUGH_RANGE rows for assets not returned by RPC ───
+      // The vacancy RPC excludes booked assets, so we add them here so the
+      // "Booked / Occupied" KPI and status filter reflect reality.
+      const existingIds = new Set(mergedRows.map(r => r.asset_id));
+      const cityFilter = selectedCity === 'all' ? null : selectedCity;
+      const typeFilter = selectedMediaType === 'all' ? null : selectedMediaType;
+
+      const syntheticBookedRows: AvailabilityRow[] = [];
+      bookedMap.forEach((ba, assetId) => {
+        if (existingIds.has(assetId)) return; // already in vacancy set (shouldn't happen, but safe)
+        const asset = opsMap.get(assetId);
+        if (!asset) return;
+        // Respect city / media_type filters (RPC applies them; we mirror here)
+        if (cityFilter && asset.city !== cityFilter) return;
+        if (typeFilter && asset.media_type !== typeFilter) return;
+
+        const opStatus = (asset.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
+        const bookingEnd = ba.booking_end_date || ba.effective_end_date || ba.end_date || null;
+        const bookingStart = ba.booking_start_date || ba.effective_start_date || ba.start_date || null;
+        const availableFrom = bookingEnd
+          ? format(addDays(new Date(bookingEnd), 1), 'yyyy-MM-dd')
+          : '';
+        const campaign = ba.campaigns || {};
+        const client = campaign?.clients || {};
+
+        syntheticBookedRows.push({
+          asset_id: assetId,
+          media_asset_code: asset.media_asset_code || null,
+          area: asset.area || '',
+          location: asset.location || '',
+          direction: asset.direction || null,
+          dimension: asset.dimension || null,
+          sqft: Number(asset.total_sqft) || 0,
+          illumination: asset.illumination_type || null,
+          card_rate: Number(asset.card_rate) || 0,
+          city: asset.city || '',
+          media_type: asset.media_type || '',
+          primary_photo_url: asset.primary_photo_url || null,
+          qr_code_url: asset.qr_code_url || null,
+          latitude: asset.latitude ?? null,
+          longitude: asset.longitude ?? null,
+          availability_status: 'BOOKED_THROUGH_RANGE',
+          available_from: availableFrom,
+          booked_till: bookingEnd,
+          current_campaign_id: campaign?.id || null,
+          current_campaign_name: campaign?.name || null,
+          current_client_name: client?.name || null,
+          booking_start: bookingStart,
+          booking_end: bookingEnd,
+          operational_status: opStatus,
+          deactivation_reason: asset.deactivation_reason || null,
+        });
+      });
+
+      const finalRows = [...mergedRows, ...syntheticBookedRows];
+      setAllRows(finalRows);
       toast({
         title: "Report Updated",
-        description: `Found ${mergedRows.length} assets in range (${holds.length} with holds)`,
+        description: `Found ${finalRows.length} assets in range (${syntheticBookedRows.length} booked, ${holds.length} with holds)`,
       });
     } catch (error: any) {
       console.error('Error loading availability:', error);

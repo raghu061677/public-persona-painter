@@ -312,7 +312,7 @@ export default function MediaAssetNew() {
 
   return (
     <ModuleGuard module="media_assets">
-    <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
+    <form onSubmit={handleSubmit} className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
       <header className="flex items-center justify-between pb-4 mb-4 border-b">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => navigate('/admin/media-assets')} type="button">

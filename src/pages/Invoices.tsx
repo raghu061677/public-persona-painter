@@ -172,7 +172,7 @@ export default function Invoices() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
-        <div className="container mx-auto px-4 py-4">
+        <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -203,7 +203,7 @@ export default function Invoices() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 sm:py-8 space-y-6">
         {/* Global List View Toolbar */}
         {!lv.loading && (
           <ListToolbar

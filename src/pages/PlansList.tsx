@@ -763,7 +763,7 @@ export default function PlansList() {
   return (
     <ModuleGuard module="plans">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl space-y-4">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">

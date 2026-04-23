@@ -97,7 +97,7 @@ export default function LeadsList() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6">
         <PageHeader
           title="Leads"
           description="Manage incoming leads and convert them to clients"
@@ -109,7 +109,7 @@ export default function LeadsList() {
 
   if (!leads || leads.length === 0) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6">
         <PageHeader
           title="Leads"
           description="Manage incoming leads and convert them to clients"
@@ -131,7 +131,7 @@ export default function LeadsList() {
 
   return (
     <ModuleGuard module="clients">
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-6 space-y-6">
       <PageHeader
         title="Leads"
         description={`${filteredLeads?.length || 0} leads found`}

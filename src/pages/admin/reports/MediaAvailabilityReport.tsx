@@ -76,6 +76,73 @@ function formatDateIN(dateStr: string | null | undefined): string {
     return `${dd}/${mm}/${d.getFullYear()}`;
   } catch { return '-'; }
 }
+
+/**
+ * Build a compact 1-3 line availability timeline explanation for a row.
+ * Reuses the already-resolved availability_status and dates from row enrichment;
+ * does NOT recompute vacancy logic.
+ */
+function buildAvailabilityTimeline(row: any): { lines: Array<{ label?: string; value: string }> } {
+  const lines: Array<{ label?: string; value: string }> = [];
+  const status = row?.availability_status;
+  const bookedTill = formatDateIN(row?.booked_till);
+  const availFrom = formatDateIN(row?.available_from);
+  const holdEnd = formatDateIN(row?.hold_end_date);
+  const reason = row?.deactivation_reason || row?.block_reason || null;
+
+  switch (status) {
+    case 'VACANT_NOW':
+      lines.push({ value: 'Available now' });
+      if (row?.booked_till) lines.push({ label: 'Next booked till', value: bookedTill });
+      break;
+    case 'AVAILABLE_SOON':
+    case 'BOOKED_THROUGH_RANGE':
+      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: 'Booked' });
+      break;
+    case 'HELD':
+      if (row?.hold_end_date) lines.push({ label: 'Held till', value: holdEnd });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: 'On hold' });
+      break;
+    case 'MAINTENANCE':
+      lines.push({ value: 'Under maintenance' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    case 'REMOVED':
+      lines.push({ value: 'Removed' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    case 'INACTIVE':
+      lines.push({ value: 'Inactive' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    default:
+      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: '-' });
+  }
+  return { lines };
+}
+
+/** Flat string version of the timeline, for exports */
+function timelineAsText(row: any): string {
+  const { lines } = buildAvailabilityTimeline(row);
+  return lines.map(l => (l.label ? `${l.label}: ${l.value}` : l.value)).join(' | ');
+}
+
+/** Map operational_status enum to a readable label for exports/UI */
+function operationalStatusLabel(s: string | null | undefined): string {
+  if (!s) return '-';
+  switch (s) {
+    case 'active': return 'Active';
+    case 'inactive': return 'Inactive';
+    case 'removed': return 'Removed';
+    case 'maintenance': return 'Under Maintenance';
+    default: return s;
+  }
+}
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";

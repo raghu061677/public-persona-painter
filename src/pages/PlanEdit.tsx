@@ -1282,7 +1282,7 @@ export default function PlanEdit() {
           </div>
           )}
         </form>
-      </div>
+      </WorkspaceContainer>
     </div>
   );
 }

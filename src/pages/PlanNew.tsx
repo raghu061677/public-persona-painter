@@ -1228,7 +1228,7 @@ export default function PlanNew() {
           onOpenChange={setShowTemplateDialog}
           onSelectTemplate={handleSelectTemplate}
         />
-      </div>
+      </WorkspaceContainer>
     </div>
     </ModuleGuard>
   );

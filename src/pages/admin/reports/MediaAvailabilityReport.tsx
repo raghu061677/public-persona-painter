@@ -950,6 +950,98 @@ export default function MediaAvailabilityReport() {
           </div>
         )}
 
+        {/* Secondary KPI row: Booked + At Risk + Becoming Free */}
+        {allRows.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
+            <Card
+              className={`cursor-pointer transition-colors ${statusFilter === 'BOOKED_THROUGH_RANGE' ? 'ring-2 ring-red-500' : 'hover:border-red-400'}`}
+              onClick={() => setStatusFilter(statusFilter === 'BOOKED_THROUGH_RANGE' ? 'all' : 'BOOKED_THROUGH_RANGE')}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-sm text-muted-foreground">Booked</span>
+                </div>
+                <div className="text-3xl font-bold mt-1 text-red-600">{counts.booked}</div>
+                <div className="text-xs text-muted-foreground mt-1">Held: {counts.held}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-amber-400 transition-colors">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <span className="text-sm text-muted-foreground">At Risk / Non-Bookable</span>
+                </div>
+                <div className="text-3xl font-bold mt-1 text-amber-600">{counts.atRisk}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Maint: {counts.maintenance} · Removed: {counts.removed} · Inactive: {counts.inactive}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm text-muted-foreground">Becoming Free</span>
+                </div>
+                <div className="flex items-baseline gap-3 mt-1">
+                  <div><span className="text-2xl font-bold">{summaries.freeIn7}</span><span className="text-xs text-muted-foreground ml-1">in 7d</span></div>
+                  <div><span className="text-2xl font-bold">{summaries.freeIn15}</span><span className="text-xs text-muted-foreground ml-1">in 15d</span></div>
+                  <div><span className="text-2xl font-bold">{summaries.freeIn30}</span><span className="text-xs text-muted-foreground ml-1">in 30d</span></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Grouped summaries: Top Cities & Top Media Types by sellable vacancy */}
+        {allRows.length > 0 && (summaries.topCities.length > 0 || summaries.topTypes.length > 0) && (
+          <div className="grid gap-4 md:grid-cols-2 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Building2 className="h-4 w-4" /> Top Cities by Vacant Inventory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {summaries.topCities.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {summaries.topCities.map(([city, count]) => (
+                      <div key={city} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{city}</span>
+                        <Badge variant="secondary">{count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Top Media Types by Vacant Inventory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {summaries.topTypes.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {summaries.topTypes.map(([type, count]) => (
+                      <div key={type} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{type}</span>
+                        <Badge variant="secondary">{count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Search bar + Column toggle */}
         {allRows.length > 0 && (
           <div className="flex items-center gap-3 mb-4">

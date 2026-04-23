@@ -611,10 +611,20 @@ export default function MediaAvailabilityReport() {
   // ─── Filtering ─────────────────────────────────────────────
   const filteredRows = useMemo(() => {
     let rows = allRows;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
 
     // Status filter
     if (statusFilter !== 'all') {
-      rows = rows.filter(r => r.availability_status === statusFilter);
+      if (statusFilter === 'BOOKED_THROUGH_RANGE') {
+        // "Booked / Occupied" virtual filter — currently occupied right now
+        rows = rows.filter(r => {
+          if (r.availability_status === 'BOOKED_THROUGH_RANGE') return true;
+          if (r.availability_status === 'AVAILABLE_SOON' && r.booked_till && r.booked_till >= todayStr) return true;
+          return false;
+        });
+      } else {
+        rows = rows.filter(r => r.availability_status === statusFilter);
+      }
     }
 
     // Search term

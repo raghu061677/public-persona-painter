@@ -63,7 +63,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { format, addDays, addMonths } from "date-fns";
+import { format, addDays, addMonths, startOfToday } from "date-fns";
 
 /** Format date string to Indian DD/MM/YYYY */
 function formatDateIN(dateStr: string | null | undefined): string {

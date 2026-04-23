@@ -29,12 +29,6 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { datesOverlap, toDateString } from "@/lib/availability/dateOverlap";
 import { computeFirstAvailableDate } from "@/utils/resolveAssetBookingWindow";

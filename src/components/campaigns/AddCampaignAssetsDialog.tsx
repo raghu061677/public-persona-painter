@@ -29,12 +29,6 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { datesOverlap, toDateString } from "@/lib/availability/dateOverlap";
 import { computeFirstAvailableDate } from "@/utils/resolveAssetBookingWindow";
@@ -544,35 +538,17 @@ export function AddCampaignAssetsDialog({
 
   const renderStatusBadge = (asset: any) => {
     const info = getAvailInfo(asset.id);
-    
+    const hoverData = fromCampaignConflict(info);
+
     switch (info.status) {
       case 'conflict':
         return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-destructive border-destructive cursor-help">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  Fully Booked
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="text-sm">
-                  <p className="font-semibold mb-1">Asset fully booked for this period:</p>
-                  {info.overlappingBookings.map((c, i) => (
-                    <div key={i} className="mb-1">
-                      <span className="font-medium">{c.campaignName}</span>
-                      <br />
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(c.startDate), 'dd MMM yyyy')} to{' '}
-                        {format(new Date(c.endDate), 'dd MMM yyyy')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <AssetAvailabilityHoverCard data={hoverData}>
+            <Badge variant="outline" className="text-destructive border-destructive cursor-help">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Fully Booked
+            </Badge>
+          </AssetAvailabilityHoverCard>
         );
       
       case 'available_adjusted': {
@@ -581,50 +557,24 @@ export function AddCampaignAssetsDialog({
           : info.suggestedEndDate
             ? `Until ${format(new Date(info.suggestedEndDate), 'dd MMM')}`
             : 'Adjusted';
-        const dateLabelFull = info.suggestedStartDate
-          ? `Available from ${format(new Date(info.suggestedStartDate), 'dd MMM yyyy')}`
-          : info.suggestedEndDate
-            ? `Available until ${format(new Date(info.suggestedEndDate), 'dd MMM yyyy')}`
-            : 'Available with adjusted dates';
         return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-blue-600 border-blue-500 cursor-help">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {dateLabel}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="text-sm">
-                  <p className="font-semibold mb-1">{dateLabelFull}</p>
-                  <p className="text-muted-foreground mb-1">Existing booking:</p>
-                  {info.overlappingBookings.map((c, i) => (
-                    <div key={i} className="mb-1">
-                      <span className="font-medium">{c.campaignName}</span>
-                      <br />
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(c.startDate), 'dd MMM yyyy')} to{' '}
-                        {format(new Date(c.endDate), 'dd MMM yyyy')}
-                      </span>
-                    </div>
-                  ))}
-                  <p className="mt-1 text-xs text-blue-600 font-medium">
-                    ✔ Booking dates will be auto-adjusted when added
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <AssetAvailabilityHoverCard data={hoverData}>
+            <Badge variant="outline" className="text-blue-600 border-blue-500 cursor-help">
+              <Clock className="w-3 h-3 mr-1" />
+              {dateLabel}
+            </Badge>
+          </AssetAvailabilityHoverCard>
         );
       }
       
       default:
         return (
-          <Badge variant="outline" className="text-green-600 border-green-500">
-            <Check className="w-3 h-3 mr-1" />
-            Available
-          </Badge>
+          <AssetAvailabilityHoverCard data={hoverData}>
+            <Badge variant="outline" className="text-green-600 border-green-500 cursor-help">
+              <Check className="w-3 h-3 mr-1" />
+              Available
+            </Badge>
+          </AssetAvailabilityHoverCard>
         );
     }
   };

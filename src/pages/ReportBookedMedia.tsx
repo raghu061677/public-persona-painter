@@ -9,8 +9,12 @@ import {
   Briefcase,
   Clock,
   Settings2,
+  IndianRupee,
+  AlertTriangle,
+  CalendarClock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -29,6 +33,7 @@ import { useReportFilters } from "@/hooks/useReportFilters";
 import { usePagination } from "@/hooks/usePagination";
 import { Button } from "@/components/ui/button";
 import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
+import { exportListPdf } from "@/utils/exports/pdf/exportListPdf";
 import { BookedMediaCustomExportDialog } from "@/components/reports/BookedMediaCustomExportDialog";
 
 interface BookedMediaRow {
@@ -46,13 +51,25 @@ interface BookedMediaRow {
   latitude: number | null;
   longitude: number | null;
   asset_status: string;
+  operational_status: string;
   campaign_name: string;
+  campaign_id: string;
   client_name: string;
   start_date: string;
   end_date: string;
   duration_days: number;
   campaign_status: string;
   installation_status: string;
+  // Booking intelligence
+  booked_till: string;
+  available_from: string;
+  billing_type: string;
+  // Commercial
+  negotiated_rate: number;
+  printing_charges: number;
+  mounting_charges: number;
+  total_booking_value: number;
+  invoice_status: string;
 }
 
 const DATE_TYPES = [
@@ -85,13 +102,22 @@ const COLUMNS = [
   { key: "latitude", label: "Latitude", default: false },
   { key: "longitude", label: "Longitude", default: false },
   { key: "asset_status", label: "Asset Status", default: false },
+  { key: "operational_status", label: "Ops Status", default: true },
   { key: "campaign_name", label: "Campaign", default: true },
   { key: "client_name", label: "Client", default: true },
   { key: "start_date", label: "Start Date", default: true },
   { key: "end_date", label: "End Date", default: true },
+  { key: "booked_till", label: "Booked Till", default: true },
+  { key: "available_from", label: "Available From", default: true },
   { key: "duration_days", label: "Duration (Days)", default: true },
   { key: "campaign_status", label: "Campaign Status", default: true },
   { key: "installation_status", label: "Installation", default: false },
+  { key: "billing_type", label: "Billing Type", default: false },
+  { key: "negotiated_rate", label: "Negotiated Rate", default: false },
+  { key: "printing_charges", label: "Printing", default: false },
+  { key: "mounting_charges", label: "Mounting", default: false },
+  { key: "total_booking_value", label: "Booking Value", default: true },
+  { key: "invoice_status", label: "Invoice Status", default: true },
 ];
 
 const STORAGE_KEY = "report.bookedMedia.visibleColumns";
@@ -188,6 +214,8 @@ export default function ReportBookedMedia() {
           illumination_type,
           latitude, longitude,
           campaign_id, is_removed,
+          billing_mode, billing_mode_override,
+          negotiated_rate, printing_charges, mounting_charges, total_price,
           campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
         `)
         .eq("campaigns.company_id", company.id)
@@ -198,14 +226,14 @@ export default function ReportBookedMedia() {
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
-      let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number }>();
+      let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number; operational_status: string }>();
 
       if (assetIds.length > 0) {
         for (let i = 0; i < assetIds.length; i += 100) {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code, status, direction, dimensions, illumination_type, total_sqft")
+            .select("id, media_asset_code, status, direction, dimensions, illumination_type, total_sqft, operational_status")
             .in("id", chunk);
           maData?.forEach((ma: any) => {
             assetCodeMap.set(ma.id, ma.media_asset_code || `ASSET-${ma.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
@@ -215,16 +243,91 @@ export default function ReportBookedMedia() {
               dimensions: ma.dimensions || "-",
               illumination_type: ma.illumination_type || "-",
               total_sqft: ma.total_sqft || 0,
+              operational_status: ma.operational_status || "active",
             });
           });
         }
       }
+
+      // Batch-fetch invoice statuses by campaign_id (latest per campaign)
+      const campaignIds = [...new Set((caData || []).map((r: any) => r.campaigns?.id).filter(Boolean))];
+      const invoiceStatusMap = new Map<string, string>();
+      if (campaignIds.length > 0) {
+        for (let i = 0; i < campaignIds.length; i += 100) {
+          const chunk = campaignIds.slice(i, i + 100);
+          const { data: invData } = await supabase
+            .from("invoices")
+            .select("campaign_id, status, balance_due")
+            .in("campaign_id", chunk);
+          invData?.forEach((inv: any) => {
+            if (!inv.campaign_id) return;
+            const prev = invoiceStatusMap.get(inv.campaign_id);
+            // Priority: Overdue > Partially Paid > Sent > Paid > Draft > Cancelled
+            const rank = (s: string) => {
+              if (s === 'Overdue') return 6;
+              if (s === 'Partially Paid') return 5;
+              if (s === 'Sent' || s === 'Issued') return 4;
+              if (s === 'Paid') return 3;
+              if (s === 'Draft') return 2;
+              return 1;
+            };
+            if (!prev || rank(inv.status) > rank(prev)) {
+              invoiceStatusMap.set(inv.campaign_id, inv.status);
+            }
+          });
+        }
+      }
+
+      // Build per-asset booking timeline to derive booked_till + available_from
+      // Group all bookings by asset to find chained next-booking dates
+      const bookingsByAsset = new Map<string, Array<{ start: string; end: string }>>();
+      (caData || []).forEach((r: any) => {
+        const s = r.effective_start_date || r.booking_start_date || r.start_date || r.campaigns?.start_date;
+        const e = r.effective_end_date || r.booking_end_date || r.end_date || r.campaigns?.end_date;
+        if (!s || !e) return;
+        if (!bookingsByAsset.has(r.asset_id)) bookingsByAsset.set(r.asset_id, []);
+        bookingsByAsset.get(r.asset_id)!.push({ start: s, end: e });
+      });
+      // Sort each asset's bookings ascending
+      bookingsByAsset.forEach((arr) => arr.sort((a, b) => a.start.localeCompare(b.start)));
 
       const rows: BookedMediaRow[] = (caData || []).map((r: any) => {
         const campaign = r.campaigns;
         const startDate = r.effective_start_date || r.booking_start_date || r.start_date || campaign.start_date;
         const endDate = r.effective_end_date || r.booking_end_date || r.end_date || campaign.end_date;
         const maExtra = assetExtraMap.get(r.asset_id);
+
+        // booked_till = current row end date
+        const bookedTill = endDate;
+        // available_from = day after booked_till, unless next chained booking continues
+        let availableFrom = "";
+        try {
+          const list = bookingsByAsset.get(r.asset_id) || [];
+          // Find the latest end among bookings overlapping or starting before our end
+          let chainedEnd = endDate;
+          let extended = true;
+          while (extended) {
+            extended = false;
+            for (const b of list) {
+              if (b.start <= chainedEnd && b.end > chainedEnd) {
+                chainedEnd = b.end;
+                extended = true;
+              }
+            }
+          }
+          if (chainedEnd) {
+            const d = new Date(chainedEnd + "T00:00:00");
+            d.setDate(d.getDate() + 1);
+            availableFrom = d.toISOString().split("T")[0];
+          }
+        } catch {
+          availableFrom = "";
+        }
+
+        const negotiated = Number(r.negotiated_rate || 0);
+        const printing = Number(r.printing_charges || 0);
+        const mounting = Number(r.mounting_charges || 0);
+        const totalValue = Number(r.total_price || 0) || (negotiated + printing + mounting);
 
         return {
           asset_id: r.asset_id,
@@ -241,13 +344,23 @@ export default function ReportBookedMedia() {
           latitude: r.latitude || null,
           longitude: r.longitude || null,
           asset_status: maExtra?.status || "-",
+          operational_status: maExtra?.operational_status || "active",
           campaign_name: campaign.campaign_name || "-",
+          campaign_id: campaign.id,
           client_name: campaign.client_name || "-",
           start_date: startDate,
           end_date: endDate,
           duration_days: diffDays(startDate, endDate),
           campaign_status: campaign.status || "-",
           installation_status: r.status || "-",
+          booked_till: bookedTill,
+          available_from: availableFrom,
+          billing_type: r.billing_mode_override || r.billing_mode || "-",
+          negotiated_rate: negotiated,
+          printing_charges: printing,
+          mounting_charges: mounting,
+          total_booking_value: totalValue,
+          invoice_status: invoiceStatusMap.get(campaign.id) || "Not Invoiced",
         };
       });
 
@@ -375,6 +488,8 @@ export default function ReportBookedMedia() {
     const avgDuration = filteredData.length > 0
       ? Math.round(filteredData.reduce((s, r) => s + r.duration_days, 0) / filteredData.length)
       : 0;
+    const totalValue = filteredData.reduce((s, r) => s + (r.total_booking_value || 0), 0);
+    const atRisk = filteredData.filter((r) => r.operational_status && r.operational_status !== "active").length;
 
     return [
       { label: "Total Bookings", value: filteredData.length, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
@@ -383,7 +498,36 @@ export default function ReportBookedMedia() {
       { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" />, color: 'danger' as const },
       { label: "Cities", value: uniqueCities, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
       { label: "Avg Duration", value: `${avgDuration} days`, icon: <Clock className="h-5 w-5" />, color: 'default' as const },
+      { label: "Booking Value", value: `₹${Math.round(totalValue).toLocaleString('en-IN')}`, icon: <IndianRupee className="h-5 w-5" />, color: 'success' as const },
+      { label: "At Risk Assets", value: atRisk, icon: <AlertTriangle className="h-5 w-5" />, color: atRisk > 0 ? 'danger' as const : 'default' as const },
     ];
+  }, [filteredData]);
+
+  // Grouped summaries — Top Cities & Top Clients
+  const topCities = useMemo(() => {
+    const map = new Map<string, { count: number; value: number }>();
+    filteredData.forEach((r) => {
+      const cur = map.get(r.city) || { count: 0, value: 0 };
+      cur.count += 1;
+      cur.value += r.total_booking_value || 0;
+      map.set(r.city, cur);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5);
+  }, [filteredData]);
+
+  const topClients = useMemo(() => {
+    const map = new Map<string, { count: number; value: number }>();
+    filteredData.forEach((r) => {
+      const cur = map.get(r.client_name) || { count: 0, value: 0 };
+      cur.count += 1;
+      cur.value += r.total_booking_value || 0;
+      map.set(r.client_name, cur);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1].value - a[1].value)
+      .slice(0, 5);
   }, [filteredData]);
 
   // Status badge
@@ -405,6 +549,50 @@ export default function ReportBookedMedia() {
     }
   };
 
+  const getOperationalBadge = (status: string) => {
+    const s = (status || "active").toLowerCase();
+    switch (s) {
+      case "active":
+        return <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50">Active</Badge>;
+      case "removed":
+        return <Badge variant="destructive">Removed</Badge>;
+      case "maintenance":
+        return <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">Maintenance</Badge>;
+      case "inactive":
+        return <Badge variant="outline" className="border-slate-400 text-slate-600">Inactive</Badge>;
+      case "blocked":
+        return <Badge variant="destructive">Blocked</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getInvoiceBadge = (status: string) => {
+    switch (status) {
+      case "Paid":
+        return <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50">Paid</Badge>;
+      case "Partially Paid":
+        return <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">Partial</Badge>;
+      case "Sent":
+      case "Issued":
+        return <Badge variant="outline" className="border-indigo-500 text-indigo-700 bg-indigo-50">{status}</Badge>;
+      case "Overdue":
+        return <Badge variant="destructive">Overdue</Badge>;
+      case "Draft":
+        return <Badge variant="secondary">Draft</Badge>;
+      case "Cancelled":
+        return <Badge variant="outline" className="border-red-400 text-red-600">Cancelled</Badge>;
+      case "Not Invoiced":
+      default:
+        return <Badge variant="outline" className="text-muted-foreground">Not Invoiced</Badge>;
+    }
+  };
+
+  const formatCurrency = (n: number) => {
+    if (!n || n === 0) return "-";
+    return `₹${Math.round(n).toLocaleString("en-IN")}`;
+  };
+
   // Excel export
   const handleExportExcel = async () => {
     const cols = COLUMNS.filter((c) => visibleColumns.includes(c.key));
@@ -422,17 +610,25 @@ export default function ReportBookedMedia() {
           key: c.key,
           label: c.label,
           width: c.key === "location" || c.key === "address" ? 30 : 18,
-          type: (c.key === "total_sqft" || c.key === "duration_days" ? "number" : c.key === "start_date" || c.key === "end_date" ? "date" : "text") as any,
-          value: c.key === "start_date"
-            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
-            : c.key === "end_date"
-            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+          type: (
+            ["total_sqft", "duration_days", "negotiated_rate", "printing_charges", "mounting_charges", "total_booking_value"].includes(c.key)
+              ? "number"
+              : ["start_date", "end_date", "booked_till", "available_from"].includes(c.key)
+              ? "date"
+              : "text"
+          ) as any,
+          value:
+            c.key === "start_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
+            : c.key === "end_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+            : c.key === "booked_till" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.booked_till)
+            : c.key === "available_from" ? (row: BookedMediaRow) => row.available_from ? formatDateDDMMYYYY(row.available_from) : "-"
             : undefined,
         })),
         rows: filteredData,
         rowStyleRules: [
           { when: (r: BookedMediaRow) => r.campaign_status === "Completed", fill: { argb: "FFD1FAE5" } },
           { when: (r: BookedMediaRow) => r.campaign_status === "Cancelled", fill: { argb: "FFFEE2E2" } },
+          { when: (r: BookedMediaRow) => r.operational_status && r.operational_status !== "active", fill: { argb: "FFFEF3C7" } },
         ],
         fileName: `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
       });
@@ -443,12 +639,63 @@ export default function ReportBookedMedia() {
     }
   };
 
+  // PDF export
+  const handleExportPDF = async () => {
+    const cols = COLUMNS.filter((c) => visibleColumns.includes(c.key));
+    try {
+      await exportListPdf({
+        branding: {
+          companyName: company?.name || "GO-ADS 360°",
+          title: "Booked Media Report",
+          subtitle: dateRange?.from && dateRange?.to
+            ? `Period: ${formatDateDDMMYYYY(dateRange.from.toISOString())} – ${formatDateDDMMYYYY(dateRange.to.toISOString())} | ${filteredData.length} bookings`
+            : `${filteredData.length} bookings | Generated ${formatDateDDMMYYYY(new Date().toISOString())}`,
+          themeColor: company?.theme_color || undefined,
+          logoUrl: company?.logo_url || undefined,
+        },
+        fields: cols.map((c) => ({
+          key: c.key,
+          label: c.label,
+          value:
+            c.key === "start_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
+            : c.key === "end_date" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+            : c.key === "booked_till" ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.booked_till)
+            : c.key === "available_from" ? (row: BookedMediaRow) => row.available_from ? formatDateDDMMYYYY(row.available_from) : "-"
+            : ["negotiated_rate", "printing_charges", "mounting_charges", "total_booking_value"].includes(c.key)
+              ? (row: BookedMediaRow) => formatCurrency((row as any)[c.key])
+            : undefined,
+        })),
+        rows: filteredData,
+        orientation: "l",
+        rowStyleRules: [
+          { when: (r: BookedMediaRow) => r.operational_status && r.operational_status !== "active", fillColor: [254, 243, 199] },
+          { when: (r: BookedMediaRow) => r.campaign_status === "Cancelled", fillColor: [254, 226, 226] },
+        ],
+        fileName: `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.pdf`,
+      });
+      toast({ title: "PDF Exported", description: `Exported ${filteredData.length} rows.` });
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast({ title: "PDF Export Failed", variant: "destructive" });
+    }
+  };
+
   const getCellValue = (row: BookedMediaRow, key: string) => {
     switch (key) {
       case "start_date": return formatDateDDMMYYYY(row.start_date);
       case "end_date": return formatDateDDMMYYYY(row.end_date);
+      case "booked_till": return formatDateDDMMYYYY(row.booked_till);
+      case "available_from": return row.available_from ? formatDateDDMMYYYY(row.available_from) : <span className="text-muted-foreground">-</span>;
       case "campaign_status": return getStatusBadge(row.campaign_status);
       case "installation_status": return <Badge variant="outline">{row.installation_status}</Badge>;
+      case "operational_status": return getOperationalBadge(row.operational_status);
+      case "invoice_status": return getInvoiceBadge(row.invoice_status);
+      case "billing_type": return row.billing_type && row.billing_type !== "-" ? <Badge variant="secondary" className="capitalize">{row.billing_type}</Badge> : "-";
+      case "negotiated_rate":
+      case "printing_charges":
+      case "mounting_charges":
+      case "total_booking_value":
+        return <span className="tabular-nums">{formatCurrency((row as any)[key])}</span>;
       default: return row[key as keyof BookedMediaRow] || "-";
     }
   };
@@ -482,7 +729,7 @@ export default function ReportBookedMedia() {
           </Button>
           <ReportExportMenu
             onExportExcel={handleExportExcel}
-            onExportPDF={async () => {}}
+            onExportPDF={handleExportPDF}
             metadata={{
               reportName: "Booked Media Report",
               generatedAt: new Date(),
@@ -519,6 +766,60 @@ export default function ReportBookedMedia() {
       />
 
       <ReportKPICards kpis={kpis} columns={6} />
+
+      {filteredData.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" /> Top Cities by Booked Assets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topCities.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-2">
+                  {topCities.map(([city, info]) => (
+                    <div key={city} className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate">{city}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-muted-foreground tabular-nums">{info.count} bookings</span>
+                        <span className="font-semibold tabular-nums">{formatCurrency(info.value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Top Clients by Booking Value
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topClients.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-2">
+                  {topClients.map(([client, info]) => (
+                    <div key={client} className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate">{client}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-muted-foreground tabular-nums">{info.count} bookings</span>
+                        <span className="font-semibold tabular-nums">{formatCurrency(info.value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">

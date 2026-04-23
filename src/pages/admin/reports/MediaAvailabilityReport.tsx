@@ -1063,7 +1063,11 @@ export default function MediaAvailabilityReport() {
                 <SelectItem value="all">All Statuses ({allRows.length})</SelectItem>
                 <SelectItem value="VACANT_NOW">Vacant Now ({counts.vacantNow})</SelectItem>
                 <SelectItem value="AVAILABLE_SOON">Available Soon ({counts.availableSoon})</SelectItem>
+                {counts.booked > 0 && <SelectItem value="BOOKED_THROUGH_RANGE">Booked ({counts.booked})</SelectItem>}
                 {counts.held > 0 && <SelectItem value="HELD">Held/Blocked ({counts.held})</SelectItem>}
+                {counts.maintenance > 0 && <SelectItem value="MAINTENANCE">Under Maintenance ({counts.maintenance})</SelectItem>}
+                {counts.removed > 0 && <SelectItem value="REMOVED">Removed ({counts.removed})</SelectItem>}
+                {counts.inactive > 0 && <SelectItem value="INACTIVE">Inactive ({counts.inactive})</SelectItem>}
               </SelectContent>
             </Select>
 

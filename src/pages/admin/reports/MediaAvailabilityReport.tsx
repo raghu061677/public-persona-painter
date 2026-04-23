@@ -654,6 +654,57 @@ export default function MediaAvailabilityReport() {
             </Tooltip>
           </TooltipProvider>
         );
+      case 'MAINTENANCE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                  <Wrench className="h-3 w-3 mr-1" />Under Maintenance
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'REMOVED':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-rose-100 text-rose-800 border-rose-200">
+                  <Ban className="h-3 w-3 mr-1" />Removed
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'INACTIVE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-gray-200 text-gray-800 border-gray-300">
+                  <AlertTriangle className="h-3 w-3 mr-1" />Inactive
+                </Badge>
+              </TooltipTrigger>
+              {row.deactivation_reason && (
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {row.deactivation_reason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        );
       default:
         return (
           <Badge className="bg-red-100 text-red-800 border-red-200">

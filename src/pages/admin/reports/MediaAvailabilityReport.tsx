@@ -105,7 +105,14 @@ interface AvailabilityRow {
   qr_code_url: string | null;
   latitude: number | null;
   longitude: number | null;
-  availability_status: 'VACANT_NOW' | 'AVAILABLE_SOON' | 'BOOKED_THROUGH_RANGE' | 'HELD';
+  availability_status:
+    | 'VACANT_NOW'
+    | 'AVAILABLE_SOON'
+    | 'BOOKED_THROUGH_RANGE'
+    | 'HELD'
+    | 'MAINTENANCE'
+    | 'REMOVED'
+    | 'INACTIVE';
   available_from: string;
   booked_till: string | null;
   current_campaign_id: string | null;
@@ -120,6 +127,10 @@ interface AvailabilityRow {
   hold_start_date?: string | null;
   hold_end_date?: string | null;
   hold_id?: string | null;
+  // Operational fields (computed client-side from media_assets)
+  operational_status?: 'active' | 'inactive' | 'removed' | 'maintenance' | null;
+  deactivation_reason?: string | null;
+  block_reason?: string | null;
 }
 
 interface ActiveHold {

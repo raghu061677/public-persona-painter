@@ -503,14 +503,20 @@ export default function MediaAvailabilityReport() {
     const inactive = allRows.filter(r => r.availability_status === 'INACTIVE').length;
     const atRisk = maintenance + removed + inactive;
     const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
+    const sellableSqft = allRows
+      .filter(r => r.availability_status === 'VACANT_NOW')
+      .reduce((s, r) => s + (Number(r.sqft) || 0), 0);
     const potentialRevenue = allRows
       .filter(r => r.availability_status === 'VACANT_NOW')
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
+    const vacantRatio = allRows.length > 0
+      ? Math.round((vacantNow / allRows.length) * 100)
+      : 0;
     return {
       total: allRows.length,
       vacantNow, availableSoon, held, booked,
       maintenance, removed, inactive, atRisk,
-      totalSqft, potentialRevenue,
+      totalSqft, sellableSqft, potentialRevenue, vacantRatio,
     };
   }, [allRows]);
 
@@ -552,9 +558,23 @@ export default function MediaAvailabilityReport() {
       }).length;
     };
 
+    // Soonest availability — next 5 assets becoming free
+    const soonest = allRows
+      .filter(r => r.availability_status === 'AVAILABLE_SOON' && r.available_from)
+      .map(r => ({
+        asset_id: r.asset_id,
+        code: r.media_asset_code || r.asset_id,
+        location: r.location || r.area || '—',
+        city: r.city || '—',
+        available_from: r.available_from,
+      }))
+      .sort((a, b) => a.available_from.localeCompare(b.available_from))
+      .slice(0, 5);
+
     return {
       topCities,
       topTypes,
+      soonest,
       freeIn7: within(7),
       freeIn15: within(15),
       freeIn30: within(30),
@@ -891,148 +911,276 @@ export default function MediaAvailabilityReport() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
+        {/* ─── Tier 1: Primary KPI Strip — sellable vs blocked vs at-risk ─── */}
         {allRows.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
-            <Card
-              className={`cursor-pointer transition-colors ${statusFilter === 'all' ? 'ring-2 ring-primary' : 'hover:border-primary/50'}`}
-              onClick={() => setStatusFilter('all')}
-            >
-              <CardContent className="pt-6">
-                <div className="text-sm text-muted-foreground">Total in Range</div>
-                <div className="text-3xl font-bold mt-1">{counts.total}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {counts.totalSqft.toFixed(0)} sq.ft total
-                </div>
-              </CardContent>
-            </Card>
-            <Card
-              className={`cursor-pointer transition-colors ${statusFilter === 'VACANT_NOW' ? 'ring-2 ring-green-500' : 'hover:border-green-400'}`}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4">
+            {/* Sellable Vacant Now (green) */}
+            <button
+              type="button"
               onClick={() => setStatusFilter(statusFilter === 'VACANT_NOW' ? 'all' : 'VACANT_NOW')}
+              className={`group relative overflow-hidden rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${statusFilter === 'VACANT_NOW' ? 'ring-2 ring-emerald-500 border-emerald-500/50' : 'border-border hover:border-emerald-400/50'}`}
             >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="text-sm text-muted-foreground">Vacant Now</span>
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-500 to-emerald-300" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
                 </div>
-                <div className="text-3xl font-bold mt-1 text-green-600">{counts.vacantNow}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(counts.potentialRevenue)} potential
-                </div>
-              </CardContent>
-            </Card>
-            <Card
-              className={`cursor-pointer transition-colors ${statusFilter === 'AVAILABLE_SOON' ? 'ring-2 ring-yellow-500' : 'hover:border-yellow-400'}`}
+                <Badge variant="outline" className="text-[10px] font-medium border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
+                  {counts.vacantRatio}%
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+                {counts.vacantNow}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-foreground">Sellable Vacant Now</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                {counts.sellableSqft.toLocaleString('en-IN', { maximumFractionDigits: 0 })} sq.ft · {formatCurrency(counts.potentialRevenue)}
+              </div>
+            </button>
+
+            {/* Available Soon (blue) */}
+            <button
+              type="button"
               onClick={() => setStatusFilter(statusFilter === 'AVAILABLE_SOON' ? 'all' : 'AVAILABLE_SOON')}
+              className={`group relative overflow-hidden rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${statusFilter === 'AVAILABLE_SOON' ? 'ring-2 ring-blue-500 border-blue-500/50' : 'border-border hover:border-blue-400/50'}`}
             >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                  <span className="text-sm text-muted-foreground">Available Soon</span>
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-500 to-cyan-300" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg bg-blue-500/10 p-2 text-blue-600 dark:text-blue-400">
+                  <Clock className="h-4 w-4" />
                 </div>
-                <div className="text-3xl font-bold mt-1 text-yellow-600">{counts.availableSoon}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Pre-bookable within range
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="hover:border-muted-foreground/30 transition-colors">
-              <CardContent className="pt-6">
-                <div className="text-sm text-muted-foreground">Date Range</div>
-                <div className="text-lg font-semibold mt-1">
-                  {format(new Date(startDate), 'dd MMM')} – {format(new Date(endDate), 'dd MMM yyyy')}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000)} days
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-blue-700 dark:text-blue-400 leading-none">
+                {counts.availableSoon}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-foreground">Available Soon</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                Pre-bookable in range
+              </div>
+            </button>
 
-        {/* Secondary KPI row: Booked + At Risk + Becoming Free */}
-        {allRows.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <Card
-              className={`cursor-pointer transition-colors ${statusFilter === 'BOOKED_THROUGH_RANGE' ? 'ring-2 ring-red-500' : 'hover:border-red-400'}`}
+            {/* Booked / Occupied (indigo) */}
+            <button
+              type="button"
               onClick={() => setStatusFilter(statusFilter === 'BOOKED_THROUGH_RANGE' ? 'all' : 'BOOKED_THROUGH_RANGE')}
+              className={`group relative overflow-hidden rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${statusFilter === 'BOOKED_THROUGH_RANGE' ? 'ring-2 ring-indigo-500 border-indigo-500/50' : 'border-border hover:border-indigo-400/50'}`}
             >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  <span className="text-sm text-muted-foreground">Booked</span>
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-indigo-500 to-indigo-300" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-600 dark:text-indigo-400">
+                  <XCircle className="h-4 w-4" />
                 </div>
-                <div className="text-3xl font-bold mt-1 text-red-600">{counts.booked}</div>
-                <div className="text-xs text-muted-foreground mt-1">Held: {counts.held}</div>
-              </CardContent>
-            </Card>
-            <Card className="hover:border-amber-400 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <span className="text-sm text-muted-foreground">At Risk / Non-Bookable</span>
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-indigo-700 dark:text-indigo-400 leading-none">
+                {counts.booked}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-foreground">Booked / Occupied</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                Active in selected range
+              </div>
+            </button>
+
+            {/* Held / Blocked (amber) */}
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === 'HELD' ? 'all' : 'HELD')}
+              className={`group relative overflow-hidden rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${statusFilter === 'HELD' ? 'ring-2 ring-amber-500 border-amber-500/50' : 'border-border hover:border-amber-400/50'}`}
+            >
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-300" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+                  <Shield className="h-4 w-4" />
                 </div>
-                <div className="text-3xl font-bold mt-1 text-amber-600">{counts.atRisk}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Maint: {counts.maintenance} · Removed: {counts.removed} · Inactive: {counts.inactive}
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-400 leading-none">
+                {counts.held}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-foreground">Held / Blocked</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                Operationally reserved
+              </div>
+            </button>
+
+            {/* At Risk / Non-Bookable (rose) */}
+            <div
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-rose-400/50 col-span-2 md:col-span-1"
+            >
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-rose-500 to-rose-300" />
+              <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg bg-rose-500/10 p-2 text-rose-600 dark:text-rose-400">
+                  <AlertTriangle className="h-4 w-4" />
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="hover:border-primary/30 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm text-muted-foreground">Becoming Free</span>
-                </div>
-                <div className="flex items-baseline gap-3 mt-1">
-                  <div><span className="text-2xl font-bold">{summaries.freeIn7}</span><span className="text-xs text-muted-foreground ml-1">in 7d</span></div>
-                  <div><span className="text-2xl font-bold">{summaries.freeIn15}</span><span className="text-xs text-muted-foreground ml-1">in 15d</span></div>
-                  <div><span className="text-2xl font-bold">{summaries.freeIn30}</span><span className="text-xs text-muted-foreground ml-1">in 30d</span></div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-rose-700 dark:text-rose-400 leading-none">
+                {counts.atRisk}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-foreground">At Risk / Non-Bookable</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                <span>Maint <b className="text-foreground">{counts.maintenance}</b></span>
+                <span>Removed <b className="text-foreground">{counts.removed}</b></span>
+                <span>Inactive <b className="text-foreground">{counts.inactive}</b></span>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Grouped summaries: Top Cities & Top Media Types by sellable vacancy */}
-        {allRows.length > 0 && (summaries.topCities.length > 0 || summaries.topTypes.length > 0) && (
-          <div className="grid gap-4 md:grid-cols-2 mb-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Building2 className="h-4 w-4" /> Top Cities by Vacant Inventory
+        {/* ─── Tier 2: Forecast strip — Becoming Free in 7/15/30d + Total in Range ─── */}
+        {allRows.length > 0 && (
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mb-6">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`relative overflow-hidden rounded-xl border bg-card p-3.5 text-left transition-all hover:shadow-md ${statusFilter === 'all' ? 'ring-2 ring-primary border-primary/50' : 'border-border hover:border-primary/40'}`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                  <Building2 className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Total in Range</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight">{counts.total}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                {counts.totalSqft.toLocaleString('en-IN', { maximumFractionDigits: 0 })} sq.ft considered
+              </div>
+            </button>
+
+            <div className="relative overflow-hidden rounded-xl border border-border bg-card p-3.5 transition-all hover:shadow-md hover:border-teal-400/50">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="rounded-md bg-teal-500/10 p-1.5 text-teal-600 dark:text-teal-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Free in 7 Days</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight text-teal-700 dark:text-teal-400">{summaries.freeIn7}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">Pipeline this week</div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-border bg-card p-3.5 transition-all hover:shadow-md hover:border-cyan-400/50">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="rounded-md bg-cyan-500/10 p-1.5 text-cyan-600 dark:text-cyan-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Free in 15 Days</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight text-cyan-700 dark:text-cyan-400">{summaries.freeIn15}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">Short-term pipeline</div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-border bg-card p-3.5 transition-all hover:shadow-md hover:border-sky-400/50">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="rounded-md bg-sky-500/10 p-1.5 text-sky-600 dark:text-sky-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Free in 30 Days</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight text-sky-700 dark:text-sky-400">{summaries.freeIn30}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">Monthly pipeline</div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Grouped Summaries: Top Cities · Top Media Types · Soonest Availability ─── */}
+        {allRows.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {/* Top Cities */}
+            <Card className="border-border/60">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-emerald-600" />
+                  Top Cities by Sellable Vacant
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 pb-4">
                 {summaries.topCities.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                  <div className="text-xs text-muted-foreground py-4 text-center">No sellable inventory in range.</div>
                 ) : (
-                  <div className="space-y-1.5">
-                    {summaries.topCities.map(([city, count]) => (
-                      <div key={city} className="flex items-center justify-between text-sm">
-                        <span className="truncate">{city}</span>
-                        <Badge variant="secondary">{count}</Badge>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {summaries.topCities.map(([city, count]) => {
+                      const max = summaries.topCities[0]?.[1] || 1;
+                      const pct = Math.round((count / max) * 100);
+                      return (
+                        <div key={city} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="truncate font-medium text-foreground">{city}</span>
+                            <span className="text-muted-foreground tabular-nums">{count}</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> Top Media Types by Vacant Inventory
+
+            {/* Top Media Types */}
+            <Card className="border-border/60">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  Top Media Types by Sellable Vacant
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 pb-4">
                 {summaries.topTypes.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">No vacant inventory in range.</div>
+                  <div className="text-xs text-muted-foreground py-4 text-center">No sellable inventory in range.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {summaries.topTypes.map(([type, count]) => {
+                      const max = summaries.topTypes[0]?.[1] || 1;
+                      const pct = Math.round((count / max) * 100);
+                      return (
+                        <div key={type} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="truncate font-medium text-foreground">{type}</span>
+                            <span className="text-muted-foreground tabular-nums">{count}</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Soonest Availability */}
+            <Card className="border-border/60 md:col-span-2 lg:col-span-1">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-teal-600" />
+                  Soonest Availability
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 pb-4">
+                {summaries.soonest.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">No upcoming availability detected.</div>
                 ) : (
                   <div className="space-y-1.5">
-                    {summaries.topTypes.map(([type, count]) => (
-                      <div key={type} className="flex items-center justify-between text-sm">
-                        <span className="truncate">{type}</span>
-                        <Badge variant="secondary">{count}</Badge>
+                    {summaries.soonest.map((s) => (
+                      <div
+                        key={s.asset_id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/30 px-2.5 py-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium truncate text-foreground">{s.code}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {s.location} · {s.city}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-[10px] border-teal-500/30 text-teal-700 dark:text-teal-400 font-medium">
+                          {formatDateIN(s.available_from)}
+                        </Badge>
                       </div>
                     ))}
                   </div>

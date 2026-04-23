@@ -38,6 +38,10 @@ import {
 import { format } from "date-fns";
 import { datesOverlap, toDateString } from "@/lib/availability/dateOverlap";
 import { computeFirstAvailableDate } from "@/utils/resolveAssetBookingWindow";
+import {
+  AssetAvailabilityHoverCard,
+  fromCampaignConflict,
+} from "@/components/availability/AssetAvailabilityHoverCard";
 
 type SortField = 'media_asset_code' | 'location' | 'city' | 'area' | 'media_type' | 'card_rate' | 'status';
 type SortDirection = 'asc' | 'desc' | null;

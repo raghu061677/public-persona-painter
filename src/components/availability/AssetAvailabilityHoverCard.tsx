@@ -126,7 +126,7 @@ export function fromPlanSummary(summary: AssetAvailabilitySummary): NormalizedAv
 
 /** Map campaigns' per-asset conflict info → NormalizedAvailability */
 export function fromCampaignConflict(info: {
-  status: "available" | "available_adjusted" | "conflict";
+  status: "available" | "available_adjusted" | "conflict" | "upcoming" | string;
   suggestedStartDate: string | null;
   suggestedEndDate: string | null;
   overlappingBookings: Array<{ campaignName: string; startDate: string; endDate: string; clientName?: string | null }>;
@@ -146,7 +146,7 @@ export function fromCampaignConflict(info: {
     endDate: b.endDate,
   }));
 
-  if (info.status === "available_adjusted") {
+  if (info.status === "available_adjusted" || info.status === "upcoming") {
     let title = "Available with Adjusted Dates";
     if (info.suggestedStartDate) {
       title = `Available from ${format(new Date(info.suggestedStartDate + "T00:00:00"), "dd MMM yyyy")}`;

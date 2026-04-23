@@ -76,6 +76,73 @@ function formatDateIN(dateStr: string | null | undefined): string {
     return `${dd}/${mm}/${d.getFullYear()}`;
   } catch { return '-'; }
 }
+
+/**
+ * Build a compact 1-3 line availability timeline explanation for a row.
+ * Reuses the already-resolved availability_status and dates from row enrichment;
+ * does NOT recompute vacancy logic.
+ */
+function buildAvailabilityTimeline(row: any): { lines: Array<{ label?: string; value: string }> } {
+  const lines: Array<{ label?: string; value: string }> = [];
+  const status = row?.availability_status;
+  const bookedTill = formatDateIN(row?.booked_till);
+  const availFrom = formatDateIN(row?.available_from);
+  const holdEnd = formatDateIN(row?.hold_end_date);
+  const reason = row?.deactivation_reason || row?.block_reason || null;
+
+  switch (status) {
+    case 'VACANT_NOW':
+      lines.push({ value: 'Available now' });
+      if (row?.booked_till) lines.push({ label: 'Next booked till', value: bookedTill });
+      break;
+    case 'AVAILABLE_SOON':
+    case 'BOOKED_THROUGH_RANGE':
+      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: 'Booked' });
+      break;
+    case 'HELD':
+      if (row?.hold_end_date) lines.push({ label: 'Held till', value: holdEnd });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: 'On hold' });
+      break;
+    case 'MAINTENANCE':
+      lines.push({ value: 'Under maintenance' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    case 'REMOVED':
+      lines.push({ value: 'Removed' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    case 'INACTIVE':
+      lines.push({ value: 'Inactive' });
+      if (reason) lines.push({ label: 'Reason', value: reason });
+      break;
+    default:
+      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
+      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
+      if (lines.length === 0) lines.push({ value: '-' });
+  }
+  return { lines };
+}
+
+/** Flat string version of the timeline, for exports */
+function timelineAsText(row: any): string {
+  const { lines } = buildAvailabilityTimeline(row);
+  return lines.map(l => (l.label ? `${l.label}: ${l.value}` : l.value)).join(' | ');
+}
+
+/** Map operational_status enum to a readable label for exports/UI */
+function operationalStatusLabel(s: string | null | undefined): string {
+  if (!s) return '-';
+  switch (s) {
+    case 'active': return 'Active';
+    case 'inactive': return 'Inactive';
+    case 'removed': return 'Removed';
+    case 'maintenance': return 'Under Maintenance';
+    default: return s;
+  }
+}
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
@@ -146,13 +213,13 @@ interface ActiveHold {
 // ─── Column definitions ──────────────────────────────────────
 const ALL_COLUMNS = [
   'area', 'location', 'direction', 'dimensions', 'sqft',
-  'illumination', 'status', 'available_from', 'card_rate',
+  'illumination', 'status', 'availability_timeline', 'available_from', 'card_rate',
   'asset_id', 'type', 'city', 'booked_till', 'campaign',
 ] as const;
 
 const DEFAULT_VISIBLE = [
   'area', 'location', 'direction', 'dimensions', 'sqft',
-  'illumination', 'status', 'available_from',
+  'illumination', 'status', 'availability_timeline', 'available_from',
 ];
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -170,6 +237,7 @@ const COLUMN_LABELS: Record<string, string> = {
   available_from: 'Available From',
   booked_till: 'Booked Till',
   campaign: 'Campaign',
+  availability_timeline: 'Availability Timeline',
 };
 
 type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | 'direction' | 'dimensions' | 'sqft' | 'illumination' | 'status' | 'card_rate' | 'type' | 'city' | 'booked_till' | 'campaign' | null;
@@ -237,6 +305,13 @@ export default function MediaAvailabilityReport() {
         (r.hold_type ? `Hold: ${r.hold_type}` : '') ||
         r.block_reason || '',
       client_name: (r: any) => r.current_client_name || r.hold_client_name || '',
+      // Operational/inventory fields — included in Excel/PDF/Custom exports when field is present
+      operational_status: (r: any) => operationalStatusLabel(r.operational_status),
+      deactivation_reason: (r: any) => r.deactivation_reason || '-',
+      block_reason: (r: any) => r.block_reason || r.deactivation_reason || '-',
+      hold_end_date: (r: any) => formatDateIN(r.hold_end_date),
+      // Single-cell business explanation for Availability Timeline column
+      availability_timeline: (r: any) => timelineAsText(r),
     },
   });
   // Column visibility
@@ -1357,6 +1432,11 @@ export default function MediaAvailabilityReport() {
                           <div className="flex items-center">Status {getSortIcon('status')}</div>
                         </TableHead>
                       )}
+                      {isColumnVisible('availability_timeline') && (
+                        <TableHead className="whitespace-nowrap min-w-[180px]">
+                          Availability Timeline
+                        </TableHead>
+                      )}
                       {isColumnVisible('available_from') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('available_from')}>
                           <TooltipProvider>
@@ -1433,6 +1513,29 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('sqft') && <TableCell className="whitespace-nowrap">{row.sqft || '-'}</TableCell>}
                         {isColumnVisible('illumination') && <TableCell className="whitespace-nowrap">{row.illumination || '-'}</TableCell>}
                         {isColumnVisible('status') && <TableCell>{getStatusBadge(row)}</TableCell>}
+                        {isColumnVisible('availability_timeline') && (
+                          <TableCell className="align-top py-2">
+                            <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px]">
+                              {buildAvailabilityTimeline(row).lines.map((ln, i) => (
+                                <div key={i} className="flex gap-1">
+                                  {ln.label && (
+                                    <span className="text-muted-foreground">{ln.label}:</span>
+                                  )}
+                                  <span
+                                    className={
+                                      ln.label
+                                        ? 'font-medium text-foreground truncate max-w-[140px]'
+                                        : 'font-semibold text-foreground'
+                                    }
+                                    title={ln.value}
+                                  >
+                                    {ln.value}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                        )}
                         {isColumnVisible('available_from') && (
                           <TableCell>
                             {row.availability_status === 'VACANT_NOW' ? (

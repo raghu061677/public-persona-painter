@@ -289,8 +289,18 @@ export function AddAssetsDialog({
                             className="h-4 w-4 rounded border-gray-300 disabled:cursor-not-allowed"
                           />
                         </TableCell>
-                        <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
-                        <TableCell>{asset.location}</TableCell>
+                        <TableCell className="font-medium font-mono text-sm">
+                          <BookingHoverCard summary={result}>
+                            <span className="cursor-help underline-offset-2 hover:underline">
+                              {asset.media_asset_code || asset.id}
+                            </span>
+                          </BookingHoverCard>
+                        </TableCell>
+                        <TableCell>
+                          <BookingHoverCard summary={result}>
+                            <span className="cursor-help">{asset.location}</span>
+                          </BookingHoverCard>
+                        </TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>{asset.area}</TableCell>
                         <TableCell>{asset.media_type}</TableCell>

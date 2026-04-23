@@ -102,13 +102,22 @@ const COLUMNS = [
   { key: "latitude", label: "Latitude", default: false },
   { key: "longitude", label: "Longitude", default: false },
   { key: "asset_status", label: "Asset Status", default: false },
+  { key: "operational_status", label: "Ops Status", default: true },
   { key: "campaign_name", label: "Campaign", default: true },
   { key: "client_name", label: "Client", default: true },
   { key: "start_date", label: "Start Date", default: true },
   { key: "end_date", label: "End Date", default: true },
+  { key: "booked_till", label: "Booked Till", default: true },
+  { key: "available_from", label: "Available From", default: true },
   { key: "duration_days", label: "Duration (Days)", default: true },
   { key: "campaign_status", label: "Campaign Status", default: true },
   { key: "installation_status", label: "Installation", default: false },
+  { key: "billing_type", label: "Billing Type", default: false },
+  { key: "negotiated_rate", label: "Negotiated Rate", default: false },
+  { key: "printing_charges", label: "Printing", default: false },
+  { key: "mounting_charges", label: "Mounting", default: false },
+  { key: "total_booking_value", label: "Booking Value", default: true },
+  { key: "invoice_status", label: "Invoice Status", default: true },
 ];
 
 const STORAGE_KEY = "report.bookedMedia.visibleColumns";

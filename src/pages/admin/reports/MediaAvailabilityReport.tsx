@@ -283,8 +283,8 @@ export default function MediaAvailabilityReport() {
     }
     setLoading(true);
     try {
-      // Fetch availability + active holds in parallel
-      const [availResult, holdsResult] = await Promise.all([
+      // Fetch availability + active holds + operational status in parallel
+      const [availResult, holdsResult, opsResult] = await Promise.all([
         supabase.rpc('fn_media_availability_range', {
           p_company_id: company.id,
           p_start: trimmedStart,
@@ -299,6 +299,10 @@ export default function MediaAvailabilityReport() {
           .eq('status', 'ACTIVE')
           .lte('start_date', trimmedEnd)
           .gte('end_date', trimmedStart),
+        supabase
+          .from('media_assets')
+          .select('id, operational_status, deactivation_reason')
+          .eq('company_id', company.id),
       ]);
 
       if (availResult.error) throw availResult.error;
@@ -316,13 +320,59 @@ export default function MediaAvailabilityReport() {
         }
       }
 
+      // Build operational map: asset_id -> { operational_status, deactivation_reason }
+      const opsMap = new Map<string, { operational_status: string | null; deactivation_reason: string | null }>();
+      for (const op of (opsResult.data || []) as any[]) {
+        opsMap.set(op.id, {
+          operational_status: op.operational_status || 'active',
+          deactivation_reason: op.deactivation_reason || null,
+        });
+      }
+
       // Merge hold info into rows
       const mergedRows = rows.map((row) => {
         const hold = holdMap.get(row.asset_id);
+        const ops = opsMap.get(row.asset_id);
+        const opStatus = (ops?.operational_status || 'active') as 'active' | 'inactive' | 'removed' | 'maintenance';
+        const deactivationReason = ops?.deactivation_reason || null;
+
+        // Priority rules:
+        //   1. Active booking always shows as booked (operational issue noted via badge)
+        //   2. Operational unavailability (removed / maintenance / inactive) overrides "vacant"
+        //   3. Active hold overrides "vacant"
+        const isCurrentlyBooked = row.availability_status === 'BOOKED_THROUGH_RANGE';
+
+        // Apply operational override only if NOT currently booked
+        let workingRow: AvailabilityRow = {
+          ...row,
+          operational_status: opStatus,
+          deactivation_reason: deactivationReason,
+        };
+
+        if (!isCurrentlyBooked && opStatus !== 'active') {
+          const opsLabel: AvailabilityRow['availability_status'] =
+            opStatus === 'removed' ? 'REMOVED'
+            : opStatus === 'maintenance' ? 'MAINTENANCE'
+            : 'INACTIVE';
+          workingRow = {
+            ...workingRow,
+            availability_status: opsLabel,
+            // Operationally non-bookable assets do not have a derivable available_from
+            available_from: '',
+            block_reason: deactivationReason || (
+              opStatus === 'removed' ? 'Asset removed'
+              : opStatus === 'maintenance' ? 'Under maintenance'
+              : 'Inactive'
+            ),
+          };
+        }
+
         if (hold) {
-          // If asset was VACANT_NOW or AVAILABLE_SOON but has an active hold, mark as HELD
-          // If booked AND held, booking takes precedence in display but we still note the hold
-          const isCurrentlyBooked = row.availability_status === 'BOOKED_THROUGH_RANGE';
+          // If asset was VACANT_NOW/AVAILABLE_SOON/operational-issue but has an active hold,
+          // mark as HELD. Booking still wins.
+          const isOperationallyBlocked = workingRow.availability_status === 'REMOVED'
+            || workingRow.availability_status === 'MAINTENANCE'
+            || workingRow.availability_status === 'INACTIVE';
           const newAvailFrom = isCurrentlyBooked
             ? row.available_from
             : (hold.end_date > (row.booked_till || '') 
@@ -330,8 +380,12 @@ export default function MediaAvailabilityReport() {
                 : row.available_from);
           
           return {
-            ...row,
-            availability_status: isCurrentlyBooked ? row.availability_status : 'HELD' as const,
+            ...workingRow,
+            availability_status: isCurrentlyBooked
+              ? row.availability_status
+              : isOperationallyBlocked
+                ? workingRow.availability_status // operational issue still wins over hold
+                : 'HELD' as const,
             available_from: newAvailFrom,
             hold_status: 'ACTIVE',
             hold_type: hold.hold_type,
@@ -341,7 +395,7 @@ export default function MediaAvailabilityReport() {
             hold_id: hold.id,
           };
         }
-        return row;
+        return workingRow;
       });
 
       setAllRows(mergedRows);

@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchImageAsBase64 } from "@/lib/qrWatermark";
 import { sanitizePptText, PPT_SAFE_FONTS } from "@/lib/ppt/sanitizers";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { timelineAsText } from "@/lib/reports/availabilityTimeline";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -454,6 +455,7 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       ["Illumination", row.illumination || "Non-lit"],
       ["City", row.city],
       ["Availability", statusLabel],
+      ["Availability Timeline", timelineAsText(row as any)],
     ];
 
     if (row.latitude && row.longitude) {

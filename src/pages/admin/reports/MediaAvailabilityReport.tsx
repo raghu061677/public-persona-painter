@@ -1595,25 +1595,55 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('status') && <TableCell>{getStatusBadge(row)}</TableCell>}
                         {isColumnVisible('availability_timeline') && (
                           <TableCell className="align-top py-2">
-                            <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px]">
-                              {buildAvailabilityTimeline(row).lines.map((ln, i) => (
-                                <div key={i} className="flex gap-1">
-                                  {ln.label && (
-                                    <span className="text-muted-foreground">{ln.label}:</span>
-                                  )}
-                                  <span
-                                    className={
-                                      ln.label
-                                        ? 'font-medium text-foreground truncate max-w-[140px]'
-                                        : 'font-semibold text-foreground'
-                                    }
-                                    title={ln.value}
-                                  >
-                                    {ln.value}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px] max-w-[220px] cursor-help">
+                                    {buildAvailabilityTimeline(row).lines.map((ln, i) => (
+                                      <div key={i} className="flex gap-1 items-baseline">
+                                        {ln.label && (
+                                          <span className="text-muted-foreground shrink-0">{ln.label}:</span>
+                                        )}
+                                        <span
+                                          className={
+                                            ln.label
+                                              ? 'font-medium text-foreground truncate'
+                                              : 'font-semibold text-foreground truncate'
+                                          }
+                                        >
+                                          {ln.value}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="start" className="max-w-xs">
+                                  <div className="space-y-1.5 text-xs">
+                                    <div className="font-semibold text-foreground">
+                                      {timelineAsText(row)}
+                                    </div>
+                                    {row.deactivation_reason && (
+                                      <div>
+                                        <span className="text-muted-foreground">Deactivation reason: </span>
+                                        <span className="font-medium">{row.deactivation_reason}</span>
+                                      </div>
+                                    )}
+                                    {row.block_reason && row.block_reason !== row.deactivation_reason && (
+                                      <div>
+                                        <span className="text-muted-foreground">Block reason: </span>
+                                        <span className="font-medium">{row.block_reason}</span>
+                                      </div>
+                                    )}
+                                    {row.operational_status && row.operational_status !== 'active' && (
+                                      <div>
+                                        <span className="text-muted-foreground">Operational status: </span>
+                                        <span className="font-medium">{operationalStatusLabel(row.operational_status)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TableCell>
                         )}
                         {isColumnVisible('available_from') && (

@@ -121,8 +121,13 @@ export function computeCampaignTotals({
         displayCostRaw += Number(asset.billing_override_amount);
         continue;
       }
-      // prorated / full_term: fall through to normal date-based calculation
-      // (effective_end_date is already set to drop date for prorated)
+      // Only billing_mode_override = 'prorated' or 'full_term' should
+      // continue to bill a dropped asset. Anything else (NULL / unset)
+      // is treated as waived so the Financial Summary stays in sync
+      // with what the Billing & Invoice engine actually charges.
+      if (mode !== 'prorated' && mode !== 'full_term') {
+        continue;
+      }
     }
 
      // Use effective dates (which account for drops), falling back to booking/campaign dates
@@ -150,18 +155,17 @@ export function computeCampaignTotals({
      const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * assetDurationDays;
      displayCostRaw += proRataAmount;
      
-     // Track min/max dates for campaign period (only active assets)
-     if (!asset.is_removed) {
-       if (assetStart < minStartDate) minStartDate = assetStart;
-       if (assetEnd > maxEndDate) maxEndDate = assetEnd;
-     }
    }
    const displayCost = Math.round(displayCostRaw * 100) / 100;
    
-   // Campaign period is the span of all asset dates
-   const campaignPeriodStart = minStartDate;
-   const campaignPeriodEnd = maxEndDate;
-   const durationDays = Math.ceil((campaignPeriodEnd.getTime() - campaignPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  // Campaign period and duration are anchored to the campaign's own
+  // start/end dates — NOT widened by individual asset booking windows.
+  // This keeps the Campaign Period card consistent with the campaign
+  // contract (e.g. 20 Apr → 19 May = 30 days, not 33 days because one
+  // asset's window happens to extend to 22 May).
+  const campaignPeriodStart = campaignStartDate;
+  const campaignPeriodEnd = campaignEndDate;
+  const durationDays = Math.ceil((campaignPeriodEnd.getTime() - campaignPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
    
    // Sum printing and mounting from campaign_assets (only non-removed for one-time charges)
    const printingCost = activeAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);

@@ -103,8 +103,6 @@ export function computeCampaignTotals({
    // Formula: (monthly_rate / 30) × asset_duration_days for each asset
    // Dropped assets with billing overrides use the override amount
    let displayCostRaw = 0;
-   let minStartDate = campaignStartDate;
-   let maxEndDate = campaignEndDate;
    
    // Count active (non-removed) assets for totalAssets
    const activeAssets = campaignAssets.filter(a => !a.is_removed);
@@ -147,9 +145,16 @@ export function computeCampaignTotals({
      if (!asset.is_removed && !asset.effective_end_date && assetEnd < campaignEndDate) {
        assetEnd = campaignEndDate;
      }
+
+     // Clip asset window to the campaign contract window so the
+     // Financial Summary mirrors what the Billing engine actually
+     // invoices (it never bills outside the campaign period).
+     const clippedStart = assetStart < campaignStartDate ? campaignStartDate : assetStart;
+     const clippedEnd = assetEnd > campaignEndDate ? campaignEndDate : assetEnd;
+     if (clippedStart > clippedEnd) continue;
      
      // Calculate this asset's duration in days (inclusive)
-     const assetDurationDays = Math.ceil((assetEnd.getTime() - assetStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+     const assetDurationDays = Math.ceil((clippedEnd.getTime() - clippedStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
      
      const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
      const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * assetDurationDays;

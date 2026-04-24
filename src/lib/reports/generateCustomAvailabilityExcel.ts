@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { addProfessionalFooter } from "@/lib/exports/excelFooterSection";
+import { timelineAsText, operationalStatusLabel } from "@/lib/reports/availabilityTimeline";
 
 export interface CustomExportField {
   key: string;
@@ -41,6 +42,8 @@ export const ALL_EXPORT_FIELDS: CustomExportField[] = [
   { key: 'booked_till', label: 'Booked Till', group: 'Availability', getValue: (r) => {
     try { return r.booked_till ? format(new Date(r.booked_till), 'dd-MM-yyyy') : ''; } catch { return r.booked_till || ''; }
   }, width: 14 },
+  // Single-cell flat-text timeline — uses the SAME shared formatter as table/Excel/PDF/Proposal exports
+  { key: 'availability_timeline', label: 'Availability Timeline', group: 'Availability', getValue: (r) => timelineAsText(r), width: 44 },
 
   // Pricing
   { key: 'card_rate', label: 'Card Rate', group: 'Pricing', getValue: (r) => r.card_rate || 0, width: 14, numFmt: '₹#,##0' },
@@ -49,6 +52,14 @@ export const ALL_EXPORT_FIELDS: CustomExportField[] = [
   { key: 'campaign_name', label: 'Campaign Name', group: 'Campaign & Client', getValue: (r) => r.current_campaign_name || '', width: 24 },
   { key: 'client_name', label: 'Client Name', group: 'Campaign & Client', getValue: (r) => r.current_client_name || '', width: 24 },
 
+  // Operational / inventory metadata (optional in Custom Export field picker)
+  { key: 'operational_status', label: 'Operational Status', group: 'Operational', getValue: (r) => operationalStatusLabel(r.operational_status), width: 18 },
+  { key: 'deactivation_reason', label: 'Deactivation Reason', group: 'Operational', getValue: (r) => r.deactivation_reason || '', width: 28 },
+  { key: 'block_reason', label: 'Block Reason', group: 'Operational', getValue: (r) => r.block_reason || '', width: 28 },
+  { key: 'hold_end_date', label: 'Hold End Date', group: 'Operational', getValue: (r) => {
+    try { return r.hold_end_date ? format(new Date(r.hold_end_date), 'dd-MM-yyyy') : ''; } catch { return r.hold_end_date || ''; }
+  }, width: 14 },
+
   // Geo Coordinates
   { key: 'latitude', label: 'Latitude', group: 'Geo Coordinates', getValue: (r) => r.latitude ?? '', width: 14, numFmt: '0.000000' },
   { key: 'longitude', label: 'Longitude', group: 'Geo Coordinates', getValue: (r) => r.longitude ?? '', width: 14, numFmt: '0.000000' },
@@ -56,7 +67,7 @@ export const ALL_EXPORT_FIELDS: CustomExportField[] = [
 
 export const DEFAULT_CUSTOM_FIELDS = [
   'sno', 'asset_id', 'area', 'location', 'direction', 'dimension', 'sqft',
-  'illumination', 'availability_status', 'available_from', 'booked_till', 'card_rate',
+  'illumination', 'availability_status', 'availability_timeline', 'available_from', 'booked_till', 'card_rate',
 ];
 
 export const FIELD_GROUPS = [...new Set(ALL_EXPORT_FIELDS.map(f => f.group))];

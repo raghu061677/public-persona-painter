@@ -230,10 +230,7 @@ export default function ReportBookedMedia() {
         // never plan/proposal/quotation rows or soft-deleted/cancelled campaigns.
         .eq("campaigns.is_deleted", false)
         // Confirmed campaign statuses only (case variants tolerated in JS guard below).
-        .in("campaigns.status", [
-          "Running", "Active", "Confirmed", "In Progress", "Completed",
-          "running", "active", "confirmed", "in_progress", "completed",
-        ]);
+        .in("campaigns.status", ["Running", "InProgress", "Completed"]);
 
       if (caError) throw caError;
 

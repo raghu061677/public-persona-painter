@@ -64,85 +64,12 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { format, addDays, addMonths, startOfToday } from "date-fns";
-
-/** Format date string to Indian DD/MM/YYYY */
-function formatDateIN(dateStr: string | null | undefined): string {
-  if (!dateStr) return '-';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
-    const dd = d.getDate().toString().padStart(2, '0');
-    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-    return `${dd}/${mm}/${d.getFullYear()}`;
-  } catch { return '-'; }
-}
-
-/**
- * Build a compact 1-3 line availability timeline explanation for a row.
- * Reuses the already-resolved availability_status and dates from row enrichment;
- * does NOT recompute vacancy logic.
- */
-function buildAvailabilityTimeline(row: any): { lines: Array<{ label?: string; value: string }> } {
-  const lines: Array<{ label?: string; value: string }> = [];
-  const status = row?.availability_status;
-  const bookedTill = formatDateIN(row?.booked_till);
-  const availFrom = formatDateIN(row?.available_from);
-  const holdEnd = formatDateIN(row?.hold_end_date);
-  const reason = row?.deactivation_reason || row?.block_reason || null;
-
-  switch (status) {
-    case 'VACANT_NOW':
-      lines.push({ value: 'Available now' });
-      if (row?.booked_till) lines.push({ label: 'Next booked till', value: bookedTill });
-      break;
-    case 'AVAILABLE_SOON':
-    case 'BOOKED_THROUGH_RANGE':
-      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
-      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
-      if (lines.length === 0) lines.push({ value: 'Booked' });
-      break;
-    case 'HELD':
-      if (row?.hold_end_date) lines.push({ label: 'Held till', value: holdEnd });
-      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
-      if (lines.length === 0) lines.push({ value: 'On hold' });
-      break;
-    case 'MAINTENANCE':
-      lines.push({ value: 'Under maintenance' });
-      if (reason) lines.push({ label: 'Reason', value: reason });
-      break;
-    case 'REMOVED':
-      lines.push({ value: 'Removed' });
-      if (reason) lines.push({ label: 'Reason', value: reason });
-      break;
-    case 'INACTIVE':
-      lines.push({ value: 'Inactive' });
-      if (reason) lines.push({ label: 'Reason', value: reason });
-      break;
-    default:
-      if (row?.booked_till) lines.push({ label: 'Booked till', value: bookedTill });
-      if (row?.available_from) lines.push({ label: 'Available from', value: availFrom });
-      if (lines.length === 0) lines.push({ value: '-' });
-  }
-  return { lines };
-}
-
-/** Flat string version of the timeline, for exports */
-function timelineAsText(row: any): string {
-  const { lines } = buildAvailabilityTimeline(row);
-  return lines.map(l => (l.label ? `${l.label}: ${l.value}` : l.value)).join(' | ');
-}
-
-/** Map operational_status enum to a readable label for exports/UI */
-function operationalStatusLabel(s: string | null | undefined): string {
-  if (!s) return '-';
-  switch (s) {
-    case 'active': return 'Active';
-    case 'inactive': return 'Inactive';
-    case 'removed': return 'Removed';
-    case 'maintenance': return 'Under Maintenance';
-    default: return s;
-  }
-}
+import {
+  formatDateIN,
+  buildAvailabilityTimeline,
+  timelineAsText,
+  operationalStatusLabel,
+} from "@/lib/reports/availabilityTimeline";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
@@ -1668,25 +1595,55 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('status') && <TableCell>{getStatusBadge(row)}</TableCell>}
                         {isColumnVisible('availability_timeline') && (
                           <TableCell className="align-top py-2">
-                            <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px]">
-                              {buildAvailabilityTimeline(row).lines.map((ln, i) => (
-                                <div key={i} className="flex gap-1">
-                                  {ln.label && (
-                                    <span className="text-muted-foreground">{ln.label}:</span>
-                                  )}
-                                  <span
-                                    className={
-                                      ln.label
-                                        ? 'font-medium text-foreground truncate max-w-[140px]'
-                                        : 'font-semibold text-foreground'
-                                    }
-                                    title={ln.value}
-                                  >
-                                    {ln.value}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex flex-col gap-0.5 text-xs leading-tight min-w-[170px] max-w-[220px] cursor-help">
+                                    {buildAvailabilityTimeline(row).lines.map((ln, i) => (
+                                      <div key={i} className="flex gap-1 items-baseline">
+                                        {ln.label && (
+                                          <span className="text-muted-foreground shrink-0">{ln.label}:</span>
+                                        )}
+                                        <span
+                                          className={
+                                            ln.label
+                                              ? 'font-medium text-foreground truncate'
+                                              : 'font-semibold text-foreground truncate'
+                                          }
+                                        >
+                                          {ln.value}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="start" className="max-w-xs">
+                                  <div className="space-y-1.5 text-xs">
+                                    <div className="font-semibold text-foreground">
+                                      {timelineAsText(row)}
+                                    </div>
+                                    {row.deactivation_reason && (
+                                      <div>
+                                        <span className="text-muted-foreground">Deactivation reason: </span>
+                                        <span className="font-medium">{row.deactivation_reason}</span>
+                                      </div>
+                                    )}
+                                    {row.block_reason && row.block_reason !== row.deactivation_reason && (
+                                      <div>
+                                        <span className="text-muted-foreground">Block reason: </span>
+                                        <span className="font-medium">{row.block_reason}</span>
+                                      </div>
+                                    )}
+                                    {row.operational_status && row.operational_status !== 'active' && (
+                                      <div>
+                                        <span className="text-muted-foreground">Operational status: </span>
+                                        <span className="font-medium">{operationalStatusLabel(row.operational_status)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TableCell>
                         )}
                         {isColumnVisible('available_from') && (

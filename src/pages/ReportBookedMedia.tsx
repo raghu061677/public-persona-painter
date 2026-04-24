@@ -222,12 +222,33 @@ export default function ReportBookedMedia() {
           campaign_id, is_removed,
           billing_mode, billing_mode_override,
           negotiated_rate, printing_charges, mounting_charges, total_price,
-          campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
+          campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id, is_deleted)
         `)
         .eq("campaigns.company_id", company.id)
-        .eq("is_removed", false);
+        .eq("is_removed", false)
+        // Booked Media must reflect ONLY real, confirmed campaign bookings —
+        // never plan/proposal/quotation rows or soft-deleted/cancelled campaigns.
+        .eq("campaigns.is_deleted", false)
+        // Confirmed campaign statuses only (case variants tolerated in JS guard below).
+        .in("campaigns.status", [
+          "Running", "Active", "Confirmed", "In Progress", "Completed",
+          "running", "active", "confirmed", "in_progress", "completed",
+        ]);
 
       if (caError) throw caError;
+
+      // Defensive client-side guard: drop any row whose joined campaign somehow
+      // arrives without a confirmed status or is flagged deleted. Protects the
+      // report from future status enum drift / orphan rows.
+      const CONFIRMED_STATUSES = new Set([
+        "running", "active", "confirmed", "in progress", "in_progress", "completed",
+      ]);
+      const cleanData = (caData || []).filter((r: any) => {
+        const c = r.campaigns;
+        if (!c || c.is_deleted === true) return false;
+        const s = String(c.status || "").trim().toLowerCase();
+        return CONFIRMED_STATUSES.has(s);
+      });
 
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];

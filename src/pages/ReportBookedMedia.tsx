@@ -248,7 +248,7 @@ export default function ReportBookedMedia() {
       });
 
       // Get asset codes
-      const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
+      const assetIds = [...new Set(cleanData.map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
       let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number; operational_status: string }>();
 
@@ -274,7 +274,7 @@ export default function ReportBookedMedia() {
       }
 
       // Batch-fetch invoice statuses by campaign_id (latest per campaign)
-      const campaignIds = [...new Set((caData || []).map((r: any) => r.campaigns?.id).filter(Boolean))];
+      const campaignIds = [...new Set(cleanData.map((r: any) => r.campaigns?.id).filter(Boolean))];
       const invoiceStatusMap = new Map<string, string>();
       if (campaignIds.length > 0) {
         for (let i = 0; i < campaignIds.length; i += 100) {
@@ -305,7 +305,7 @@ export default function ReportBookedMedia() {
       // Build per-asset booking timeline to derive booked_till + available_from
       // Group all bookings by asset to find chained next-booking dates
       const bookingsByAsset = new Map<string, Array<{ start: string; end: string }>>();
-      (caData || []).forEach((r: any) => {
+      cleanData.forEach((r: any) => {
         const s = r.effective_start_date || r.booking_start_date || r.start_date || r.campaigns?.start_date;
         const e = r.effective_end_date || r.booking_end_date || r.end_date || r.campaigns?.end_date;
         if (!s || !e) return;
@@ -315,7 +315,7 @@ export default function ReportBookedMedia() {
       // Sort each asset's bookings ascending
       bookingsByAsset.forEach((arr) => arr.sort((a, b) => a.start.localeCompare(b.start)));
 
-      const rows: BookedMediaRow[] = (caData || []).map((r: any) => {
+      const rows: BookedMediaRow[] = cleanData.map((r: any) => {
         const campaign = r.campaigns;
         const startDate = r.effective_start_date || r.booking_start_date || r.start_date || campaign.start_date;
         const endDate = r.effective_end_date || r.booking_end_date || r.end_date || campaign.end_date;

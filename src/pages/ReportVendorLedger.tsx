@@ -11,6 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle } from "lucide-react";
 import ExcelJS from "exceljs";
+import { DateRangeFilter } from "@/components/common/date-range-filter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import type { DateRange } from "react-day-picker";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -27,6 +31,8 @@ interface PayableLine {
   campaignName: string;
   clientName: string;
   assetId: string;
+  assetDisplayCode: string;
+  assetCodeMismatch: boolean;
   location: string;
   city: string;
   month: string;
@@ -55,6 +61,8 @@ export default function ReportVendorLedger() {
   const [vendorType, setVendorType] = useState<"all" | "mounter" | "printer">("all");
   const [cityFilter, setCityFilter] = useState("all");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Fetch mounters
   const { data: mounters = [] } = useQuery({
@@ -67,6 +75,23 @@ export default function ReportVendorLedger() {
         .eq("company_id", companyId!)
         .order("name");
       return data ?? [];
+    },
+  });
+
+  // Fetch media_assets to resolve readable codes + detect orphan IDs
+  const { data: assetCodeMap = new Map<string, string>() } = useQuery<Map<string, string>>({
+    queryKey: ["media-asset-codes", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("media_assets")
+        .select("id, media_asset_code")
+        .eq("company_id", companyId!);
+      const map = new Map<string, string>();
+      (data ?? []).forEach((a: any) => {
+        if (a?.id) map.set(a.id, a.media_asset_code || "");
+      });
+      return map;
     },
   });
 
@@ -111,6 +136,14 @@ export default function ReportVendorLedger() {
     lines.forEach(l => {
       const key = `${l.campaignId}__${l.assetId}`;
       const mounter = assetMounterMap.get(key) ?? { mounterId: null, mounterName: "Unassigned" };
+      const storedCode = assetCodeMap.get(l.assetId);
+      // Mismatch = the campaign_asset.asset_id doesn't resolve to any media_assets row
+      // (orphan / tenant-prefix drift / hard-deleted asset).
+      const assetCodeMismatch = assetCodeMap.size > 0 && !assetCodeMap.has(l.assetId);
+      const assetDisplayCode = formatAssetDisplayCode({
+        mediaAssetCode: storedCode || null,
+        fallbackId: l.assetId,
+      });
 
       if (l.mountingPayable > 0) {
         result.push({
@@ -118,6 +151,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.mountingMonth,
@@ -132,6 +167,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.unmountingMonth,
@@ -146,6 +183,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.mountingMonth,
@@ -156,7 +195,13 @@ export default function ReportVendorLedger() {
       }
     });
     return result;
-  }, [lines, assetMounterMap]);
+  }, [lines, assetMounterMap, assetCodeMap]);
+
+  // Asset-code mismatch warning count
+  const mismatchCount = useMemo(
+    () => new Set(payableLines.filter(l => l.assetCodeMismatch).map(l => l.assetId)).size,
+    [payableLines]
+  );
 
   // Count unassigned payables (mounting/unmounting only — printers handled separately)
   const unassignedCount = useMemo(() => {
@@ -178,12 +223,37 @@ export default function ReportVendorLedger() {
     }
     if (cityFilter !== "all") result = result.filter(l => l.city === cityFilter);
     if (campaignFilter !== "all") result = result.filter(l => l.campaignName === campaignFilter);
+    if (monthFilter !== "all") result = result.filter(l => l.month === monthFilter);
+    if (dateRange?.from || dateRange?.to) {
+      // Month is YYYY-MM. Convert to a comparable first-of-month date.
+      const fromKey = dateRange?.from
+        ? `${dateRange.from.getFullYear()}-${String(dateRange.from.getMonth() + 1).padStart(2, "0")}`
+        : null;
+      const toKey = dateRange?.to
+        ? `${dateRange.to.getFullYear()}-${String(dateRange.to.getMonth() + 1).padStart(2, "0")}`
+        : null;
+      result = result.filter(l => {
+        if (!l.month) return false;
+        if (fromKey && l.month < fromKey) return false;
+        if (toKey && l.month > toKey) return false;
+        return true;
+      });
+    }
     return result;
-  }, [payableLines, selectedVendor, vendorType, cityFilter, campaignFilter]);
+  }, [payableLines, selectedVendor, vendorType, cityFilter, campaignFilter, monthFilter, dateRange]);
 
   // Unique values for filters
   const cities = useMemo(() => [...new Set(payableLines.map(l => l.city))].filter(Boolean).sort(), [payableLines]);
   const campaigns = useMemo(() => [...new Set(payableLines.map(l => l.campaignName))].filter(Boolean).sort(), [payableLines]);
+  const monthOptions = useMemo(
+    () => [...new Set(payableLines.map(l => l.month))].filter(Boolean).sort(),
+    [payableLines]
+  );
+  const formatMonthLabel = (m: string) => {
+    if (!/^\d{4}-\d{2}$/.test(m)) return m;
+    const [y, mo] = m.split("-").map(Number);
+    return new Date(y, mo - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+  };
 
   // Build month-wise statement
   const monthStatement = useMemo((): MonthStatement[] => {
@@ -258,7 +328,9 @@ export default function ReportVendorLedger() {
       { header: "Month", key: "month", width: 12 },
       { header: "Campaign", key: "campaignName", width: 25 },
       { header: "Client", key: "clientName", width: 22 },
-      { header: "Asset ID", key: "assetId", width: 18 },
+      { header: "Asset Code", key: "assetDisplayCode", width: 22 },
+      { header: "Stored Asset ID", key: "assetId", width: 38 },
+      { header: "Asset Code Match", key: "codeMatch", width: 18 },
       { header: "Location", key: "location", width: 28 },
       { header: "City", key: "city", width: 14 },
       { header: "Mounter", key: "mounterName", width: 18 },
@@ -271,7 +343,9 @@ export default function ReportVendorLedger() {
         const ws = wb.addWorksheet(`${type} Lines`);
         ws.columns = lineCols.map(c => ({ ...c }));
         ws.getRow(1).font = { bold: true };
-        typeLines.forEach(l => ws.addRow(l));
+        typeLines.forEach(l =>
+          ws.addRow({ ...l, codeMatch: l.assetCodeMismatch ? "MISMATCH" : "OK" })
+        );
       }
     });
 
@@ -284,6 +358,8 @@ export default function ReportVendorLedger() {
     setVendorType("all");
     setCityFilter("all");
     setCampaignFilter("all");
+    setMonthFilter("all");
+    setDateRange(undefined);
   };
 
   const isLoading = opsLoading;
@@ -307,6 +383,20 @@ export default function ReportVendorLedger() {
             <Button variant="outline" size="sm" className="ml-3" onClick={() => setSelectedVendor("__unassigned__")}>
               View Unassigned
             </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Asset-code mismatch warning */}
+      {mismatchCount > 0 && (
+        <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{mismatchCount} asset identifier(s)</strong> in this ledger don't match any current
+            <code className="mx-1 px-1 py-0.5 rounded bg-muted text-foreground text-xs">media_assets</code>
+            record. The displayed code is a fallback derived from the stored ID. This usually means the
+            asset was removed, re-prefixed, or belongs to a different tenant. Hover the asset code to see
+            the raw stored ID.
           </AlertDescription>
         </Alert>
       )}
@@ -370,6 +460,21 @@ export default function ReportVendorLedger() {
             {campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Month" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {monthOptions.map(m => (
+              <SelectItem key={m} value={m}>{formatMonthLabel(m)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DateRangeFilter
+          label=""
+          value={dateRange}
+          onChange={setDateRange}
+          placeholder="Date range (by booking month)"
+        />
         <Button variant="outline" size="sm" onClick={resetFilters}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
         </Button>
@@ -474,7 +579,29 @@ export default function ReportVendorLedger() {
                             <td className="py-2.5 px-4">{l.month}</td>
                             <td className="py-2.5 px-4 font-medium">{l.campaignName}</td>
                             <td className="py-2.5 px-4">{l.clientName}</td>
-                            <td className="py-2.5 px-4 font-mono text-xs">{l.assetId}</td>
+                            <td className="py-2.5 px-4 font-mono text-xs">
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className={`inline-flex items-center gap-1 cursor-help ${l.assetCodeMismatch ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                                      {l.assetCodeMismatch && (
+                                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                                      )}
+                                      {l.assetDisplayCode}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs space-y-1">
+                                    <div><strong>Display:</strong> {l.assetDisplayCode}</div>
+                                    <div className="break-all"><strong>Stored ID:</strong> {l.assetId}</div>
+                                    {l.assetCodeMismatch && (
+                                      <div className="text-amber-500">
+                                        No matching media_assets row found. Code shown is a fallback.
+                                      </div>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </td>
                             <td className="py-2.5 px-4 max-w-[200px] truncate">{l.location}</td>
                             <td className="py-2.5 px-4">{l.city}</td>
                             <td className="py-2.5 px-4">

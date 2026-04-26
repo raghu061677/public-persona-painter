@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle } from "lucide-react";
+import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import ExcelJS from "exceljs";
 import { DateRangeFilter } from "@/components/common/date-range-filter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
@@ -41,6 +43,22 @@ interface PayableLine {
   mounterName: string;
 }
 
+/** Which date dimension Month/Date filters operate on. */
+type DateBasis = "mounting" | "unmounting" | "payable";
+
+type DrillSortKey =
+  | "month"
+  | "campaignName"
+  | "clientName"
+  | "assetDisplayCode"
+  | "assetId"
+  | "assetCodeMatch"
+  | "location"
+  | "city"
+  | "mounterName"
+  | "amount";
+type SortDir = "asc" | "desc";
+
 interface MonthStatement {
   month: string;
   opening: number;
@@ -63,6 +81,19 @@ export default function ReportVendorLedger() {
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  // Default preserves prior behavior: Mounting/Printing -> mountingMonth, Unmounting -> unmountingMonth.
+  // "mounting" / "unmounting" force every row to that single dimension; "payable" = current default.
+  const [dateBasis, setDateBasis] = useState<DateBasis>("payable");
+
+  // Per-tab sort state (one entry per drilldown tab key).
+  const [sortByTab, setSortByTab] = useState<Record<string, { key: DrillSortKey; dir: SortDir } | null>>({
+    mounting: null,
+    unmounting: null,
+    printing: null,
+  });
+
+  // Drill-down modal state
+  const [drillAsset, setDrillAsset] = useState<PayableLine | null>(null);
 
   // Fetch mounters
   const { data: mounters = [] } = useQuery({
@@ -155,7 +186,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.mountingMonth,
+          month: dateBasis === "unmounting" ? l.unmountingMonth : l.mountingMonth,
           amount: l.mountingPayable,
           mounterId: mounter.mounterId,
           mounterName: mounter.mounterName,
@@ -171,7 +202,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.unmountingMonth,
+          month: dateBasis === "mounting" ? l.mountingMonth : l.unmountingMonth,
           amount: l.unmountingPayable,
           mounterId: mounter.mounterId,
           mounterName: mounter.mounterName,
@@ -187,7 +218,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.mountingMonth,
+          month: dateBasis === "unmounting" ? l.unmountingMonth : l.mountingMonth,
           amount: l.printingPayable,
           mounterId: null,
           mounterName: "Printer Vendor",
@@ -195,7 +226,7 @@ export default function ReportVendorLedger() {
       }
     });
     return result;
-  }, [lines, assetMounterMap, assetCodeMap]);
+  }, [lines, assetMounterMap, assetCodeMap, dateBasis]);
 
   // Asset-code mismatch warning count
   const mismatchCount = useMemo(
@@ -360,6 +391,8 @@ export default function ReportVendorLedger() {
     setCampaignFilter("all");
     setMonthFilter("all");
     setDateRange(undefined);
+    setDateBasis("payable");
+    setSortByTab({ mounting: null, unmounting: null, printing: null });
   };
 
   const isLoading = opsLoading;

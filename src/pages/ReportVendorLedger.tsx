@@ -328,7 +328,9 @@ export default function ReportVendorLedger() {
       { header: "Month", key: "month", width: 12 },
       { header: "Campaign", key: "campaignName", width: 25 },
       { header: "Client", key: "clientName", width: 22 },
-      { header: "Asset ID", key: "assetId", width: 18 },
+      { header: "Asset Code", key: "assetDisplayCode", width: 22 },
+      { header: "Stored Asset ID", key: "assetId", width: 38 },
+      { header: "Asset Code Match", key: "codeMatch", width: 18 },
       { header: "Location", key: "location", width: 28 },
       { header: "City", key: "city", width: 14 },
       { header: "Mounter", key: "mounterName", width: 18 },
@@ -341,7 +343,9 @@ export default function ReportVendorLedger() {
         const ws = wb.addWorksheet(`${type} Lines`);
         ws.columns = lineCols.map(c => ({ ...c }));
         ws.getRow(1).font = { bold: true };
-        typeLines.forEach(l => ws.addRow(l));
+        typeLines.forEach(l =>
+          ws.addRow({ ...l, codeMatch: l.assetCodeMismatch ? "MISMATCH" : "OK" })
+        );
       }
     });
 

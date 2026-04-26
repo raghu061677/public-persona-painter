@@ -383,6 +383,20 @@ export default function ReportVendorLedger() {
         </Alert>
       )}
 
+      {/* Asset-code mismatch warning */}
+      {mismatchCount > 0 && (
+        <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{mismatchCount} asset identifier(s)</strong> in this ledger don't match any current
+            <code className="mx-1 px-1 py-0.5 rounded bg-muted text-foreground text-xs">media_assets</code>
+            record. The displayed code is a fallback derived from the stored ID. This usually means the
+            asset was removed, re-prefixed, or belongs to a different tenant. Hover the asset code to see
+            the raw stored ID.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-4">
@@ -442,6 +456,21 @@ export default function ReportVendorLedger() {
             {campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Month" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {monthOptions.map(m => (
+              <SelectItem key={m} value={m}>{formatMonthLabel(m)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DateRangeFilter
+          label=""
+          value={dateRange}
+          onChange={setDateRange}
+          placeholder="Date range (by booking month)"
+        />
         <Button variant="outline" size="sm" onClick={resetFilters}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
         </Button>

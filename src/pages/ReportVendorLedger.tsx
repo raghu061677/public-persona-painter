@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle } from "lucide-react";
+import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import ExcelJS from "exceljs";
 import { DateRangeFilter } from "@/components/common/date-range-filter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
@@ -41,6 +43,22 @@ interface PayableLine {
   mounterName: string;
 }
 
+/** Which date dimension Month/Date filters operate on. */
+type DateBasis = "mounting" | "unmounting" | "payable";
+
+type DrillSortKey =
+  | "month"
+  | "campaignName"
+  | "clientName"
+  | "assetDisplayCode"
+  | "assetId"
+  | "assetCodeMatch"
+  | "location"
+  | "city"
+  | "mounterName"
+  | "amount";
+type SortDir = "asc" | "desc";
+
 interface MonthStatement {
   month: string;
   opening: number;
@@ -63,6 +81,19 @@ export default function ReportVendorLedger() {
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  // Default preserves prior behavior: Mounting/Printing -> mountingMonth, Unmounting -> unmountingMonth.
+  // "mounting" / "unmounting" force every row to that single dimension; "payable" = current default.
+  const [dateBasis, setDateBasis] = useState<DateBasis>("payable");
+
+  // Per-tab sort state (one entry per drilldown tab key).
+  const [sortByTab, setSortByTab] = useState<Record<string, { key: DrillSortKey; dir: SortDir } | null>>({
+    mounting: null,
+    unmounting: null,
+    printing: null,
+  });
+
+  // Drill-down modal state
+  const [drillAsset, setDrillAsset] = useState<PayableLine | null>(null);
 
   // Fetch mounters
   const { data: mounters = [] } = useQuery({
@@ -155,7 +186,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.mountingMonth,
+          month: dateBasis === "unmounting" ? l.unmountingMonth : l.mountingMonth,
           amount: l.mountingPayable,
           mounterId: mounter.mounterId,
           mounterName: mounter.mounterName,
@@ -171,7 +202,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.unmountingMonth,
+          month: dateBasis === "mounting" ? l.mountingMonth : l.unmountingMonth,
           amount: l.unmountingPayable,
           mounterId: mounter.mounterId,
           mounterName: mounter.mounterName,
@@ -187,7 +218,7 @@ export default function ReportVendorLedger() {
           assetCodeMismatch,
           location: l.location,
           city: l.city,
-          month: l.mountingMonth,
+          month: dateBasis === "unmounting" ? l.unmountingMonth : l.mountingMonth,
           amount: l.printingPayable,
           mounterId: null,
           mounterName: "Printer Vendor",
@@ -195,7 +226,7 @@ export default function ReportVendorLedger() {
       }
     });
     return result;
-  }, [lines, assetMounterMap, assetCodeMap]);
+  }, [lines, assetMounterMap, assetCodeMap, dateBasis]);
 
   // Asset-code mismatch warning count
   const mismatchCount = useMemo(
@@ -360,6 +391,8 @@ export default function ReportVendorLedger() {
     setCampaignFilter("all");
     setMonthFilter("all");
     setDateRange(undefined);
+    setDateBasis("payable");
+    setSortByTab({ mounting: null, unmounting: null, printing: null });
   };
 
   const isLoading = opsLoading;
@@ -469,11 +502,28 @@ export default function ReportVendorLedger() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Date basis:</span>
+          <Select value={dateBasis} onValueChange={v => setDateBasis(v as DateBasis)}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="payable">Payable month (default)</SelectItem>
+              <SelectItem value="mounting">Mounting month</SelectItem>
+              <SelectItem value="unmounting">Unmounting month</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <DateRangeFilter
           label=""
           value={dateRange}
           onChange={setDateRange}
-          placeholder="Date range (by booking month)"
+          placeholder={
+            dateBasis === "mounting" ? "Date range (mounting month)"
+            : dateBasis === "unmounting" ? "Date range (unmounting month)"
+            : "Date range (payable month)"
+          }
         />
         <Button variant="outline" size="sm" onClick={resetFilters}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
@@ -554,6 +604,75 @@ export default function ReportVendorLedger() {
           {(["mounting", "unmounting", "printing"] as const).map(tab => {
             const typeLabel = tab === "mounting" ? "Mounting" : tab === "unmounting" ? "Unmounting" : "Printing";
             const tabLines = filteredLines.filter(l => l.type === typeLabel);
+            const sort = sortByTab[tab];
+            const sortedLines = (() => {
+              if (!sort) return tabLines;
+              const arr = [...tabLines];
+              arr.sort((a, b) => {
+                let av: any;
+                let bv: any;
+                switch (sort.key) {
+                  case "assetCodeMatch":
+                    av = a.assetCodeMismatch ? 0 : 1;
+                    bv = b.assetCodeMismatch ? 0 : 1;
+                    break;
+                  case "amount":
+                    av = a.amount;
+                    bv = b.amount;
+                    break;
+                  default:
+                    av = (a as any)[sort.key] ?? "";
+                    bv = (b as any)[sort.key] ?? "";
+                }
+                if (typeof av === "number" && typeof bv === "number") {
+                  return sort.dir === "asc" ? av - bv : bv - av;
+                }
+                const as = String(av).toLowerCase();
+                const bs = String(bv).toLowerCase();
+                if (as < bs) return sort.dir === "asc" ? -1 : 1;
+                if (as > bs) return sort.dir === "asc" ? 1 : -1;
+                return 0;
+              });
+              return arr;
+            })();
+            const cycleSort = (key: DrillSortKey) => {
+              setSortByTab(prev => {
+                const current = prev[tab];
+                let next: { key: DrillSortKey; dir: SortDir } | null;
+                if (!current || current.key !== key) next = { key, dir: "asc" };
+                else if (current.dir === "asc") next = { key, dir: "desc" };
+                else next = null;
+                return { ...prev, [tab]: next };
+              });
+            };
+            const SortHeader = ({
+              label,
+              k,
+              align = "left",
+            }: { label: string; k: DrillSortKey; align?: "left" | "right" }) => {
+              const active = sort?.key === k;
+              return (
+                <th
+                  className={cn(
+                    "py-3 px-4 font-medium cursor-pointer select-none hover:bg-muted/40 transition-colors",
+                    align === "right" ? "text-right" : "text-left",
+                    active && "bg-muted/30 text-foreground"
+                  )}
+                  onClick={() => cycleSort(k)}
+                >
+                  <span className={cn("inline-flex items-center gap-1", align === "right" && "justify-end w-full")}>
+                    {label}
+                    {active ? (
+                      sort!.dir === "asc"
+                        ? <ArrowUp className="h-3 w-3" />
+                        : <ArrowDown className="h-3 w-3" />
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 opacity-40" />
+                    )}
+                  </span>
+                </th>
+              );
+            };
             return (
               <TabsContent key={tab} value={tab} className="mt-4">
                 <Card>
@@ -561,25 +680,31 @@ export default function ReportVendorLedger() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border/40 text-muted-foreground">
-                          <th className="text-left py-3 px-4 font-medium">Month</th>
-                          <th className="text-left py-3 px-4 font-medium">Campaign</th>
-                          <th className="text-left py-3 px-4 font-medium">Client</th>
-                          <th className="text-left py-3 px-4 font-medium">Asset ID</th>
-                          <th className="text-left py-3 px-4 font-medium">Location</th>
-                          <th className="text-left py-3 px-4 font-medium">City</th>
-                          <th className="text-left py-3 px-4 font-medium">Vendor</th>
-                          <th className="text-right py-3 px-4 font-medium">Amount</th>
+                          <SortHeader label="Month" k="month" />
+                          <SortHeader label="Campaign" k="campaignName" />
+                          <SortHeader label="Client" k="clientName" />
+                          <SortHeader label="Asset Code" k="assetDisplayCode" />
+                          <SortHeader label="Stored Asset ID" k="assetId" />
+                          <SortHeader label="Code Match" k="assetCodeMatch" />
+                          <SortHeader label="Location" k="location" />
+                          <SortHeader label="City" k="city" />
+                          <SortHeader label="Vendor" k="mounterName" />
+                          <SortHeader label="Amount" k="amount" align="right" />
                         </tr>
                       </thead>
                       <tbody>
-                        {tabLines.length === 0 ? (
-                          <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No {typeLabel.toLowerCase()} records</td></tr>
-                        ) : tabLines.map((l, i) => (
-                          <tr key={i} className="border-b border-border/20 hover:bg-muted/30">
+                        {sortedLines.length === 0 ? (
+                          <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No {typeLabel.toLowerCase()} records</td></tr>
+                        ) : sortedLines.map((l, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-border/20 hover:bg-muted/30 cursor-pointer"
+                            onClick={() => setDrillAsset(l)}
+                          >
                             <td className="py-2.5 px-4">{l.month}</td>
                             <td className="py-2.5 px-4 font-medium">{l.campaignName}</td>
                             <td className="py-2.5 px-4">{l.clientName}</td>
-                            <td className="py-2.5 px-4 font-mono text-xs">
+                            <td className="py-2.5 px-4 font-mono text-xs" onClick={e => e.stopPropagation()}>
                               <TooltipProvider delayDuration={150}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -602,6 +727,14 @@ export default function ReportVendorLedger() {
                                 </Tooltip>
                               </TooltipProvider>
                             </td>
+                            <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground max-w-[220px] truncate">{l.assetId}</td>
+                            <td className="py-2.5 px-4">
+                              {l.assetCodeMismatch ? (
+                                <Badge variant="outline" className="text-amber-600 border-amber-400 text-[10px]">Mismatch</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">OK</Badge>
+                              )}
+                            </td>
                             <td className="py-2.5 px-4 max-w-[200px] truncate">{l.location}</td>
                             <td className="py-2.5 px-4">{l.city}</td>
                             <td className="py-2.5 px-4">
@@ -613,12 +746,12 @@ export default function ReportVendorLedger() {
                           </tr>
                         ))}
                       </tbody>
-                      {tabLines.length > 0 && (
+                      {sortedLines.length > 0 && (
                         <tfoot>
                           <tr className="border-t-2 border-border font-bold">
-                            <td colSpan={7} className="py-3 px-4 text-right">Total</td>
+                            <td colSpan={9} className="py-3 px-4 text-right">Total</td>
                             <td className="py-3 px-4 text-right font-mono text-destructive">
-                              {fmt(tabLines.reduce((s, l) => s + l.amount, 0))}
+                              {fmt(sortedLines.reduce((s, l) => s + l.amount, 0))}
                             </td>
                           </tr>
                         </tfoot>
@@ -636,6 +769,118 @@ export default function ReportVendorLedger() {
         Payables computed from campaign assets using Rate Settings engine. Paid amounts tracked from Mounting/Printing expense entries.
         Vendor linked via campaign_assets.assigned_mounter_id.
       </p>
+
+      {/* Asset drill-down modal */}
+      <Dialog open={!!drillAsset} onOpenChange={open => !open && setDrillAsset(null)}>
+        <DialogContent className="max-w-2xl">
+          {drillAsset && (() => {
+            // All payable lines for the same asset under the currently active filters
+            // (so the drill-down respects month/date basis + every other filter chip).
+            const related = filteredLines.filter(l => l.assetId === drillAsset.assetId);
+            const totalForAsset = related.reduce((s, l) => s + l.amount, 0);
+            const monthsForAsset = [...new Set(related.map(l => l.month))].filter(Boolean).sort();
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    {drillAsset.assetCodeMismatch && (
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    )}
+                    {drillAsset.assetDisplayCode}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Vendor payables for this asset across all currently filtered campaigns.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Asset Code</div>
+                    <div className="font-mono">{drillAsset.assetDisplayCode}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Stored Asset ID</div>
+                    <div className="font-mono text-xs break-all">{drillAsset.assetId}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Code Match</div>
+                    {drillAsset.assetCodeMismatch ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-400">Mismatch (orphan)</Badge>
+                    ) : (
+                      <Badge variant="outline">OK</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">City / Location</div>
+                    <div>{drillAsset.city}{drillAsset.location ? ` — ${drillAsset.location}` : ""}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Date basis</div>
+                    <div className="capitalize">{dateBasis} month</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Months covered</div>
+                    <div>{monthsForAsset.length ? monthsForAsset.join(", ") : "—"}</div>
+                  </div>
+                </div>
+
+                {drillAsset.assetCodeMismatch && (
+                  <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      This stored asset_id has no matching <code>media_assets</code> row.
+                      The displayed code is a fallback derived from the raw ID.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium">Month</th>
+                        <th className="text-left py-2 px-3 font-medium">Type</th>
+                        <th className="text-left py-2 px-3 font-medium">Campaign</th>
+                        <th className="text-left py-2 px-3 font-medium">Client</th>
+                        <th className="text-left py-2 px-3 font-medium">Vendor</th>
+                        <th className="text-right py-2 px-3 font-medium">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {related.map((l, i) => (
+                        <tr key={i} className="border-t border-border/30">
+                          <td className="py-1.5 px-3">{l.month}</td>
+                          <td className="py-1.5 px-3">
+                            <Badge variant="outline" className="text-[10px]">{l.type}</Badge>
+                          </td>
+                          <td className="py-1.5 px-3">{l.campaignName}</td>
+                          <td className="py-1.5 px-3">{l.clientName}</td>
+                          <td className="py-1.5 px-3">
+                            {l.mounterId ? l.mounterName : <span className="text-amber-600">Unassigned</span>}
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-mono">{fmt(l.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-border font-bold bg-muted/20">
+                        <td colSpan={5} className="py-2 px-3 text-right">Total</td>
+                        <td className="py-2 px-3 text-right font-mono text-destructive">{fmt(totalForAsset)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setDrillAsset(null)}>
+                    <X className="h-3.5 w-3.5 mr-1" /> Close
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

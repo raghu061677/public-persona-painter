@@ -502,11 +502,28 @@ export default function ReportVendorLedger() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Date basis:</span>
+          <Select value={dateBasis} onValueChange={v => setDateBasis(v as DateBasis)}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="payable">Payable month (default)</SelectItem>
+              <SelectItem value="mounting">Mounting month</SelectItem>
+              <SelectItem value="unmounting">Unmounting month</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <DateRangeFilter
           label=""
           value={dateRange}
           onChange={setDateRange}
-          placeholder="Date range (by booking month)"
+          placeholder={
+            dateBasis === "mounting" ? "Date range (mounting month)"
+            : dateBasis === "unmounting" ? "Date range (unmounting month)"
+            : "Date range (payable month)"
+          }
         />
         <Button variant="outline" size="sm" onClick={resetFilters}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset

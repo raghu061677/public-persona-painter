@@ -779,6 +779,81 @@ export default function ReportVendorLedger() {
             const related = filteredLines.filter(l => l.assetId === drillAsset.assetId);
             const totalForAsset = related.reduce((s, l) => s + l.amount, 0);
             const monthsForAsset = [...new Set(related.map(l => l.month))].filter(Boolean).sort();
+
+            // Resolve human-readable filter context (vendor / city / campaign / month / date range).
+            const vendorLabel =
+              selectedVendor === "all" ? "All vendors"
+              : selectedVendor === "__unassigned__" ? "Unassigned"
+              : (mounters.find(m => m.id === selectedVendor)?.name ?? selectedVendor);
+            const cityLabel = cityFilter === "all" ? "All cities" : cityFilter;
+            const campaignLabel = campaignFilter === "all" ? "All campaigns" : campaignFilter;
+            const monthLabel = monthFilter === "all" ? "All months" : monthFilter;
+            const dateRangeLabel = dateRange?.from || dateRange?.to
+              ? `${dateRange?.from ? dateRange.from.toLocaleDateString("en-IN") : "…"} → ${dateRange?.to ? dateRange.to.toLocaleDateString("en-IN") : "…"}`
+              : "Any date";
+            const dateBasisLabel =
+              dateBasis === "mounting" ? "Mounting month"
+              : dateBasis === "unmounting" ? "Unmounting month"
+              : "Payable month";
+
+            const safeName = (drillAsset.assetDisplayCode || drillAsset.assetId || "asset").replace(/[^A-Za-z0-9_-]+/g, "_");
+            const fileBase = `vendor-ledger_${safeName}_${monthFilter !== "all" ? monthFilter : "all-months"}`;
+
+            const exportRows = related.map(l => ({
+              Month: l.month,
+              Type: l.type,
+              Campaign: l.campaignName,
+              Client: l.clientName,
+              Vendor: l.mounterId ? l.mounterName : "Unassigned",
+              "Asset Code": l.assetDisplayCode,
+              "Stored Asset ID": l.assetId,
+              "Code Match": l.assetCodeMismatch ? "Mismatch" : "OK",
+              City: l.city,
+              Location: l.location,
+              Amount: l.amount,
+            }));
+
+            const handleCsvExport = () => {
+              const headers = Object.keys(exportRows[0] ?? { Month: "", Type: "", Campaign: "", Client: "", Vendor: "", Amount: 0 });
+              const escape = (v: any) => {
+                const s = v == null ? "" : String(v);
+                return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+              };
+              const contextLines = [
+                `# Vendor Ledger – Asset Drill-down`,
+                `# Asset: ${drillAsset.assetDisplayCode} (${drillAsset.assetId})`,
+                `# Vendor: ${vendorLabel}  |  City: ${cityLabel}  |  Campaign: ${campaignLabel}`,
+                `# Month: ${monthLabel}  |  Date range: ${dateRangeLabel}  |  Date basis: ${dateBasisLabel}`,
+                ``,
+              ].join("\n");
+              const body = [headers.join(","), ...exportRows.map(r => headers.map(h => escape((r as any)[h])).join(","))].join("\n");
+              const blob = new Blob([contextLines + body], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `${fileBase}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            };
+
+            const handleExcelExport = async () => {
+              const wb = new ExcelJS.Workbook();
+              const ws = wb.addWorksheet("Asset Drill-down");
+              ws.addRow(["Vendor Ledger – Asset Drill-down"]).font = { bold: true, size: 14 };
+              ws.addRow([`Asset`, `${drillAsset.assetDisplayCode} (${drillAsset.assetId})`]);
+              ws.addRow([`Vendor`, vendorLabel, `City`, cityLabel, `Campaign`, campaignLabel]);
+              ws.addRow([`Month`, monthLabel, `Date range`, dateRangeLabel, `Date basis`, dateBasisLabel]);
+              ws.addRow([]);
+              const headers = Object.keys(exportRows[0] ?? { Month: "", Type: "", Campaign: "", Client: "", Vendor: "", Amount: 0 });
+              const headerRow = ws.addRow(headers);
+              headerRow.font = { bold: true };
+              headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEFF6FF" } };
+              exportRows.forEach(r => ws.addRow(headers.map(h => (r as any)[h])));
+              const totalRow = ws.addRow(headers.map((h, i) => i === 0 ? "Total" : h === "Amount" ? totalForAsset : ""));
+              totalRow.font = { bold: true };
+              ws.columns.forEach(c => { c.width = 20; });
+              const buf = await wb.xlsx.writeBuffer();
+              downloadExcel(buf, `${fileBase}.xlsx`);
+            };
+
             return (
               <>
                 <DialogHeader>
@@ -792,6 +867,22 @@ export default function ReportVendorLedger() {
                     Vendor payables for this asset across all currently filtered campaigns.
                   </DialogDescription>
                 </DialogHeader>
+
+                {/* Active filter context banner */}
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-primary">Active filters</span>
+                    <Badge variant="outline" className="text-[10px]">{related.length} row{related.length === 1 ? "" : "s"}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="secondary" className="font-normal"><Truck className="h-3 w-3 mr-1" />{vendorLabel}</Badge>
+                    <Badge variant="secondary" className="font-normal">City: {cityLabel}</Badge>
+                    <Badge variant="secondary" className="font-normal">Campaign: {campaignLabel}</Badge>
+                    <Badge variant="secondary" className="font-normal"><CalendarDays className="h-3 w-3 mr-1" />{monthLabel}</Badge>
+                    <Badge variant="secondary" className="font-normal">Range: {dateRangeLabel}</Badge>
+                    <Badge variant="outline" className="font-normal border-primary/40 text-primary">Basis: {dateBasisLabel}</Badge>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -871,10 +962,28 @@ export default function ReportVendorLedger() {
                   </table>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setDrillAsset(null)}>
-                    <X className="h-3.5 w-3.5 mr-1" /> Close
-                  </Button>
+                {/* Footer: filter recap + export + close */}
+                <div className="flex flex-col gap-2 border-t pt-3">
+                  <div className="text-[11px] text-muted-foreground leading-relaxed">
+                    <span className="font-medium text-foreground">Filter recap:</span>{" "}
+                    Vendor <span className="font-medium">{vendorLabel}</span> ·
+                    City <span className="font-medium">{cityLabel}</span> ·
+                    Campaign <span className="font-medium">{campaignLabel}</span> ·
+                    Month <span className="font-medium">{monthLabel}</span> ·
+                    Range <span className="font-medium">{dateRangeLabel}</span> ·
+                    Basis <span className="font-medium">{dateBasisLabel}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={related.length === 0}>
+                      <FileText className="h-3.5 w-3.5 mr-1" /> CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExcelExport} disabled={related.length === 0}>
+                      <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setDrillAsset(null)}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Close
+                    </Button>
+                  </div>
                 </div>
               </>
             );

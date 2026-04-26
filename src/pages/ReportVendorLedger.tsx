@@ -11,6 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle } from "lucide-react";
 import ExcelJS from "exceljs";
+import { DateRangeFilter } from "@/components/common/date-range-filter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import type { DateRange } from "react-day-picker";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -27,6 +31,8 @@ interface PayableLine {
   campaignName: string;
   clientName: string;
   assetId: string;
+  assetDisplayCode: string;
+  assetCodeMismatch: boolean;
   location: string;
   city: string;
   month: string;
@@ -55,6 +61,8 @@ export default function ReportVendorLedger() {
   const [vendorType, setVendorType] = useState<"all" | "mounter" | "printer">("all");
   const [cityFilter, setCityFilter] = useState("all");
   const [campaignFilter, setCampaignFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Fetch mounters
   const { data: mounters = [] } = useQuery({
@@ -67,6 +75,23 @@ export default function ReportVendorLedger() {
         .eq("company_id", companyId!)
         .order("name");
       return data ?? [];
+    },
+  });
+
+  // Fetch media_assets to resolve readable codes + detect orphan IDs
+  const { data: assetCodeMap = new Map<string, string>() } = useQuery<Map<string, string>>({
+    queryKey: ["media-asset-codes", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("media_assets")
+        .select("id, media_asset_code")
+        .eq("company_id", companyId!);
+      const map = new Map<string, string>();
+      (data ?? []).forEach((a: any) => {
+        if (a?.id) map.set(a.id, a.media_asset_code || "");
+      });
+      return map;
     },
   });
 
@@ -111,6 +136,14 @@ export default function ReportVendorLedger() {
     lines.forEach(l => {
       const key = `${l.campaignId}__${l.assetId}`;
       const mounter = assetMounterMap.get(key) ?? { mounterId: null, mounterName: "Unassigned" };
+      const storedCode = assetCodeMap.get(l.assetId);
+      // Mismatch = the campaign_asset.asset_id doesn't resolve to any media_assets row
+      // (orphan / tenant-prefix drift / hard-deleted asset).
+      const assetCodeMismatch = assetCodeMap.size > 0 && !assetCodeMap.has(l.assetId);
+      const assetDisplayCode = formatAssetDisplayCode({
+        mediaAssetCode: storedCode || null,
+        fallbackId: l.assetId,
+      });
 
       if (l.mountingPayable > 0) {
         result.push({
@@ -118,6 +151,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.mountingMonth,
@@ -132,6 +167,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.unmountingMonth,
@@ -146,6 +183,8 @@ export default function ReportVendorLedger() {
           campaignName: l.campaignName,
           clientName: l.clientName,
           assetId: l.assetId,
+          assetDisplayCode,
+          assetCodeMismatch,
           location: l.location,
           city: l.city,
           month: l.mountingMonth,
@@ -156,7 +195,13 @@ export default function ReportVendorLedger() {
       }
     });
     return result;
-  }, [lines, assetMounterMap]);
+  }, [lines, assetMounterMap, assetCodeMap]);
+
+  // Asset-code mismatch warning count
+  const mismatchCount = useMemo(
+    () => new Set(payableLines.filter(l => l.assetCodeMismatch).map(l => l.assetId)).size,
+    [payableLines]
+  );
 
   // Count unassigned payables (mounting/unmounting only — printers handled separately)
   const unassignedCount = useMemo(() => {
@@ -178,12 +223,37 @@ export default function ReportVendorLedger() {
     }
     if (cityFilter !== "all") result = result.filter(l => l.city === cityFilter);
     if (campaignFilter !== "all") result = result.filter(l => l.campaignName === campaignFilter);
+    if (monthFilter !== "all") result = result.filter(l => l.month === monthFilter);
+    if (dateRange?.from || dateRange?.to) {
+      // Month is YYYY-MM. Convert to a comparable first-of-month date.
+      const fromKey = dateRange?.from
+        ? `${dateRange.from.getFullYear()}-${String(dateRange.from.getMonth() + 1).padStart(2, "0")}`
+        : null;
+      const toKey = dateRange?.to
+        ? `${dateRange.to.getFullYear()}-${String(dateRange.to.getMonth() + 1).padStart(2, "0")}`
+        : null;
+      result = result.filter(l => {
+        if (!l.month) return false;
+        if (fromKey && l.month < fromKey) return false;
+        if (toKey && l.month > toKey) return false;
+        return true;
+      });
+    }
     return result;
-  }, [payableLines, selectedVendor, vendorType, cityFilter, campaignFilter]);
+  }, [payableLines, selectedVendor, vendorType, cityFilter, campaignFilter, monthFilter, dateRange]);
 
   // Unique values for filters
   const cities = useMemo(() => [...new Set(payableLines.map(l => l.city))].filter(Boolean).sort(), [payableLines]);
   const campaigns = useMemo(() => [...new Set(payableLines.map(l => l.campaignName))].filter(Boolean).sort(), [payableLines]);
+  const monthOptions = useMemo(
+    () => [...new Set(payableLines.map(l => l.month))].filter(Boolean).sort(),
+    [payableLines]
+  );
+  const formatMonthLabel = (m: string) => {
+    if (!/^\d{4}-\d{2}$/.test(m)) return m;
+    const [y, mo] = m.split("-").map(Number);
+    return new Date(y, mo - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+  };
 
   // Build month-wise statement
   const monthStatement = useMemo((): MonthStatement[] => {
@@ -284,6 +354,8 @@ export default function ReportVendorLedger() {
     setVendorType("all");
     setCityFilter("all");
     setCampaignFilter("all");
+    setMonthFilter("all");
+    setDateRange(undefined);
   };
 
   const isLoading = opsLoading;

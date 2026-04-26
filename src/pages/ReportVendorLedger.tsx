@@ -575,7 +575,29 @@ export default function ReportVendorLedger() {
                             <td className="py-2.5 px-4">{l.month}</td>
                             <td className="py-2.5 px-4 font-medium">{l.campaignName}</td>
                             <td className="py-2.5 px-4">{l.clientName}</td>
-                            <td className="py-2.5 px-4 font-mono text-xs">{l.assetId}</td>
+                            <td className="py-2.5 px-4 font-mono text-xs">
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className={`inline-flex items-center gap-1 cursor-help ${l.assetCodeMismatch ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                                      {l.assetCodeMismatch && (
+                                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                                      )}
+                                      {l.assetDisplayCode}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs space-y-1">
+                                    <div><strong>Display:</strong> {l.assetDisplayCode}</div>
+                                    <div className="break-all"><strong>Stored ID:</strong> {l.assetId}</div>
+                                    {l.assetCodeMismatch && (
+                                      <div className="text-amber-500">
+                                        No matching media_assets row found. Code shown is a fallback.
+                                      </div>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </td>
                             <td className="py-2.5 px-4 max-w-[200px] truncate">{l.location}</td>
                             <td className="py-2.5 px-4">{l.city}</td>
                             <td className="py-2.5 px-4">

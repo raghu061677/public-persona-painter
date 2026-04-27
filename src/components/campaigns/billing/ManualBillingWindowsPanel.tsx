@@ -31,6 +31,7 @@ import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { logActivity } from "@/utils/activityLogger";
 import type { CampaignTotalsResult } from "@/utils/computeCampaignTotals";
+import { buildManualWindowItems } from "@/lib/invoices/manualWindowItems";
 
 // 30-day commercial basis (industry standard for OOH)
 const COMMERCIAL_DAYS_PER_MONTH = 30;

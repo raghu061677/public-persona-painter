@@ -265,6 +265,62 @@ export function ManualBillingWindowsPanel({
     }
   };
 
+  const openEdit = (inv: ManualWindowInvoice) => {
+    if (inv.status !== "Draft") return;
+    setEditTarget(inv);
+    setEditStart(inv.invoice_period_start || "");
+    setEditEnd(inv.invoice_period_end || "");
+  };
+
+  const handleEditSave = async () => {
+    if (!editTarget || !editPreview || "error" in editPreview) return;
+    setEditSaving(true);
+    try {
+      const isIGST = gstMode === "IGST";
+      const dueDate = addDays(parseISO(editStart), 30);
+      const items = [
+        {
+          sno: 1,
+          description: `Display rent (${editPreview.days} day${editPreview.days === 1 ? "" : "s"} @ ${formatCurrency(perDayRate)}/day, 30-day basis)`,
+          quantity: editPreview.days,
+          rate: perDayRate,
+          amount: editPreview.taxable,
+          total: editPreview.taxable,
+          hsn_sac: "998361",
+          charge_type: "manual_window_rent",
+        },
+      ];
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          invoice_date: editStart,
+          due_date: format(dueDate, "yyyy-MM-dd"),
+          invoice_period_start: editStart,
+          invoice_period_end: editEnd,
+          billing_window_key: `manual_${editStart}_${editEnd}`,
+          sub_total: editPreview.taxable,
+          gst_amount: editPreview.gst,
+          total_amount: editPreview.grand,
+          balance_due: editPreview.grand,
+          cgst_amount: isIGST ? 0 : editPreview.gst / 2,
+          sgst_amount: isIGST ? 0 : editPreview.gst / 2,
+          igst_amount: isIGST ? editPreview.gst : 0,
+          items,
+          notes: `Manual billing window for ${campaign.campaign_name} (${format(parseISO(editStart), "dd MMM yyyy")} – ${format(parseISO(editEnd), "dd MMM yyyy")})`,
+        })
+        .eq("id", editTarget.id)
+        .eq("status", "Draft"); // safety: only drafts editable
+      if (error) throw error;
+      toast({ title: "Draft updated", description: `Window ${editTarget.id} updated.` });
+      setEditTarget(null);
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Update failed", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleCancelDraft = async (inv: ManualWindowInvoice) => {
     if (inv.status !== "Draft") {
       toast({

@@ -314,7 +314,7 @@ export function ManualBillingWindowsPanel({
         igst_amount: isIGST ? preview.gst : 0,
         status: "Draft",
         is_draft: true,
-        items,
+        items: items as any,
         notes:
           `Manual billing window for ${campaign.campaign_name} (${format(parseISO(startDate), "dd MMM yyyy")} – ${format(parseISO(endDate), "dd MMM yyyy")})` +
           (reusedFromCancelled

@@ -109,41 +109,35 @@ export function ManualBillingWindowsPanel({
 
   // Live preview computation for the Add dialog
   const preview = useMemo(() => {
-    if (!startDate || !endDate) return null;
-    const s = parseISO(startDate);
-    const e = parseISO(endDate);
-    if (isAfter(s, e)) return { error: "End date must be on or after start date." };
-    const days = differenceInCalendarDays(e, s) + 1;
-    if (days <= 0) return { error: "Window must be at least 1 day." };
-
-    // Bounds vs campaign period
-    const cs = parseISO(campaign.start_date);
-    const ce = parseISO(campaign.end_date);
-    if (isBefore(s, cs) || isAfter(e, ce)) {
-      return {
-        error: `Window must lie within campaign period (${format(cs, "dd MMM yyyy")} – ${format(ce, "dd MMM yyyy")}).`,
-      };
-    }
-
-    // Overlap with existing non-cancelled windows
-    const overlap = invoices
-      .filter((inv) => inv.status !== "Cancelled" && inv.invoice_period_start && inv.invoice_period_end)
-      .find((inv) => {
-        const iS = parseISO(inv.invoice_period_start!);
-        const iE = parseISO(inv.invoice_period_end!);
-        return !(isAfter(s, iE) || isBefore(e, iS));
-      });
-    if (overlap) {
-      return {
-        error: `Overlaps existing window ${format(parseISO(overlap.invoice_period_start!), "dd MMM yyyy")} – ${format(parseISO(overlap.invoice_period_end!), "dd MMM yyyy")} (${overlap.id}).`,
-      };
-    }
-
-    const taxable = Math.round(perDayRate * days * 100) / 100;
-    const gst = Math.round((taxable * totals.gstRate) / 100 * 100) / 100;
-    const grand = Math.round((taxable + gst) * 100) / 100;
-    return { days, taxable, gst, grand };
+    return computePreview({
+      startDate,
+      endDate,
+      campaign,
+      invoices,
+      perDayRate,
+      gstRate: totals.gstRate,
+    });
   }, [startDate, endDate, invoices, perDayRate, totals.gstRate, campaign]);
+
+  // Detect cancelled twin to surface number-reuse hint in the dialog
+  const cancelledTwin = useMemo(
+    () => (startDate && endDate ? findCancelledTwin(invoices, startDate, endDate) : null),
+    [startDate, endDate, invoices],
+  );
+
+  // Live preview for inline edit
+  const editPreview = useMemo(() => {
+    if (!editTarget) return null;
+    return computePreview({
+      startDate: editStart,
+      endDate: editEnd,
+      campaign,
+      invoices,
+      perDayRate,
+      gstRate: totals.gstRate,
+      excludeId: editTarget.id,
+    });
+  }, [editTarget, editStart, editEnd, invoices, perDayRate, totals.gstRate, campaign]);
 
   // Coverage analysis: show uninvoiced gaps
   const coverage = useMemo(

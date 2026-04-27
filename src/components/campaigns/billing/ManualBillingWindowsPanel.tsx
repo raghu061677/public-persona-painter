@@ -153,7 +153,27 @@ export function ManualBillingWindowsPanel({
       if (!userData.user) throw new Error("Not authenticated");
 
       const regSnapshot = await buildRegistrationSnapshot(campaign.id);
-      const invoiceId = generateDraftInvoiceId();
+      // Phase 2 — Reuse cancelled invoice number when regenerating the EXACT
+      // same manual window for this campaign. Falls back to a fresh draft id.
+      const reuseTwin = findCancelledTwin(invoices, startDate, endDate);
+      let invoiceId = generateDraftInvoiceId();
+      let reusedFromCancelled = false;
+      if (reuseTwin) {
+        const candidate = (reuseTwin.invoice_no || reuseTwin.id || "").trim();
+        if (candidate) {
+          // Defensive: ensure no other non-cancelled invoice owns this number.
+          const { data: clash } = await supabase
+            .from("invoices")
+            .select("id, status")
+            .or(`id.eq.${candidate},invoice_no.eq.${candidate}`)
+            .neq("status", "Cancelled")
+            .limit(1);
+          if (!clash || clash.length === 0) {
+            invoiceId = candidate;
+            reusedFromCancelled = true;
+          }
+        }
+      }
       const isIGST = gstMode === "IGST";
       const gstHalf = totals.gstRate / 2;
 
@@ -171,6 +191,19 @@ export function ManualBillingWindowsPanel({
           charge_type: "manual_window_rent",
         },
       ];
+
+      // If reusing a cancelled number, hard-delete the cancelled record first
+      // so the unique key (id / invoice_no) is free for the new draft. This is
+      // safe — cancelled invoices carry no live receivable and are excluded
+      // from GSTR exports.
+      if (reusedFromCancelled && reuseTwin) {
+        const { error: delErr } = await supabase
+          .from("invoices")
+          .delete()
+          .eq("id", reuseTwin.id)
+          .eq("status", "Cancelled");
+        if (delErr) throw delErr;
+      }
 
       const { error } = await supabase.from("invoices").insert({
         id: invoiceId,
@@ -202,15 +235,21 @@ export function ManualBillingWindowsPanel({
         status: "Draft",
         is_draft: true,
         items,
-        notes: `Manual billing window for ${campaign.campaign_name} (${format(parseISO(startDate), "dd MMM yyyy")} – ${format(parseISO(endDate), "dd MMM yyyy")})`,
+        notes:
+          `Manual billing window for ${campaign.campaign_name} (${format(parseISO(startDate), "dd MMM yyyy")} – ${format(parseISO(endDate), "dd MMM yyyy")})` +
+          (reusedFromCancelled
+            ? `\n[Regenerated — reusing cancelled invoice number ${invoiceId}]`
+            : ""),
         created_by: userData.user.id,
         ...regSnapshot,
       });
       if (error) throw error;
 
       toast({
-        title: "Manual window created",
-        description: `Draft invoice ${invoiceId} created for ${preview.days} day(s).`,
+        title: reusedFromCancelled ? "Manual window regenerated" : "Manual window created",
+        description: reusedFromCancelled
+          ? `Reused cancelled invoice number ${invoiceId} for ${preview.days} day(s).`
+          : `Draft invoice ${invoiceId} created for ${preview.days} day(s).`,
       });
       setOpen(false);
       onChanged();

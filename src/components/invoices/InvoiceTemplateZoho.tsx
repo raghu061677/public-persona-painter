@@ -107,7 +107,7 @@
             invoicePeriodEnd: mwEnd,
             fixedTaxable: Number(invoice.sub_total || 0),
           });
-          items = built.items;
+          items = built.items as any[];
         }
 
         // If summary-only items and we have a campaign, rebuild from campaign_assets.

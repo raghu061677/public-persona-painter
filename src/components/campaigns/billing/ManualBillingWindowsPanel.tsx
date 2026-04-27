@@ -361,6 +361,9 @@ export function ManualBillingWindowsPanel({
           </AlertDescription>
         </Alert>
 
+        {/* Phase 5 — Coverage timeline */}
+        <CoverageTimeline campaign={campaign} invoices={invoices} />
+
         {coverage.gaps.length > 0 && (
           <Alert variant="default" className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -442,14 +445,24 @@ export function ManualBillingWindowsPanel({
                             View
                           </Button>
                           {inv.status === "Draft" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCancelDraft(inv)}
-                              title="Remove draft"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openEdit(inv)}
+                                title="Edit dates"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleCancelDraft(inv)}
+                                title="Remove draft"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>

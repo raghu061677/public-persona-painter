@@ -105,10 +105,15 @@ export async function buildManualWindowItems(opts: {
   );
 
   // Pull active campaign assets (mirrors what asset_cycle uses).
+  // We select BOTH `negotiated_rate` (the agreed monthly per-asset rate that
+  // drives every other billing path — see computeCampaignTotals) and the
+  // legacy `rent_amount` so that manual-window pricing matches the rest of
+  // the system. Using `rent_amount` alone would charge the gross/list rate
+  // instead of the negotiated rate, materially over-/under-billing windows.
   const { data: caRows } = await supabase
     .from("campaign_assets")
     .select(
-      "id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, rent_amount, daily_rate, is_removed, status",
+      "id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, negotiated_rate, card_rate, rent_amount, daily_rate, is_removed, status",
     )
     .eq("campaign_id", campaignId);
 
@@ -163,10 +168,19 @@ export async function buildManualWindowItems(opts: {
   }
 
   // Build per-asset prorated rent lines.
+  // Monthly basis priority: negotiated_rate → card_rate → rent_amount.
+  // This mirrors `computeCampaignTotals` so manual-window invoices charge the
+  // SAME per-asset rate finance signed off on for Calendar Monthly / Asset
+  // Cycle Billing. We deliberately ignore `daily_rate` as a primary source
+  // because it can be a stale denormalised value; we always re-derive the
+  // per-day figure from the agreed monthly amount on a 30-day basis.
   const proratedRaw = activeAssets.map((ca: any) => {
-    const monthly = Number(ca.rent_amount ?? 0);
-    const dailyExplicit = Number(ca.daily_rate ?? 0);
-    const perDay = dailyExplicit > 0 ? dailyExplicit : monthly / COMMERCIAL_DAYS_PER_MONTH;
+    const monthly =
+      Number(ca.negotiated_rate) ||
+      Number(ca.card_rate) ||
+      Number(ca.rent_amount) ||
+      0;
+    const perDay = monthly / COMMERCIAL_DAYS_PER_MONTH;
     const rent = Math.round(perDay * days * 100) / 100;
     return { ca, monthly, perDay, rent };
   });

@@ -1073,6 +1073,7 @@ export function CampaignBillingTab({
             tax_type: campaign.tax_type,
           }}
           totals={totals}
+          campaignAssets={campaignAssets}
           gstMode={gstMode}
           invoices={existingInvoices.filter(
             (inv) => (inv as any).billing_mode === 'manual_window',

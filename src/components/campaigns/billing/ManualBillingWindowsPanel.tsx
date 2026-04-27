@@ -61,6 +61,15 @@ interface Props {
     tax_type?: string;
   };
   totals: CampaignTotalsResult;
+  /**
+   * Active campaign assets (post-drop filtering happens locally). Used to
+   * compute the TRUE monthly agreed rent for the manual-window per-day rate
+   * (Σ negotiated_rate over active assets) instead of the smudged
+   * `totals.monthlyDisplayRent` figure (= displayCost / totalMonths), which
+   * dilutes the per-day rate when the campaign duration is not a clean
+   * multiple of 30 days.
+   */
+  campaignAssets: any[];
   gstMode: "CGST_SGST" | "IGST";
   invoices: ManualWindowInvoice[]; // pre-filtered to billing_mode='manual_window'
   locked: boolean; // disabled when another billing mode already finalized
@@ -76,6 +85,7 @@ interface Props {
 export function ManualBillingWindowsPanel({
   campaign,
   totals,
+  campaignAssets,
   gstMode,
   invoices,
   locked,
@@ -169,9 +179,28 @@ export function ManualBillingWindowsPanel({
   }, [editTarget, editStart, editEnd, invoices, campaign.start_date, campaign.end_date]);
   const hasEditErrors = !!editErrors && (editErrors.bounds || editErrors.overlap || editErrors.range);
 
-  // Per-day rate (30-day commercial basis)
-  // monthlyAgreed comes from computeCampaignTotals.monthlyDisplayRent.
-  const monthlyAgreed = totals.monthlyDisplayRent || 0;
+  // Per-day rate (30-day commercial basis).
+  //
+  // CORRECT BASIS: Σ(negotiated_rate || card_rate) over ACTIVE campaign assets,
+  // mirroring what `buildManualWindowItems` charges per asset and what finance
+  // signed off on per asset per month. We deliberately do NOT use
+  // `totals.monthlyDisplayRent` here because that field is computed as
+  // `displayCost / totalMonths` inside computeCampaignTotals — which for any
+  // campaign whose duration is not a clean multiple of 30 days produces a
+  // diluted figure (e.g. a 32-day, 2-month campaign with 2× ₹55,000 assets
+  // returns ~₹95,333/mo instead of the true ₹110,000/mo agreed amount,
+  // which then under-bills every manual window).
+  const monthlyAgreed = useMemo(() => {
+    const activeAssets = (campaignAssets || []).filter(
+      (a: any) => !a.is_removed && (a.status ?? "Active") !== "Dropped",
+    );
+    const sum = activeAssets.reduce((s: number, a: any) => {
+      const monthly = Number(a.negotiated_rate) || Number(a.card_rate) || Number(a.rent_amount) || 0;
+      return s + monthly;
+    }, 0);
+    return Math.round(sum * 100) / 100;
+  }, [campaignAssets]);
+
   const perDayRate = useMemo(
     () => Math.round(((monthlyAgreed / COMMERCIAL_DAYS_PER_MONTH) || 0) * 100) / 100,
     [monthlyAgreed],

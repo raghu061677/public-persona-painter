@@ -548,10 +548,22 @@ export function ManualBillingWindowsPanel({
               ? "No manual windows yet."
               : `${invoices.length} window${invoices.length === 1 ? "" : "s"} • Covered ${coverage.coveredDays}/${coverage.totalDays} days`}
           </div>
-          <Button size="sm" onClick={() => setOpen(true)} disabled={locked}>
-            <Plus className="h-4 w-4 mr-1" />
-            Create Manual Invoice Window
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={sortedInvoices.length === 0}
+              title="Download the current table view as CSV"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)} disabled={locked}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create Manual Invoice Window
+            </Button>
+          </div>
         </div>
 
         {invoices.length > 0 && (

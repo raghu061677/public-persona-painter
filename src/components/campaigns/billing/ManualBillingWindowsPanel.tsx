@@ -547,6 +547,14 @@ export function ManualBillingWindowsPanel({
 
 // ───────────────────────── helpers ─────────────────────────
 
+type PreviewOk = { days: number; taxable: number; gst: number; grand: number };
+type PreviewErr = { error: string };
+type PreviewResult = PreviewOk | PreviewErr | null;
+
+function isPreviewError(p: PreviewResult): p is PreviewErr {
+  return !!p && "error" in p;
+}
+
 /**
  * Phase 3 — Overlap & preview computation.
  * Treats ALL non-cancelled manual_window invoices (Draft, Sent, Partial, Paid,

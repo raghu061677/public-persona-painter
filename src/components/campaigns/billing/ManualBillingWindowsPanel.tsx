@@ -547,6 +547,110 @@ export function ManualBillingWindowsPanel({
 
 // ───────────────────────── helpers ─────────────────────────
 
+/**
+ * Phase 3 — Overlap & preview computation.
+ * Treats ALL non-cancelled manual_window invoices (Draft, Sent, Partial, Paid,
+ * Overdue, …) as blocking. Cancelled invoices never block — their numbers may
+ * be reused via findCancelledTwin().
+ */
+function computePreview(opts: {
+  startDate: string;
+  endDate: string;
+  campaign: { start_date: string; end_date: string };
+  invoices: ManualWindowInvoice[];
+  perDayRate: number;
+  gstRate: number;
+  excludeId?: string;
+}):
+  | { days: number; taxable: number; gst: number; grand: number }
+  | { error: string }
+  | null {
+  const { startDate, endDate, campaign, invoices, perDayRate, gstRate, excludeId } = opts;
+  if (!startDate || !endDate) return null;
+  const s = parseISO(startDate);
+  const e = parseISO(endDate);
+  if (isAfter(s, e)) return { error: "End date must be on or after start date." };
+  const days = differenceInCalendarDays(e, s) + 1;
+  if (days <= 0) return { error: "Window must be at least 1 day." };
+
+  const cs = parseISO(campaign.start_date);
+  const ce = parseISO(campaign.end_date);
+  if (isBefore(s, cs) || isAfter(e, ce)) {
+    return {
+      error: `Window must lie within campaign period (${format(cs, "dd MMM yyyy")} – ${format(ce, "dd MMM yyyy")}).`,
+    };
+  }
+
+  const overlap = invoices
+    .filter(
+      (inv) =>
+        inv.status !== "Cancelled" &&
+        inv.id !== excludeId &&
+        inv.invoice_period_start &&
+        inv.invoice_period_end,
+    )
+    .find((inv) => {
+      const iS = parseISO(inv.invoice_period_start!);
+      const iE = parseISO(inv.invoice_period_end!);
+      return !(isAfter(s, iE) || isBefore(e, iS)); // inclusive overlap
+    });
+  if (overlap) {
+    return {
+      error: `Overlaps existing ${overlap.status} window ${format(parseISO(overlap.invoice_period_start!), "dd MMM yyyy")} – ${format(parseISO(overlap.invoice_period_end!), "dd MMM yyyy")} (${overlap.invoice_no || overlap.id}).`,
+    };
+  }
+
+  const taxable = Math.round(perDayRate * days * 100) / 100;
+  const gst = Math.round(((taxable * gstRate) / 100) * 100) / 100;
+  const grand = Math.round((taxable + gst) * 100) / 100;
+  return { days, taxable, gst, grand };
+}
+
+/**
+ * Find the most-recent cancelled manual_window invoice whose period exactly
+ * matches the proposed window. Used for invoice-number reuse on regeneration.
+ * Skips stale DRAFT-* ids — we only reuse permanent finalised numbers.
+ */
+function findCancelledTwin(
+  invoices: ManualWindowInvoice[],
+  startDate: string,
+  endDate: string,
+): ManualWindowInvoice | null {
+  if (!startDate || !endDate) return null;
+  const matches = invoices.filter((inv) => {
+    if (inv.status !== "Cancelled") return false;
+    if (inv.invoice_period_start !== startDate) return false;
+    if (inv.invoice_period_end !== endDate) return false;
+    const num = (inv.invoice_no || inv.id || "").trim();
+    if (!num) return false;
+    if (num.startsWith("DRAFT-")) return false;
+    return true;
+  });
+  if (matches.length === 0) return null;
+  // Deterministic: greatest invoice_no — sequential INV/YYYY-YY/#### sorts chronologically.
+  return matches.sort((a, b) =>
+    (b.invoice_no || b.id).localeCompare(a.invoice_no || a.id),
+  )[0];
+}
+
+/**
+ * Phase 4 — Suggest the next uncovered window, capped to a 30-day commercial month.
+ */
+function suggestNextWindow(
+  campaign: { start_date: string; end_date: string },
+  invoices: ManualWindowInvoice[],
+): { start: string; end: string } {
+  const cov = analyzeCoverage(campaign, invoices);
+  if (cov.gaps.length === 0) {
+    return { start: campaign.end_date, end: "" };
+  }
+  const gap = cov.gaps[0];
+  const ce = parseISO(campaign.end_date);
+  const cap = addDays(gap.start, COMMERCIAL_DAYS_PER_MONTH - 1);
+  const end = isAfter(cap, gap.end) ? gap.end : isAfter(cap, ce) ? ce : cap;
+  return { start: format(gap.start, "yyyy-MM-dd"), end: format(end, "yyyy-MM-dd") };
+}
+
 function computeNextUncoveredStart(
   campaign: { start_date: string; end_date: string },
   invoices: ManualWindowInvoice[],

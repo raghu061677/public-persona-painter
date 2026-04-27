@@ -501,7 +501,7 @@ export function ManualBillingWindowsPanel({
                 <span>Per-day rate (30-day basis)</span>
                 <span className="font-medium text-foreground">{formatCurrency(perDayRate)}</span>
               </div>
-              {preview && "error" in preview ? (
+              {isPreviewError(preview) ? (
                 <div className="text-sm text-destructive">{preview.error}</div>
               ) : preview ? (
                 <>

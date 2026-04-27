@@ -84,6 +84,11 @@ export function ManualBillingWindowsPanel({
   const [submitting, setSubmitting] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  // Inline edit dialog state for draft windows
+  const [editTarget, setEditTarget] = useState<ManualWindowInvoice | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   // Per-day rate (30-day commercial basis)
   // monthlyAgreed comes from computeCampaignTotals.monthlyDisplayRent.
@@ -96,9 +101,10 @@ export function ManualBillingWindowsPanel({
   // Reset dialog inputs each time it opens; default to next uncovered date.
   useEffect(() => {
     if (!open) return;
-    const nextStart = computeNextUncoveredStart(campaign, invoices);
-    setStartDate(nextStart);
-    setEndDate("");
+    // Phase 4 — Suggest next uncovered, non-overlapping range, capped to 30 days.
+    const suggestion = suggestNextWindow(campaign, invoices);
+    setStartDate(suggestion.start);
+    setEndDate(suggestion.end);
   }, [open, campaign, invoices]);
 
   // Live preview computation for the Add dialog

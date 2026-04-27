@@ -10,6 +10,7 @@ import { AssetCycleBillingPreview } from "./AssetCycleBillingPreview";
 import { BillingSummaryCard } from "./BillingSummaryCard";
 import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
+import { ManualBillingWindowsPanel } from "./ManualBillingWindowsPanel";
 import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
 import { generateDraftInvoiceId } from "@/utils/finance";
@@ -61,7 +62,7 @@ interface InvoiceRecord {
   is_monthly_split: boolean | null;
 }
 
-type BillingMode = 'monthly' | 'single' | 'asset_cycle';
+type BillingMode = 'monthly' | 'single' | 'asset_cycle' | 'manual';
 type GSTMode = 'CGST_SGST' | 'IGST';
 
 export function CampaignBillingTab({
@@ -231,6 +232,7 @@ export function CampaignBillingTab({
       if (activeInvoices.length > 0) {
         const hasAssetCycle = activeInvoices.some((inv: any) => inv.billing_mode === 'asset_cycle');
         const hasMonthly = activeInvoices.some((inv: any) => inv.billing_mode === 'calendar_monthly' || inv.is_monthly_split === true);
+        const hasManual = activeInvoices.some((inv: any) => inv.billing_mode === 'manual_window');
         const hasSingle = activeInvoices.some((inv: any) => inv.billing_mode === 'single_invoice' || (!inv.billing_mode && inv.is_monthly_split !== true));
         if (hasAssetCycle) {
           setBillingMode('asset_cycle');
@@ -238,6 +240,9 @@ export function CampaignBillingTab({
         } else if (hasMonthly) {
           setBillingMode('monthly');
           setLockedBillingMode('monthly');
+        } else if (hasManual) {
+          setBillingMode('manual');
+          setLockedBillingMode('manual');
         } else if (hasSingle) {
           setBillingMode('single');
           setLockedBillingMode('single');

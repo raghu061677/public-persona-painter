@@ -79,13 +79,24 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   // Important: We do NOT recalculate totals here; only hydrate display metadata.
   let enrichedItems = Array.isArray(invoice.items) ? [...invoice.items] : [];
 
+  // Manual-window date pinning helpers — applied after enrichment to guarantee
+  // that line booking dates / billable days mirror the invoice window, never
+  // the full campaign asset window.
+  const isManualWindow = invoice.billing_mode === 'manual_window';
+  const mwStart: string | null = invoice.invoice_period_start || null;
+  const mwEnd: string | null = invoice.invoice_period_end || null;
+  const mwDays = (mwStart && mwEnd)
+    ? Math.max(1, Math.floor((new Date(mwEnd).getTime() - new Date(mwStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+    : 0;
+
   // Check if items lack asset details (legacy summary-only items)
   const itemsLackAssetInfo = enrichedItems.length > 0 && enrichedItems.every(
     (item: any) => !item.asset_id && !item.campaign_asset_id && !item.campaign_assets_id && !item.location
   );
 
-  // If items are summary-only and we have a campaign, rebuild from campaign_assets
-  if (itemsLackAssetInfo && invoice.campaign_id) {
+  // If items are summary-only and we have a campaign, rebuild from campaign_assets.
+  // Skip for manual_window — see InvoiceTemplateZoho for full rationale.
+  if (itemsLackAssetInfo && invoice.campaign_id && !isManualWindow) {
     const { data: campAssets } = await supabase
       .from('campaign_assets')
       .select('id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')

@@ -584,11 +584,201 @@ export function ManualBillingWindowsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phase 6 — Edit draft window dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Edit Draft Manual Window</DialogTitle>
+            <DialogDescription>
+              Update the start/end dates. Amounts will recalculate using the same per-day rate.
+              Editing is allowed for draft windows only.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="mw-edit-start">Start Date</Label>
+                <Input
+                  id="mw-edit-start"
+                  type="date"
+                  value={editStart}
+                  min={campaign.start_date}
+                  max={campaign.end_date}
+                  onChange={(e) => setEditStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mw-edit-end">End Date</Label>
+                <Input
+                  id="mw-edit-end"
+                  type="date"
+                  value={editEnd}
+                  min={editStart || campaign.start_date}
+                  max={campaign.end_date}
+                  onChange={(e) => setEditEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Per-day rate (30-day basis)</span>
+                <span className="font-medium text-foreground">{formatCurrency(perDayRate)}</span>
+              </div>
+              {isPreviewError(editPreview) ? (
+                <div className="text-sm text-destructive">{editPreview.error}</div>
+              ) : editPreview ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>Billed Days</span>
+                    <span className="font-medium">{editPreview.days}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Taxable Amount</span>
+                    <span className="font-medium">{formatCurrency(editPreview.taxable)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>GST ({totals.gstRate}%)</span>
+                    <span className="font-medium">{formatCurrency(editPreview.gst)}</span>
+                  </div>
+                  <div className="flex justify-between text-base border-t pt-2">
+                    <span className="font-semibold">Grand Total</span>
+                    <span className="font-bold text-primary">{formatCurrency(editPreview.grand)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-muted-foreground">Adjust dates to preview.</div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditSave}
+              disabled={!editPreview || isPreviewError(editPreview) || editSaving}
+            >
+              {editSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
 
 // ───────────────────────── helpers ─────────────────────────
+
+/**
+ * Phase 5 — Compact coverage timeline for the campaign period.
+ * Renders proportional segments: covered (finalised vs draft) and gaps.
+ */
+function CoverageTimeline({
+  campaign,
+  invoices,
+}: {
+  campaign: { start_date: string; end_date: string };
+  invoices: ManualWindowInvoice[];
+}) {
+  const cs = parseISO(campaign.start_date);
+  const ce = parseISO(campaign.end_date);
+  const totalDays = Math.max(1, differenceInCalendarDays(ce, cs) + 1);
+
+  type Seg = {
+    kind: "covered-final" | "covered-draft" | "gap" | "cancelled";
+    start: Date;
+    end: Date;
+    days: number;
+    label: string;
+  };
+
+  const active = invoices
+    .filter((i) => i.status !== "Cancelled" && i.invoice_period_start && i.invoice_period_end)
+    .map((i) => ({
+      s: parseISO(i.invoice_period_start!),
+      e: parseISO(i.invoice_period_end!),
+      isDraft: i.status === "Draft",
+      id: i.invoice_no || i.id,
+    }))
+    .sort((a, b) => a.s.getTime() - b.s.getTime());
+
+  const segments: Seg[] = [];
+  let cursor = cs;
+  for (const w of active) {
+    if (isBefore(cursor, w.s)) {
+      const gapEnd = addDays(w.s, -1);
+      segments.push({
+        kind: "gap",
+        start: cursor,
+        end: gapEnd,
+        days: differenceInCalendarDays(gapEnd, cursor) + 1,
+        label: `Gap ${format(cursor, "dd MMM")} – ${format(gapEnd, "dd MMM")}`,
+      });
+    }
+    const segStart = isBefore(w.s, cursor) ? cursor : w.s;
+    const segEnd = isAfter(w.e, ce) ? ce : w.e;
+    if (!isAfter(segStart, segEnd)) {
+      segments.push({
+        kind: w.isDraft ? "covered-draft" : "covered-final",
+        start: segStart,
+        end: segEnd,
+        days: differenceInCalendarDays(segEnd, segStart) + 1,
+        label: `${w.isDraft ? "Draft" : "Invoiced"} ${format(segStart, "dd MMM")} – ${format(segEnd, "dd MMM")} (${w.id})`,
+      });
+    }
+    if (isAfter(addDays(w.e, 1), cursor)) cursor = addDays(w.e, 1);
+  }
+  if (!isAfter(cursor, ce)) {
+    segments.push({
+      kind: "gap",
+      start: cursor,
+      end: ce,
+      days: differenceInCalendarDays(ce, cursor) + 1,
+      label: `Gap ${format(cursor, "dd MMM")} – ${format(ce, "dd MMM")}`,
+    });
+  }
+
+  const colorFor = (k: Seg["kind"]) =>
+    k === "covered-final"
+      ? "bg-emerald-500"
+      : k === "covered-draft"
+        ? "bg-emerald-300"
+        : "bg-amber-300";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>Coverage timeline</span>
+        <span>
+          {format(cs, "dd MMM yyyy")} → {format(ce, "dd MMM yyyy")}
+        </span>
+      </div>
+      <div className="flex h-3 w-full overflow-hidden rounded-md border bg-muted">
+        {segments.map((s, i) => (
+          <div
+            key={i}
+            className={`${colorFor(s.kind)} h-full`}
+            style={{ width: `${(s.days / totalDays) * 100}%` }}
+            title={s.label}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" /> Invoiced
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-sm bg-emerald-300" /> Draft
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-sm bg-amber-300" /> Gap
+        </span>
+      </div>
+    </div>
+  );
+}
 
 type PreviewOk = { days: number; taxable: number; gst: number; grand: number };
 type PreviewErr = { error: string };

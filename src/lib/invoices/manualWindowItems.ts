@@ -31,19 +31,27 @@ export interface ManualWindowItem {
   sno: number;
   description: string;
   hsn_sac: string;
-  charge_type: "manual_window_rent";
+  /**
+   * Display-rent rows must NOT carry `charge_type`; invoice renderers treat
+   * charge_type rows as standalone charges and skip the standard asset-detail
+   * layout. Manual windows are normal asset rows with manual period/pricing.
+   */
+  charge_type?: "manual_window_rent";
   // Asset identity (mirrors asset_cycle item shape so the renderer enriches
   // metadata correctly without falling back to the FULL campaign asset window).
   asset_id: string | null;
   campaign_asset_id: string | null;
   asset_code: string | null;
+  media_asset_code?: string | null;
   // Display metadata (snapshot)
+  city?: string | null;
   location?: string | null;
   area?: string | null;
   direction?: string | null;
   media_type?: string | null;
   illumination_type?: string | null;
   dimensions?: string | null;
+  dimension_text?: string | null;
   total_sqft?: number | null;
   // Window-bound dates (the critical fix)
   booking_start_date: string;
@@ -51,6 +59,7 @@ export interface ManualWindowItem {
   start_date: string;
   end_date: string;
   booked_days: number;
+  billable_days?: number;
   // Pricing
   quantity: number;
   rate: number; // line rent (prorated)
@@ -61,6 +70,8 @@ export interface ManualWindowItem {
   daily_rate: number;
   printing_charges: 0;
   mounting_charges: 0;
+  printing_cost?: 0;
+  mounting_cost?: 0;
 }
 
 export interface ManualWindowItemsResult {
@@ -97,7 +108,7 @@ export async function buildManualWindowItems(opts: {
   const { data: caRows } = await supabase
     .from("campaign_assets")
     .select(
-      "id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, rent_amount, daily_rate, is_removed, status",
+      "id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, rent_amount, daily_rate, is_removed, status",
     )
     .eq("campaign_id", campaignId);
 

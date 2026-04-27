@@ -484,6 +484,36 @@ export function ManualBillingWindowsPanel({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {coverage.gaps.length === 0 ? (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Campaign period is fully covered. Any new window will overlap an existing one.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="border-primary/40 bg-primary/5">
+                <Info className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-xs">
+                  Suggested next window:{" "}
+                  <strong>
+                    {startDate && endDate
+                      ? `${format(parseISO(startDate), "dd MMM yyyy")} – ${format(parseISO(endDate), "dd MMM yyyy")}`
+                      : "—"}
+                  </strong>{" "}
+                  (first uncovered range, capped at 30 days). You may change it.
+                </AlertDescription>
+              </Alert>
+            )}
+            {cancelledTwin && (
+              <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+                <RotateCcw className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-xs">
+                  A cancelled invoice <strong>{cancelledTwin.invoice_no || cancelledTwin.id}</strong>{" "}
+                  exists for this exact window. Its number will be <strong>reused</strong> for continuity.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="mw-start">Start Date</Label>

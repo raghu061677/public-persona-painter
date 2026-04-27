@@ -3,6 +3,7 @@ import { InvoiceData } from './templates/types';
 import { renderInvoicePDF, INVOICE_TEMPLATES, getTemplateConfig } from './templates/registry';
 import { prorateInvoiceLineItems } from './prorateLineItems';
 import { fetchProofGalleryData } from './templates/invoiceWithProofTemplate';
+import { buildManualWindowItems } from './manualWindowItems';
 
 // Re-export for external use
 export { INVOICE_TEMPLATES, getTemplateConfig };
@@ -94,8 +95,20 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     (item: any) => !item.asset_id && !item.campaign_asset_id && !item.campaign_assets_id && !item.location
   );
 
+  // Legacy manual-window drafts may still contain one reduced summary row.
+  // Rebuild them into the standard per-asset display-rent item shape used by
+  // the other billing modes, while keeping manual invoice window dates/pricing.
+  if (itemsLackAssetInfo && isManualWindow && invoice.campaign_id && mwStart && mwEnd) {
+    const built = await buildManualWindowItems({
+      campaignId: invoice.campaign_id,
+      invoicePeriodStart: mwStart,
+      invoicePeriodEnd: mwEnd,
+      fixedTaxable: Number(invoice.sub_total || 0),
+    });
+    enrichedItems = built.items as any[];
+  }
+
   // If items are summary-only and we have a campaign, rebuild from campaign_assets.
-  // Skip for manual_window — see InvoiceTemplateZoho for full rationale.
   if (itemsLackAssetInfo && invoice.campaign_id && !isManualWindow) {
     const { data: campAssets } = await supabase
       .from('campaign_assets')

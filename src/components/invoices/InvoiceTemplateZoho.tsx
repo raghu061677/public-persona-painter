@@ -5,6 +5,7 @@
  import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
  import { getTermsFromCompany } from '@/lib/terms/standardTerms';
   import { prorateInvoiceLineItems } from '@/lib/invoices/prorateLineItems';
+  import { buildManualWindowItems } from '@/lib/invoices/manualWindowItems';
   import { resolveBillTo, resolveShipTo, resolvePlaceOfSupply as resolvePosHelper } from '@/lib/invoices/templates/registrationAddressHelper';
  
  interface InvoiceTemplateZohoProps {
@@ -32,6 +33,10 @@
  
  function getDocumentTitle(invoiceType: string): string {
    return invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+ }
+
+ function isStandaloneChargeItem(item: any): boolean {
+   return !!item?.charge_item_id || (!!item?.charge_type && item.charge_type !== 'manual_window_rent');
  }
  
  function numberToWords(num: number): string {
@@ -96,13 +101,20 @@
           (item: any) => !item.asset_id && !item.campaign_asset_id && !item.location
         );
 
-        // If summary-only items and we have a campaign, rebuild from campaign_assets
-        // CRITICAL: skip for manual_window — these invoices are scoped to a
-        // specific billing window, not the full campaign. Pulling all
-        // campaign_assets here would (a) explode 1 summary line into N rows
-        // and (b) render the FULL campaign asset window per line. The
-        // generator now produces per-asset items[] with invoice-period dates,
-        // so no rebuild is needed for manual_window invoices.
+        // Legacy manual-window drafts may still contain one reduced summary row.
+        // Rebuild them into the same per-asset display-rent row shape used by
+        // other billing modes, but pin periods/pricing to invoice_period_start/end.
+        if (itemsLackAssetInfo && isManualWindow && invoice.campaign_id && mwStart && mwEnd) {
+          const built = await buildManualWindowItems({
+            campaignId: invoice.campaign_id,
+            invoicePeriodStart: mwStart,
+            invoicePeriodEnd: mwEnd,
+            fixedTaxable: Number(invoice.sub_total || 0),
+          });
+          items = built.items as any[];
+        }
+
+        // If summary-only items and we have a campaign, rebuild from campaign_assets.
         if (itemsLackAssetInfo && invoice.campaign_id && !isManualWindow) {
           const { data: campAssets } = await supabase
             .from('campaign_assets')
@@ -193,7 +205,7 @@
             // Skip charge-line items (printing/mounting/reprint/remount/misc one-time charges).
             // These are flat charges attached to a cycle invoice and must NOT inherit
             // asset booking dates or be treated as display-rent lines.
-            if (item.charge_type || item.charge_item_id) return item;
+            if (isStandaloneChargeItem(item)) return item;
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
@@ -279,8 +291,8 @@
         // Separate charge-line items (printing/mounting/reprint/etc.) from display lines.
         // Charge items are flat one-time amounts and must NOT be prorated. We prorate
         // only the display lines against the display-only subtotal, then re-merge.
-        const chargeItems = items.filter((it: any) => it.charge_type || it.charge_item_id);
-        const displayItems = items.filter((it: any) => !(it.charge_type || it.charge_item_id));
+        const chargeItems = items.filter((it: any) => isStandaloneChargeItem(it));
+        const displayItems = items.filter((it: any) => !isStandaloneChargeItem(it));
         const chargeTotal: number = chargeItems.reduce<number>(
           (s, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
           0,
@@ -394,7 +406,7 @@
                 // Charge-line items (printing/mounting/reprint/remount/misc): render as a flat
                 // single-amount row without booking dates or asset metadata. Keeps cycle
                 // invoices accurate when one-time charges are attached to a billing window.
-                if (item.charge_type || item.charge_item_id) {
+                if (isStandaloneChargeItem(item)) {
                   const chargeAmount = Number(item.amount ?? item.total ?? item.rate ?? 0);
                   const ct = String(item.charge_type || 'misc').toLowerCase();
                   const labelMap: Record<string, string> = {

@@ -34,6 +34,10 @@
  function getDocumentTitle(invoiceType: string): string {
    return invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
  }
+
+ function isStandaloneChargeItem(item: any): boolean {
+   return !!item?.charge_item_id || (!!item?.charge_type && item.charge_type !== 'manual_window_rent');
+ }
  
  function numberToWords(num: number): string {
    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -201,7 +205,7 @@
             // Skip charge-line items (printing/mounting/reprint/remount/misc one-time charges).
             // These are flat charges attached to a cycle invoice and must NOT inherit
             // asset booking dates or be treated as display-rent lines.
-            if (item.charge_type || item.charge_item_id) return item;
+            if (isStandaloneChargeItem(item)) return item;
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
@@ -287,8 +291,8 @@
         // Separate charge-line items (printing/mounting/reprint/etc.) from display lines.
         // Charge items are flat one-time amounts and must NOT be prorated. We prorate
         // only the display lines against the display-only subtotal, then re-merge.
-        const chargeItems = items.filter((it: any) => it.charge_type || it.charge_item_id);
-        const displayItems = items.filter((it: any) => !(it.charge_type || it.charge_item_id));
+        const chargeItems = items.filter((it: any) => isStandaloneChargeItem(it));
+        const displayItems = items.filter((it: any) => !isStandaloneChargeItem(it));
         const chargeTotal: number = chargeItems.reduce<number>(
           (s, it: any) => s + Number(it.amount ?? it.total ?? it.rate ?? 0),
           0,
@@ -402,7 +406,7 @@
                 // Charge-line items (printing/mounting/reprint/remount/misc): render as a flat
                 // single-amount row without booking dates or asset metadata. Keeps cycle
                 // invoices accurate when one-time charges are attached to a billing window.
-                if (item.charge_type || item.charge_item_id) {
+                if (isStandaloneChargeItem(item)) {
                   const chargeAmount = Number(item.amount ?? item.total ?? item.rate ?? 0);
                   const ct = String(item.charge_type || 'misc').toLowerCase();
                   const labelMap: Record<string, string> = {

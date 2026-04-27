@@ -31,6 +31,7 @@ import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
 import { logActivity } from "@/utils/activityLogger";
 import type { CampaignTotalsResult } from "@/utils/computeCampaignTotals";
+import { buildManualWindowItems } from "@/lib/invoices/manualWindowItems";
 
 // 30-day commercial basis (industry standard for OOH)
 const COMMERCIAL_DAYS_PER_MONTH = 30;
@@ -257,18 +258,19 @@ export function ManualBillingWindowsPanel({
 
       const dueDate = addDays(parseISO(startDate), 30);
 
-      const items = [
-        {
-          sno: 1,
-          description: `Display rent (${preview.days} day${preview.days === 1 ? "" : "s"} @ ${formatCurrency(perDayRate)}/day, 30-day basis)`,
-          quantity: preview.days,
-          rate: perDayRate,
-          amount: preview.taxable,
-          total: preview.taxable,
-          hsn_sac: "998361",
-          charge_type: "manual_window_rent",
-        },
-      ];
+      // Build per-asset prorated lines so the invoice mirrors the cancelled
+      // reference structure (2 asset rows for Vaibhav Jewellers, etc.) and so
+      // line booking dates lock to the manual window — never the full
+      // campaign asset window. `fixedTaxable` keeps the displayed total
+      // unchanged from the user's preview.
+      const built = await buildManualWindowItems({
+        campaignId: campaign.id,
+        invoicePeriodStart: startDate,
+        invoicePeriodEnd: endDate,
+        fixedTaxable: preview.taxable,
+        fallbackPerDayRate: perDayRate,
+      });
+      const items = built.items;
 
       // If reusing a cancelled number, hard-delete the cancelled record first
       // so the unique key (id / invoice_no) is free for the new draft. This is
@@ -312,7 +314,7 @@ export function ManualBillingWindowsPanel({
         igst_amount: isIGST ? preview.gst : 0,
         status: "Draft",
         is_draft: true,
-        items,
+        items: items as any,
         notes:
           `Manual billing window for ${campaign.campaign_name} (${format(parseISO(startDate), "dd MMM yyyy")} – ${format(parseISO(endDate), "dd MMM yyyy")})` +
           (reusedFromCancelled
@@ -360,18 +362,16 @@ export function ManualBillingWindowsPanel({
       const datesChanged = prevStart !== editStart || prevEnd !== editEnd;
       const isIGST = gstMode === "IGST";
       const dueDate = addDays(parseISO(editStart), 30);
-      const items = [
-        {
-          sno: 1,
-          description: `Display rent (${editPreview.days} day${editPreview.days === 1 ? "" : "s"} @ ${formatCurrency(perDayRate)}/day, 30-day basis)`,
-          quantity: editPreview.days,
-          rate: perDayRate,
-          amount: editPreview.taxable,
-          total: editPreview.taxable,
-          hsn_sac: "998361",
-          charge_type: "manual_window_rent",
-        },
-      ];
+      // Rebuild per-asset prorated lines for the new window. Same helper used
+      // at create time → generation and edit always emit identical structure.
+      const built = await buildManualWindowItems({
+        campaignId: campaign.id,
+        invoicePeriodStart: editStart,
+        invoicePeriodEnd: editEnd,
+        fixedTaxable: editPreview.taxable,
+        fallbackPerDayRate: perDayRate,
+      });
+      const items = built.items;
       const { error } = await supabase
         .from("invoices")
         .update({
@@ -387,7 +387,7 @@ export function ManualBillingWindowsPanel({
           cgst_amount: isIGST ? 0 : editPreview.gst / 2,
           sgst_amount: isIGST ? 0 : editPreview.gst / 2,
           igst_amount: isIGST ? editPreview.gst : 0,
-          items,
+          items: items as any,
           notes: `Manual billing window for ${campaign.campaign_name} (${format(parseISO(editStart), "dd MMM yyyy")} – ${format(parseISO(editEnd), "dd MMM yyyy")})`,
         })
         .eq("id", editTarget.id)

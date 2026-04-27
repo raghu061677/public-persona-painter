@@ -76,6 +76,20 @@
         }
         let items = Array.isArray(invoice.items) ? [...invoice.items] : [];
 
+        // ---- MANUAL WINDOW SAFETY ----
+        // For billing_mode='manual_window' invoices, the booking dates and
+        // billable days MUST always come from invoice_period_start/end — never
+        // from the parent campaign_asset window (which spans the full
+        // campaign and would render misleadingly long periods like "78 Days").
+        // We do NOT change line totals or pricing here; only the date/day
+        // metadata used by the line renderer below.
+        const isManualWindow = invoice.billing_mode === 'manual_window';
+        const mwStart = invoice.invoice_period_start || null;
+        const mwEnd = invoice.invoice_period_end || null;
+        const mwDays = (mwStart && mwEnd)
+          ? Math.max(1, Math.floor((new Date(mwEnd).getTime() - new Date(mwStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+          : 0;
+
         // --- Enrich items with asset details from DB (display only, no total changes) ---
         // Check if items lack asset info
         const itemsLackAssetInfo = items.length > 0 && items.every(
@@ -83,7 +97,13 @@
         );
 
         // If summary-only items and we have a campaign, rebuild from campaign_assets
-        if (itemsLackAssetInfo && invoice.campaign_id) {
+        // CRITICAL: skip for manual_window — these invoices are scoped to a
+        // specific billing window, not the full campaign. Pulling all
+        // campaign_assets here would (a) explode 1 summary line into N rows
+        // and (b) render the FULL campaign asset window per line. The
+        // generator now produces per-asset items[] with invoice-period dates,
+        // so no rebuild is needed for manual_window invoices.
+        if (itemsLackAssetInfo && invoice.campaign_id && !isManualWindow) {
           const { data: campAssets } = await supabase
             .from('campaign_assets')
             .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
@@ -214,6 +234,26 @@
               booked_days: item.booked_days ?? ca?.booked_days,
               daily_rate: item.daily_rate ?? ca?.daily_rate,
             };
+          });
+        }
+
+        // After enrichment: enforce manual-window date/day pinning.
+        // This is the single safety net — even if a stray item slipped in
+        // with full-campaign dates, we override them here for rendering.
+        if (isManualWindow && mwStart && mwEnd) {
+          items = items.map((item: any) => {
+            if (item.charge_type === 'manual_window_rent' || item.campaign_asset_id || item.asset_id) {
+              return {
+                ...item,
+                start_date: mwStart,
+                end_date: mwEnd,
+                booking_start_date: mwStart,
+                booking_end_date: mwEnd,
+                booked_days: mwDays,
+                billable_days: mwDays,
+              };
+            }
+            return item;
           });
         }
         // --- End enrichment ---

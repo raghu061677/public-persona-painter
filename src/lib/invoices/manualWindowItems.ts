@@ -137,7 +137,6 @@ export async function buildManualWindowItems(opts: {
           sno: 1,
           description: `Display rent (${days} day${days === 1 ? "" : "s"} @ ₹${perDay}/day, 30-day basis)`,
           hsn_sac: "998361",
-          charge_type: "manual_window_rent",
           asset_id: null,
           campaign_asset_id: null,
           asset_code: null,
@@ -146,6 +145,7 @@ export async function buildManualWindowItems(opts: {
           start_date: invoicePeriodStart,
           end_date: invoicePeriodEnd,
           booked_days: days,
+          billable_days: days,
           quantity: days,
           rate: perDay,
           amount: taxable,
@@ -155,6 +155,8 @@ export async function buildManualWindowItems(opts: {
           daily_rate: perDay,
           printing_charges: 0,
           mounting_charges: 0,
+          printing_cost: 0,
+          mounting_cost: 0,
         },
       ],
     };
@@ -201,13 +203,14 @@ export async function buildManualWindowItems(opts: {
     return {
       sno: idx + 1,
       description:
-        `Display Rent — ${code || r.ca.location || "Asset"}` +
+        `${r.ca.media_type || "Display"} - ${r.ca.location || ""}, ${r.ca.area || ""}, ${r.ca.city || ""}` +
         ` [Manual window ${invoicePeriodStart} to ${invoicePeriodEnd}, ${days} day${days === 1 ? "" : "s"}]`,
       hsn_sac: "998361",
-      charge_type: "manual_window_rent",
       asset_id: r.ca.asset_id ?? null,
       campaign_asset_id: r.ca.id ?? null,
       asset_code: code,
+      media_asset_code: code,
+      city: r.ca.city ?? null,
       location: r.ca.location ?? null,
       area: r.ca.area ?? null,
       direction: r.ca.direction ?? null,
@@ -220,6 +223,7 @@ export async function buildManualWindowItems(opts: {
       start_date: invoicePeriodStart,
       end_date: invoicePeriodEnd,
       booked_days: days,
+      billable_days: days,
       quantity: 1,
       rate: lineRent,
       amount: lineRent,
@@ -229,6 +233,8 @@ export async function buildManualWindowItems(opts: {
       daily_rate: lineDaily,
       printing_charges: 0,
       mounting_charges: 0,
+      printing_cost: 0,
+      mounting_cost: 0,
     };
   });
 

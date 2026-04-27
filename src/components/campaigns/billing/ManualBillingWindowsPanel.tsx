@@ -258,18 +258,19 @@ export function ManualBillingWindowsPanel({
 
       const dueDate = addDays(parseISO(startDate), 30);
 
-      const items = [
-        {
-          sno: 1,
-          description: `Display rent (${preview.days} day${preview.days === 1 ? "" : "s"} @ ${formatCurrency(perDayRate)}/day, 30-day basis)`,
-          quantity: preview.days,
-          rate: perDayRate,
-          amount: preview.taxable,
-          total: preview.taxable,
-          hsn_sac: "998361",
-          charge_type: "manual_window_rent",
-        },
-      ];
+      // Build per-asset prorated lines so the invoice mirrors the cancelled
+      // reference structure (2 asset rows for Vaibhav Jewellers, etc.) and so
+      // line booking dates lock to the manual window — never the full
+      // campaign asset window. `fixedTaxable` keeps the displayed total
+      // unchanged from the user's preview.
+      const built = await buildManualWindowItems({
+        campaignId: campaign.id,
+        invoicePeriodStart: startDate,
+        invoicePeriodEnd: endDate,
+        fixedTaxable: preview.taxable,
+        fallbackPerDayRate: perDayRate,
+      });
+      const items = built.items;
 
       // If reusing a cancelled number, hard-delete the cancelled record first
       // so the unique key (id / invoice_no) is free for the new draft. This is

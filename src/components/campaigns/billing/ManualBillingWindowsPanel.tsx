@@ -447,6 +447,66 @@ export function ManualBillingWindowsPanel({
     }
   };
 
+  /**
+   * Phase 2 — Export the currently-displayed (sorted) Manual Billing Windows
+   * table as CSV. There is no filter UI in this panel today, so the export
+   * mirrors `sortedInvoices` 1:1.
+   */
+  const handleExportCsv = () => {
+    if (sortedInvoices.length === 0) return;
+    const headers = [
+      "Invoice No",
+      "Status",
+      "Draft/Finalised",
+      "Start Date",
+      "End Date",
+      "Days",
+      "Per Day Rate",
+      "Taxable Amount",
+      "GST Amount",
+      "Grand Total",
+      "Billing Window Key",
+    ];
+    const rows = sortedInvoices.map((inv) => {
+      const s = inv.invoice_period_start ? parseISO(inv.invoice_period_start) : null;
+      const e = inv.invoice_period_end ? parseISO(inv.invoice_period_end) : null;
+      const days = s && e ? differenceInCalendarDays(e, s) + 1 : 0;
+      const taxable = Number(inv.sub_total ?? 0);
+      const rowPerDay = days > 0 ? Math.round((taxable / days) * 100) / 100 : 0;
+      return [
+        inv.invoice_no || inv.id,
+        inv.status,
+        inv.status === "Draft" ? "Draft" : "Finalised",
+        s ? format(s, "dd MMM yyyy") : "",
+        e ? format(e, "dd MMM yyyy") : "",
+        days,
+        rowPerDay,
+        taxable,
+        Number(inv.gst_amount ?? 0),
+        Number(inv.total_amount ?? 0),
+        inv.billing_window_key || "",
+      ];
+    });
+    const csv = [headers, ...rows].map((r) => r.map(csvEscape).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const safeCampaign = (campaign.campaign_name || campaign.id || "campaign")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .slice(0, 60);
+    const filename = `manual_billing_windows_${safeCampaign}_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "CSV exported",
+      description: `${sortedInvoices.length} row${sortedInvoices.length === 1 ? "" : "s"} downloaded as ${filename}.`,
+    });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">

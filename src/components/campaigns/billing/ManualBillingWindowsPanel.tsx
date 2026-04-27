@@ -352,8 +352,12 @@ export function ManualBillingWindowsPanel({
 
   const handleEditSave = async () => {
     if (!editTarget || !editPreview || "error" in editPreview) return;
+    if (hasEditErrors) return;
     setEditSaving(true);
     try {
+      const prevStart = editTarget.invoice_period_start || "";
+      const prevEnd = editTarget.invoice_period_end || "";
+      const datesChanged = prevStart !== editStart || prevEnd !== editEnd;
       const isIGST = gstMode === "IGST";
       const dueDate = addDays(parseISO(editStart), 30);
       const items = [
@@ -389,6 +393,30 @@ export function ManualBillingWindowsPanel({
         .eq("id", editTarget.id)
         .eq("status", "Draft"); // safety: only drafts editable
       if (error) throw error;
+
+      // Phase 2 — audit note (only when dates actually changed; reuses existing log_activity RPC)
+      if (datesChanged) {
+        const fromLabel = prevStart && prevEnd
+          ? `${format(parseISO(prevStart), "dd MMM yyyy")} – ${format(parseISO(prevEnd), "dd MMM yyyy")}`
+          : "(unset)";
+        const toLabel = `${format(parseISO(editStart), "dd MMM yyyy")} – ${format(parseISO(editEnd), "dd MMM yyyy")}`;
+        await logActivity(
+          "edit",
+          "invoice",
+          editTarget.id,
+          editTarget.invoice_no || editTarget.id,
+          {
+            billing_mode: "manual_window",
+            campaign_id: campaign.id,
+            previous_start_date: prevStart,
+            previous_end_date: prevEnd,
+            new_start_date: editStart,
+            new_end_date: editEnd,
+            summary: `Manual billing window updated: ${fromLabel} → ${toLabel}`,
+          },
+        );
+      }
+
       toast({ title: "Draft updated", description: `Window ${editTarget.id} updated.` });
       setEditTarget(null);
       onChanged();

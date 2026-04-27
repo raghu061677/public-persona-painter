@@ -1059,6 +1059,32 @@ export function CampaignBillingTab({
         />
       )}
 
+      {/* Manual Billing Windows */}
+      {billingMode === 'manual' && (
+        <ManualBillingWindowsPanel
+          campaign={{
+            id: campaign.id,
+            campaign_name: campaign.campaign_name,
+            client_id: campaign.client_id,
+            client_name: campaign.client_name,
+            company_id: campaign.company_id,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            tax_type: campaign.tax_type,
+          }}
+          totals={totals}
+          gstMode={gstMode}
+          invoices={existingInvoices.filter(
+            (inv) => (inv as any).billing_mode === 'manual_window',
+          ) as any}
+          locked={!!lockedBillingMode && lockedBillingMode !== 'manual'}
+          onChanged={() => {
+            fetchExistingInvoices();
+            onRefresh?.();
+          }}
+        />
+      )}
+
       {/* Bulk Generate Dialog */}
       <GenerateMonthlyInvoicesDialog
         open={showBulkDialog}

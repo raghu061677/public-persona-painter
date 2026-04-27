@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info, Pencil, RotateCcw } from "lucide-react";
+import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info, Pencil, RotateCcw, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateDraftInvoiceId } from "@/utils/finance";

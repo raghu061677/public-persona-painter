@@ -91,6 +91,83 @@ export function ManualBillingWindowsPanel({
   const [editEnd, setEditEnd] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Phase 3 — table sort state (display-only, does not mutate data)
+  type SortKey = "start" | "end" | "status";
+  type SortDir = "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey>("start");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "status" ? "asc" : "asc");
+    }
+  };
+
+  // Sorted view — pure display layer over `invoices` prop.
+  const sortedInvoices = useMemo(() => {
+    const STATUS_ORDER: Record<string, number> = {
+      Draft: 0,
+      Sent: 1,
+      Partial: 2,
+      "Partially Paid": 2,
+      Overdue: 3,
+      Paid: 4,
+      Issued: 5,
+      Cancelled: 6,
+    };
+    const arr = [...invoices];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "start") {
+        cmp = (a.invoice_period_start || "").localeCompare(b.invoice_period_start || "");
+      } else if (sortKey === "end") {
+        cmp = (a.invoice_period_end || "").localeCompare(b.invoice_period_end || "");
+      } else {
+        const ai = STATUS_ORDER[a.status] ?? 99;
+        const bi = STATUS_ORDER[b.status] ?? 99;
+        cmp = ai - bi;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [invoices, sortKey, sortDir]);
+
+  // Phase 5 — Inline validation messages for edit dialog (overlap / bounds).
+  const editErrors = useMemo(() => {
+    if (!editTarget || !editStart || !editEnd) return null;
+    const errs: { bounds?: string; overlap?: string; range?: string } = {};
+    const s = parseISO(editStart);
+    const e = parseISO(editEnd);
+    const cs = parseISO(campaign.start_date);
+    const ce = parseISO(campaign.end_date);
+    if (isAfter(s, e)) {
+      errs.range = "End date must be on or after start date.";
+    }
+    if (isBefore(s, cs) || isAfter(e, ce)) {
+      errs.bounds = `Date range must stay within the campaign period: ${format(cs, "dd MMM yyyy")} – ${format(ce, "dd MMM yyyy")}.`;
+    }
+    const overlap = invoices
+      .filter(
+        (inv) =>
+          inv.id !== editTarget.id &&
+          inv.status !== "Cancelled" &&
+          inv.invoice_period_start &&
+          inv.invoice_period_end,
+      )
+      .find((inv) => {
+        const iS = parseISO(inv.invoice_period_start!);
+        const iE = parseISO(inv.invoice_period_end!);
+        return !(isAfter(s, iE) || isBefore(e, iS));
+      });
+    if (overlap) {
+      errs.overlap = `This date range overlaps an existing manual invoice window: ${format(parseISO(overlap.invoice_period_start!), "dd MMM yyyy")} – ${format(parseISO(overlap.invoice_period_end!), "dd MMM yyyy")} (${overlap.invoice_no || overlap.id}, ${overlap.status}).`;
+    }
+    return errs;
+  }, [editTarget, editStart, editEnd, invoices, campaign.start_date, campaign.end_date]);
+  const hasEditErrors = !!editErrors && (editErrors.bounds || editErrors.overlap || editErrors.range);
+
   // Per-day rate (30-day commercial basis)
   // monthlyAgreed comes from computeCampaignTotals.monthlyDisplayRent.
   const monthlyAgreed = totals.monthlyDisplayRent || 0;

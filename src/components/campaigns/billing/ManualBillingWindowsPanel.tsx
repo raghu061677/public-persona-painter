@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info, Pencil, RotateCcw } from "lucide-react";
+import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info, Pencil, RotateCcw, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateDraftInvoiceId } from "@/utils/finance";
@@ -447,6 +447,66 @@ export function ManualBillingWindowsPanel({
     }
   };
 
+  /**
+   * Phase 2 — Export the currently-displayed (sorted) Manual Billing Windows
+   * table as CSV. There is no filter UI in this panel today, so the export
+   * mirrors `sortedInvoices` 1:1.
+   */
+  const handleExportCsv = () => {
+    if (sortedInvoices.length === 0) return;
+    const headers = [
+      "Invoice No",
+      "Status",
+      "Draft/Finalised",
+      "Start Date",
+      "End Date",
+      "Days",
+      "Per Day Rate",
+      "Taxable Amount",
+      "GST Amount",
+      "Grand Total",
+      "Billing Window Key",
+    ];
+    const rows = sortedInvoices.map((inv) => {
+      const s = inv.invoice_period_start ? parseISO(inv.invoice_period_start) : null;
+      const e = inv.invoice_period_end ? parseISO(inv.invoice_period_end) : null;
+      const days = s && e ? differenceInCalendarDays(e, s) + 1 : 0;
+      const taxable = Number(inv.sub_total ?? 0);
+      const rowPerDay = days > 0 ? Math.round((taxable / days) * 100) / 100 : 0;
+      return [
+        inv.invoice_no || inv.id,
+        inv.status,
+        inv.status === "Draft" ? "Draft" : "Finalised",
+        s ? format(s, "dd MMM yyyy") : "",
+        e ? format(e, "dd MMM yyyy") : "",
+        days,
+        rowPerDay,
+        taxable,
+        Number(inv.gst_amount ?? 0),
+        Number(inv.total_amount ?? 0),
+        inv.billing_window_key || "",
+      ];
+    });
+    const csv = [headers, ...rows].map((r) => r.map(csvEscape).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const safeCampaign = (campaign.campaign_name || campaign.id || "campaign")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .slice(0, 60);
+    const filename = `manual_billing_windows_${safeCampaign}_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "CSV exported",
+      description: `${sortedInvoices.length} row${sortedInvoices.length === 1 ? "" : "s"} downloaded as ${filename}.`,
+    });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -488,10 +548,22 @@ export function ManualBillingWindowsPanel({
               ? "No manual windows yet."
               : `${invoices.length} window${invoices.length === 1 ? "" : "s"} • Covered ${coverage.coveredDays}/${coverage.totalDays} days`}
           </div>
-          <Button size="sm" onClick={() => setOpen(true)} disabled={locked}>
-            <Plus className="h-4 w-4 mr-1" />
-            Create Manual Invoice Window
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={sortedInvoices.length === 0}
+              title="Download the current table view as CSV"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)} disabled={locked}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create Manual Invoice Window
+            </Button>
+          </div>
         </div>
 
         {invoices.length > 0 && (
@@ -812,6 +884,19 @@ export function ManualBillingWindowsPanel({
 }
 
 // ───────────────────────── helpers ─────────────────────────
+
+/**
+ * RFC-4180 safe CSV cell escape. Handles commas, quotes, newlines and CRs.
+ * Numbers are stringified as-is so spreadsheet tools recognise them as numeric.
+ */
+function csvEscape(val: unknown): string {
+  if (val == null) return "";
+  const s = typeof val === "number" ? String(val) : String(val);
+  if (/[",\r\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
 
 /** Phase 3 — Sort indicator chevron for sortable column headers. */
 function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {

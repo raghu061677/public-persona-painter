@@ -366,6 +366,12 @@
          <div className="space-y-1">
            <div className="flex"><span className="w-28">Place Of Supply</span><span className="font-bold">: {placeOfSupply} (36)</span></div>
            <div className="flex"><span className="w-28">Sales person</span><span className="font-bold">: {invoice.sales_person || 'Raghunath Gajula'}</span></div>
+            {(invoice.client_po_number || invoice.campaign?.client_po_number) && (
+              <div className="flex"><span className="w-28">PO Number</span><span className="font-bold">: {invoice.client_po_number || invoice.campaign?.client_po_number}</span></div>
+            )}
+            {(invoice.client_po_date || invoice.campaign?.client_po_date) && (
+              <div className="flex"><span className="w-28">PO Date</span><span className="font-bold">: {formatDate(invoice.client_po_date || invoice.campaign?.client_po_date)}</span></div>
+            )}
          </div>
        </div>
  

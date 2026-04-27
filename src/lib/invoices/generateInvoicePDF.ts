@@ -296,6 +296,26 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     });
   }
 
+  // Manual-window safety net: force line booking dates/days to the invoice
+  // window for any item that was inadvertently hydrated with full campaign
+  // asset dates upstream.
+  if (isManualWindow && mwStart && mwEnd) {
+    enrichedItems = enrichedItems.map((item: any) => {
+      if (item.charge_type === 'manual_window_rent' || item.campaign_asset_id || item.campaign_assets_id || item.asset_id) {
+        return {
+          ...item,
+          start_date: mwStart,
+          end_date: mwEnd,
+          booking_start_date: mwStart,
+          booking_end_date: mwEnd,
+          booked_days: mwDays,
+          billable_days: mwDays,
+        };
+      }
+      return item;
+    });
+  }
+
   // Fetch last payment date and TDS totals for this invoice
   let lastPaymentDate: string | null = null;
   let totalTdsAmount = 0;

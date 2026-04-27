@@ -29,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
+import { logActivity } from "@/utils/activityLogger";
 import type { CampaignTotalsResult } from "@/utils/computeCampaignTotals";
 
 // 30-day commercial basis (industry standard for OOH)

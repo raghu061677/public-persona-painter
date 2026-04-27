@@ -61,6 +61,15 @@ interface Props {
     tax_type?: string;
   };
   totals: CampaignTotalsResult;
+  /**
+   * Active campaign assets (post-drop filtering happens locally). Used to
+   * compute the TRUE monthly agreed rent for the manual-window per-day rate
+   * (Σ negotiated_rate over active assets) instead of the smudged
+   * `totals.monthlyDisplayRent` figure (= displayCost / totalMonths), which
+   * dilutes the per-day rate when the campaign duration is not a clean
+   * multiple of 30 days.
+   */
+  campaignAssets: any[];
   gstMode: "CGST_SGST" | "IGST";
   invoices: ManualWindowInvoice[]; // pre-filtered to billing_mode='manual_window'
   locked: boolean; // disabled when another billing mode already finalized
@@ -76,6 +85,7 @@ interface Props {
 export function ManualBillingWindowsPanel({
   campaign,
   totals,
+  campaignAssets,
   gstMode,
   invoices,
   locked,

@@ -885,6 +885,19 @@ export function ManualBillingWindowsPanel({
 
 // ───────────────────────── helpers ─────────────────────────
 
+/**
+ * RFC-4180 safe CSV cell escape. Handles commas, quotes, newlines and CRs.
+ * Numbers are stringified as-is so spreadsheet tools recognise them as numeric.
+ */
+function csvEscape(val: unknown): string {
+  if (val == null) return "";
+  const s = typeof val === "number" ? String(val) : String(val);
+  if (/[",\r\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 /** Phase 3 — Sort indicator chevron for sortable column headers. */
 function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
   if (!active) return <span className="text-muted-foreground/40 text-[10px]">↕</span>;

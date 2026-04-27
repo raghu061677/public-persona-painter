@@ -499,19 +499,46 @@ export function ManualBillingWindowsPanel({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("start")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      Start Date
+                      <SortIndicator active={sortKey === "start"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("end")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      End Date
+                      <SortIndicator active={sortKey === "end"} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Days</TableHead>
                   <TableHead className="text-right">Per Day Rate</TableHead>
                   <TableHead className="text-right">Taxable</TableHead>
                   <TableHead className="text-right">GST</TableHead>
                   <TableHead className="text-right">Grand Total</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("status")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      Status
+                      <SortIndicator active={sortKey === "status"} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((inv) => {
+                {sortedInvoices.map((inv) => {
                   const s = inv.invoice_period_start ? parseISO(inv.invoice_period_start) : null;
                   const e = inv.invoice_period_end ? parseISO(inv.invoice_period_end) : null;
                   const days = s && e ? differenceInCalendarDays(e, s) + 1 : 0;
@@ -527,19 +554,7 @@ export function ManualBillingWindowsPanel({
                       <TableCell className="text-right">{formatCurrency(Number(inv.gst_amount ?? 0))}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(Number(inv.total_amount ?? 0))}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            inv.status === "Paid"
-                              ? "default"
-                              : inv.status === "Cancelled"
-                                ? "destructive"
-                                : inv.status === "Draft"
-                                  ? "secondary"
-                                  : "outline"
-                          }
-                        >
-                          {inv.status}
-                        </Badge>
+                        <StatusPill status={inv.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">

@@ -60,6 +60,10 @@ interface InvoiceRecord {
   status: string;
   due_date: string;
   is_monthly_split: boolean | null;
+  billing_mode?: string | null;
+  sub_total?: number | null;
+  gst_amount?: number | null;
+  billing_window_key?: string | null;
 }
 
 type BillingMode = 'monthly' | 'single' | 'asset_cycle' | 'manual';

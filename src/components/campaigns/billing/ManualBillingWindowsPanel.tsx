@@ -29,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateDraftInvoiceId } from "@/utils/finance";
 import { buildRegistrationSnapshot } from "@/utils/invoiceRegistrationSnapshot";
+import { logActivity } from "@/utils/activityLogger";
 import type { CampaignTotalsResult } from "@/utils/computeCampaignTotals";
 
 // 30-day commercial basis (industry standard for OOH)
@@ -89,6 +90,83 @@ export function ManualBillingWindowsPanel({
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Phase 3 — table sort state (display-only, does not mutate data)
+  type SortKey = "start" | "end" | "status";
+  type SortDir = "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey>("start");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "status" ? "asc" : "asc");
+    }
+  };
+
+  // Sorted view — pure display layer over `invoices` prop.
+  const sortedInvoices = useMemo(() => {
+    const STATUS_ORDER: Record<string, number> = {
+      Draft: 0,
+      Sent: 1,
+      Partial: 2,
+      "Partially Paid": 2,
+      Overdue: 3,
+      Paid: 4,
+      Issued: 5,
+      Cancelled: 6,
+    };
+    const arr = [...invoices];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "start") {
+        cmp = (a.invoice_period_start || "").localeCompare(b.invoice_period_start || "");
+      } else if (sortKey === "end") {
+        cmp = (a.invoice_period_end || "").localeCompare(b.invoice_period_end || "");
+      } else {
+        const ai = STATUS_ORDER[a.status] ?? 99;
+        const bi = STATUS_ORDER[b.status] ?? 99;
+        cmp = ai - bi;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [invoices, sortKey, sortDir]);
+
+  // Phase 5 — Inline validation messages for edit dialog (overlap / bounds).
+  const editErrors = useMemo(() => {
+    if (!editTarget || !editStart || !editEnd) return null;
+    const errs: { bounds?: string; overlap?: string; range?: string } = {};
+    const s = parseISO(editStart);
+    const e = parseISO(editEnd);
+    const cs = parseISO(campaign.start_date);
+    const ce = parseISO(campaign.end_date);
+    if (isAfter(s, e)) {
+      errs.range = "End date must be on or after start date.";
+    }
+    if (isBefore(s, cs) || isAfter(e, ce)) {
+      errs.bounds = `Date range must stay within the campaign period: ${format(cs, "dd MMM yyyy")} – ${format(ce, "dd MMM yyyy")}.`;
+    }
+    const overlap = invoices
+      .filter(
+        (inv) =>
+          inv.id !== editTarget.id &&
+          inv.status !== "Cancelled" &&
+          inv.invoice_period_start &&
+          inv.invoice_period_end,
+      )
+      .find((inv) => {
+        const iS = parseISO(inv.invoice_period_start!);
+        const iE = parseISO(inv.invoice_period_end!);
+        return !(isAfter(s, iE) || isBefore(e, iS));
+      });
+    if (overlap) {
+      errs.overlap = `This date range overlaps an existing manual invoice window: ${format(parseISO(overlap.invoice_period_start!), "dd MMM yyyy")} – ${format(parseISO(overlap.invoice_period_end!), "dd MMM yyyy")} (${overlap.invoice_no || overlap.id}, ${overlap.status}).`;
+    }
+    return errs;
+  }, [editTarget, editStart, editEnd, invoices, campaign.start_date, campaign.end_date]);
+  const hasEditErrors = !!editErrors && (editErrors.bounds || editErrors.overlap || editErrors.range);
 
   // Per-day rate (30-day commercial basis)
   // monthlyAgreed comes from computeCampaignTotals.monthlyDisplayRent.
@@ -274,8 +352,12 @@ export function ManualBillingWindowsPanel({
 
   const handleEditSave = async () => {
     if (!editTarget || !editPreview || "error" in editPreview) return;
+    if (hasEditErrors) return;
     setEditSaving(true);
     try {
+      const prevStart = editTarget.invoice_period_start || "";
+      const prevEnd = editTarget.invoice_period_end || "";
+      const datesChanged = prevStart !== editStart || prevEnd !== editEnd;
       const isIGST = gstMode === "IGST";
       const dueDate = addDays(parseISO(editStart), 30);
       const items = [
@@ -311,6 +393,30 @@ export function ManualBillingWindowsPanel({
         .eq("id", editTarget.id)
         .eq("status", "Draft"); // safety: only drafts editable
       if (error) throw error;
+
+      // Phase 2 — audit note (only when dates actually changed; reuses existing log_activity RPC)
+      if (datesChanged) {
+        const fromLabel = prevStart && prevEnd
+          ? `${format(parseISO(prevStart), "dd MMM yyyy")} – ${format(parseISO(prevEnd), "dd MMM yyyy")}`
+          : "(unset)";
+        const toLabel = `${format(parseISO(editStart), "dd MMM yyyy")} – ${format(parseISO(editEnd), "dd MMM yyyy")}`;
+        await logActivity(
+          "edit",
+          "invoice",
+          editTarget.id,
+          editTarget.invoice_no || editTarget.id,
+          {
+            billing_mode: "manual_window",
+            campaign_id: campaign.id,
+            previous_start_date: prevStart,
+            previous_end_date: prevEnd,
+            new_start_date: editStart,
+            new_end_date: editEnd,
+            summary: `Manual billing window updated: ${fromLabel} → ${toLabel}`,
+          },
+        );
+      }
+
       toast({ title: "Draft updated", description: `Window ${editTarget.id} updated.` });
       setEditTarget(null);
       onChanged();
@@ -393,19 +499,46 @@ export function ManualBillingWindowsPanel({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("start")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      Start Date
+                      <SortIndicator active={sortKey === "start"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("end")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      End Date
+                      <SortIndicator active={sortKey === "end"} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Days</TableHead>
                   <TableHead className="text-right">Per Day Rate</TableHead>
                   <TableHead className="text-right">Taxable</TableHead>
                   <TableHead className="text-right">GST</TableHead>
                   <TableHead className="text-right">Grand Total</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort("status")}
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
+                      Status
+                      <SortIndicator active={sortKey === "status"} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((inv) => {
+                {sortedInvoices.map((inv) => {
                   const s = inv.invoice_period_start ? parseISO(inv.invoice_period_start) : null;
                   const e = inv.invoice_period_end ? parseISO(inv.invoice_period_end) : null;
                   const days = s && e ? differenceInCalendarDays(e, s) + 1 : 0;
@@ -421,19 +554,7 @@ export function ManualBillingWindowsPanel({
                       <TableCell className="text-right">{formatCurrency(Number(inv.gst_amount ?? 0))}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(Number(inv.total_amount ?? 0))}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            inv.status === "Paid"
-                              ? "default"
-                              : inv.status === "Cancelled"
-                                ? "destructive"
-                                : inv.status === "Draft"
-                                  ? "secondary"
-                                  : "outline"
-                          }
-                        >
-                          {inv.status}
-                        </Badge>
+                        <StatusPill status={inv.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
@@ -620,6 +741,27 @@ export function ManualBillingWindowsPanel({
                 />
               </div>
             </div>
+
+            {/* Phase 5 — Inline validation messages adjacent to date fields */}
+            {editErrors?.range && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.range}</AlertDescription>
+              </Alert>
+            )}
+            {editErrors?.bounds && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.bounds}</AlertDescription>
+              </Alert>
+            )}
+            {editErrors?.overlap && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.overlap}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="rounded-md border p-3 space-y-2 bg-muted/30">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Per-day rate (30-day basis)</span>
@@ -657,7 +799,7 @@ export function ManualBillingWindowsPanel({
             </Button>
             <Button
               onClick={handleEditSave}
-              disabled={!editPreview || isPreviewError(editPreview) || editSaving}
+              disabled={!editPreview || isPreviewError(editPreview) || editSaving || !!hasEditErrors}
             >
               {editSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
               Save Changes
@@ -670,6 +812,40 @@ export function ManualBillingWindowsPanel({
 }
 
 // ───────────────────────── helpers ─────────────────────────
+
+/** Phase 3 — Sort indicator chevron for sortable column headers. */
+function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <span className="text-muted-foreground/40 text-[10px]">↕</span>;
+  return <span className="text-foreground text-[10px]">{dir === "asc" ? "▲" : "▼"}</span>;
+}
+
+/**
+ * Phase 4 — Compact, finance-scannable status pill.
+ * Uses the existing Badge primitive + semantic Tailwind tones to stay
+ * consistent with the rest of the app's design language.
+ */
+function StatusPill({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+  const className =
+    s === "draft"
+      ? "border-dashed text-muted-foreground"
+      : s === "sent" || s === "issued"
+        ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-900"
+        : s === "partial" || s === "partially paid"
+          ? "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+          : s === "paid"
+            ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900"
+            : s === "overdue"
+              ? "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-200 dark:border-orange-900"
+              : s === "cancelled"
+                ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-900"
+                : "";
+  return (
+    <Badge variant="outline" className={`text-xs font-medium ${className}`}>
+      {status}
+    </Badge>
+  );
+}
 
 /**
  * Phase 5 — Compact coverage timeline for the campaign period.

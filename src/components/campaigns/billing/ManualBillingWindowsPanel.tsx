@@ -362,18 +362,16 @@ export function ManualBillingWindowsPanel({
       const datesChanged = prevStart !== editStart || prevEnd !== editEnd;
       const isIGST = gstMode === "IGST";
       const dueDate = addDays(parseISO(editStart), 30);
-      const items = [
-        {
-          sno: 1,
-          description: `Display rent (${editPreview.days} day${editPreview.days === 1 ? "" : "s"} @ ${formatCurrency(perDayRate)}/day, 30-day basis)`,
-          quantity: editPreview.days,
-          rate: perDayRate,
-          amount: editPreview.taxable,
-          total: editPreview.taxable,
-          hsn_sac: "998361",
-          charge_type: "manual_window_rent",
-        },
-      ];
+      // Rebuild per-asset prorated lines for the new window. Same helper used
+      // at create time → generation and edit always emit identical structure.
+      const built = await buildManualWindowItems({
+        campaignId: campaign.id,
+        invoicePeriodStart: editStart,
+        invoicePeriodEnd: editEnd,
+        fixedTaxable: editPreview.taxable,
+        fallbackPerDayRate: perDayRate,
+      });
+      const items = built.items;
       const { error } = await supabase
         .from("invoices")
         .update({
@@ -389,7 +387,7 @@ export function ManualBillingWindowsPanel({
           cgst_amount: isIGST ? 0 : editPreview.gst / 2,
           sgst_amount: isIGST ? 0 : editPreview.gst / 2,
           igst_amount: isIGST ? editPreview.gst : 0,
-          items,
+          items: items as any,
           notes: `Manual billing window for ${campaign.campaign_name} (${format(parseISO(editStart), "dd MMM yyyy")} – ${format(parseISO(editEnd), "dd MMM yyyy")})`,
         })
         .eq("id", editTarget.id)

@@ -837,6 +837,15 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg border-dashed flex-1 ${lockedBillingMode && lockedBillingMode !== 'manual' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="manual" id="manual" disabled={!!lockedBillingMode && lockedBillingMode !== 'manual'} />
+                <Label htmlFor="manual" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Manual Billing Windows</div>
+                  <div className="text-sm text-muted-foreground">
+                    Custom client-approved invoice windows on a 30-day commercial basis
+                  </div>
+                </Label>
+              </div>
             </RadioGroup>
           </CardContent>
         </Card>

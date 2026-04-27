@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Loader2, Plus, FileText, Trash2, AlertTriangle, Info, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { generateDraftInvoiceId } from "@/utils/finance";
@@ -36,6 +36,7 @@ const COMMERCIAL_DAYS_PER_MONTH = 30;
 
 interface ManualWindowInvoice {
   id: string;
+  invoice_no?: string | null;
   invoice_period_start: string | null;
   invoice_period_end: string | null;
   total_amount: number;

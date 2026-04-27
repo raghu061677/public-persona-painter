@@ -741,6 +741,27 @@ export function ManualBillingWindowsPanel({
                 />
               </div>
             </div>
+
+            {/* Phase 5 — Inline validation messages adjacent to date fields */}
+            {editErrors?.range && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.range}</AlertDescription>
+              </Alert>
+            )}
+            {editErrors?.bounds && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.bounds}</AlertDescription>
+              </Alert>
+            )}
+            {editErrors?.overlap && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">{editErrors.overlap}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="rounded-md border p-3 space-y-2 bg-muted/30">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Per-day rate (30-day basis)</span>
@@ -778,7 +799,7 @@ export function ManualBillingWindowsPanel({
             </Button>
             <Button
               onClick={handleEditSave}
-              disabled={!editPreview || isPreviewError(editPreview) || editSaving}
+              disabled={!editPreview || isPreviewError(editPreview) || editSaving || !!hasEditErrors}
             >
               {editSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
               Save Changes
@@ -791,6 +812,40 @@ export function ManualBillingWindowsPanel({
 }
 
 // ───────────────────────── helpers ─────────────────────────
+
+/** Phase 3 — Sort indicator chevron for sortable column headers. */
+function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <span className="text-muted-foreground/40 text-[10px]">↕</span>;
+  return <span className="text-foreground text-[10px]">{dir === "asc" ? "▲" : "▼"}</span>;
+}
+
+/**
+ * Phase 4 — Compact, finance-scannable status pill.
+ * Uses the existing Badge primitive + semantic Tailwind tones to stay
+ * consistent with the rest of the app's design language.
+ */
+function StatusPill({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+  const className =
+    s === "draft"
+      ? "border-dashed text-muted-foreground"
+      : s === "sent" || s === "issued"
+        ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-900"
+        : s === "partial" || s === "partially paid"
+          ? "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+          : s === "paid"
+            ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900"
+            : s === "overdue"
+              ? "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-200 dark:border-orange-900"
+              : s === "cancelled"
+                ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-900"
+                : "";
+  return (
+    <Badge variant="outline" className={`text-xs font-medium ${className}`}>
+      {status}
+    </Badge>
+  );
+}
 
 /**
  * Phase 5 — Compact coverage timeline for the campaign period.

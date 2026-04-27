@@ -10,6 +10,7 @@ import { AssetCycleBillingPreview } from "./AssetCycleBillingPreview";
 import { BillingSummaryCard } from "./BillingSummaryCard";
 import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
+import { ManualBillingWindowsPanel } from "./ManualBillingWindowsPanel";
 import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
 import { generateDraftInvoiceId } from "@/utils/finance";
@@ -59,9 +60,13 @@ interface InvoiceRecord {
   status: string;
   due_date: string;
   is_monthly_split: boolean | null;
+  billing_mode?: string | null;
+  sub_total?: number | null;
+  gst_amount?: number | null;
+  billing_window_key?: string | null;
 }
 
-type BillingMode = 'monthly' | 'single' | 'asset_cycle';
+type BillingMode = 'monthly' | 'single' | 'asset_cycle' | 'manual';
 type GSTMode = 'CGST_SGST' | 'IGST';
 
 export function CampaignBillingTab({
@@ -231,6 +236,7 @@ export function CampaignBillingTab({
       if (activeInvoices.length > 0) {
         const hasAssetCycle = activeInvoices.some((inv: any) => inv.billing_mode === 'asset_cycle');
         const hasMonthly = activeInvoices.some((inv: any) => inv.billing_mode === 'calendar_monthly' || inv.is_monthly_split === true);
+        const hasManual = activeInvoices.some((inv: any) => inv.billing_mode === 'manual_window');
         const hasSingle = activeInvoices.some((inv: any) => inv.billing_mode === 'single_invoice' || (!inv.billing_mode && inv.is_monthly_split !== true));
         if (hasAssetCycle) {
           setBillingMode('asset_cycle');
@@ -238,6 +244,9 @@ export function CampaignBillingTab({
         } else if (hasMonthly) {
           setBillingMode('monthly');
           setLockedBillingMode('monthly');
+        } else if (hasManual) {
+          setBillingMode('manual');
+          setLockedBillingMode('manual');
         } else if (hasSingle) {
           setBillingMode('single');
           setLockedBillingMode('single');
@@ -828,6 +837,15 @@ export function CampaignBillingTab({
                   </div>
                 </Label>
               </div>
+              <div className={`flex items-center space-x-2 p-3 border rounded-lg border-dashed flex-1 ${lockedBillingMode && lockedBillingMode !== 'manual' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}>
+                <RadioGroupItem value="manual" id="manual" disabled={!!lockedBillingMode && lockedBillingMode !== 'manual'} />
+                <Label htmlFor="manual" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Manual Billing Windows</div>
+                  <div className="text-sm text-muted-foreground">
+                    Custom client-approved invoice windows on a 30-day commercial basis
+                  </div>
+                </Label>
+              </div>
             </RadioGroup>
           </CardContent>
         </Card>
@@ -1035,6 +1053,32 @@ export function CampaignBillingTab({
           taxType={campaign.tax_type}
           gstMode={gstMode}
           onInvoiceGenerated={() => {
+            fetchExistingInvoices();
+            onRefresh?.();
+          }}
+        />
+      )}
+
+      {/* Manual Billing Windows */}
+      {billingMode === 'manual' && (
+        <ManualBillingWindowsPanel
+          campaign={{
+            id: campaign.id,
+            campaign_name: campaign.campaign_name,
+            client_id: campaign.client_id,
+            client_name: campaign.client_name,
+            company_id: campaign.company_id,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            tax_type: campaign.tax_type,
+          }}
+          totals={totals}
+          gstMode={gstMode}
+          invoices={existingInvoices.filter(
+            (inv) => (inv as any).billing_mode === 'manual_window',
+          ) as any}
+          locked={!!lockedBillingMode && lockedBillingMode !== 'manual'}
+          onChanged={() => {
             fetchExistingInvoices();
             onRefresh?.();
           }}

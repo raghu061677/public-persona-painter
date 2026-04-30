@@ -165,38 +165,44 @@ export function useCampaignChargeItems(
   const ensureMonthlySeeded = useCallback(
     async (firstMonthKey: string) => {
       if (!campaignId || !firstMonthKey) return;
-
-      // Migrate any existing cycle-seeded rows that were never invoiced
-      // to the first month, so monthly billing reuses the same charges.
-      const { data: orphanCycleRows } = await supabase
-        .from("campaign_charge_items")
-        .select("id")
-        .eq("campaign_id", campaignId)
-        .eq("is_invoiced", false)
-        .is("billing_month_key", null)
-        .not("billing_cycle_no", "is", null);
-
-      if (orphanCycleRows && orphanCycleRows.length > 0) {
-        await supabase
-          .from("campaign_charge_items")
-          .update({ billing_month_key: firstMonthKey, billing_cycle_no: null })
-          .in("id", orphanCycleRows.map((r: any) => r.id));
+      const inflightKey = `${campaignId}:${firstMonthKey}`;
+      const existing = monthlySeedInFlight.get(inflightKey);
+      if (existing) {
+        await existing;
         await fetchItems();
         return;
       }
+      const run = (async () => {
+        // Migrate any existing cycle-seeded rows that were never invoiced
+        // to the first month, so monthly billing reuses the same charges.
+        const { data: orphanCycleRows } = await supabase
+          .from("campaign_charge_items")
+          .select("id")
+          .eq("campaign_id", campaignId)
+          .eq("is_invoiced", false)
+          .is("billing_month_key", null)
+          .not("billing_cycle_no", "is", null);
 
-      // If any month-assigned rows already exist (seeded or manual), do nothing.
-      const { data: existingMonthly } = await supabase
-        .from("campaign_charge_items")
-        .select("id")
-        .eq("campaign_id", campaignId)
-        .not("billing_month_key", "is", null)
-        .limit(1);
-      if (existingMonthly && existingMonthly.length > 0) return;
+        if (orphanCycleRows && orphanCycleRows.length > 0) {
+          await supabase
+            .from("campaign_charge_items")
+            .update({ billing_month_key: firstMonthKey, billing_cycle_no: null })
+            .in("id", orphanCycleRows.map((r: any) => r.id));
+          return;
+        }
 
-      // Fresh seed: one printing/mounting row per asset (>0 only) onto the first month.
-      const rows: any[] = [];
-      for (const ca of campaignAssets || []) {
+        // If any month-assigned rows already exist (seeded or manual), do nothing.
+        const { data: existingMonthly } = await supabase
+          .from("campaign_charge_items")
+          .select("id")
+          .eq("campaign_id", campaignId)
+          .not("billing_month_key", "is", null)
+          .limit(1);
+        if (existingMonthly && existingMonthly.length > 0) return;
+
+        // Fresh seed: one printing/mounting row per asset (>0 only) onto the first month.
+        const rows: any[] = [];
+        for (const ca of campaignAssets || []) {
         if (ca?.is_removed) continue;
         const printing = Number(ca?.printing_charges || ca?.printing_client_amount || 0);
         const mounting = Number(ca?.mounting_charges || ca?.mounting_cost || 0);
@@ -230,9 +236,16 @@ export function useCampaignChargeItems(
             created_from: "auto_seed_month1",
           });
         }
+        }
+        if (rows.length === 0) return;
+        await supabase.from("campaign_charge_items").insert(rows);
+      })();
+      monthlySeedInFlight.set(inflightKey, run);
+      try {
+        await run;
+      } finally {
+        monthlySeedInFlight.delete(inflightKey);
       }
-      if (rows.length === 0) return;
-      await supabase.from("campaign_charge_items").insert(rows);
       await fetchItems();
     },
     [campaignId, campaignAssets, companyId, fetchItems],

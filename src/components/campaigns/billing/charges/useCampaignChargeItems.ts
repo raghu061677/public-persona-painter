@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Module-level in-flight guards. These prevent two hook instances (e.g. a
+ * preview component and the schedule table mounted on the same page) from
+ * racing past the "do existing rows exist?" check and double-seeding initial
+ * printing/mounting charges.
+ */
+const cycleSeedInFlight = new Map<string, Promise<void>>();
+const monthlySeedInFlight = new Map<string, Promise<void>>();
+
 export interface CampaignChargeItem {
   id: string;
   campaign_id: string;
@@ -51,16 +60,23 @@ export function useCampaignChargeItems(
   const ensureSeeded = useCallback(async () => {
     if (seeded || !campaignId || totalCycles === 0) return;
     setSeeded(true);
-    // Skip if any charge items already exist
-    const { data: existing } = await supabase
-      .from("campaign_charge_items")
-      .select("id")
-      .eq("campaign_id", campaignId)
-      .limit(1);
-    if (existing && existing.length > 0) return;
+    const existingPromise = cycleSeedInFlight.get(campaignId);
+    if (existingPromise) {
+      await existingPromise;
+      await fetchItems();
+      return;
+    }
+    const run = (async () => {
+      // Skip if any charge items already exist
+      const { data: existing } = await supabase
+        .from("campaign_charge_items")
+        .select("id")
+        .eq("campaign_id", campaignId)
+        .limit(1);
+      if (existing && existing.length > 0) return;
 
-    const rows: any[] = [];
-    for (const ca of campaignAssets || []) {
+      const rows: any[] = [];
+      for (const ca of campaignAssets || []) {
       if (ca?.is_removed) continue;
       const printing = Number(ca?.printing_charges || ca?.printing_client_amount || 0);
       const mounting = Number(ca?.mounting_charges || ca?.mounting_cost || 0);
@@ -94,9 +110,16 @@ export function useCampaignChargeItems(
           created_from: "auto_seed_cycle1",
         });
       }
+      }
+      if (rows.length === 0) return;
+      await supabase.from("campaign_charge_items").insert(rows);
+    })();
+    cycleSeedInFlight.set(campaignId, run);
+    try {
+      await run;
+    } finally {
+      cycleSeedInFlight.delete(campaignId);
     }
-    if (rows.length === 0) return;
-    await supabase.from("campaign_charge_items").insert(rows);
     await fetchItems();
   }, [seeded, campaignId, totalCycles, campaignAssets, companyId, fetchItems]);
 

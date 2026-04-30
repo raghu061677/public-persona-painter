@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SortableTableHead, useSortableData } from "@/components/common/SortableTableHead";
 import {
   Select,
   SelectContent,
@@ -487,6 +488,19 @@ export function MonthlyInvoiceGenerator({
   
   const alreadyInvoicedCount = billingPreviews.filter(p => p.alreadyInvoiced).length;
   const billableCount = billingPreviews.filter(p => !p.alreadyInvoiced).length;
+
+  // Sortable rows derived from billingPreviews (flat shape for SortableTableHead)
+  const sortableRows = useMemo(() => billingPreviews.map(p => ({
+    preview: p,
+    assetCode: p.assetCode,
+    location: `${p.campaignAsset.area || ''}, ${p.campaignAsset.city || ''}`,
+    billStart: p.billStartDate.toISOString(),
+    billableDays: p.billableDays,
+    monthlyRate: p.monthlyRate,
+    calculatedAmount: p.calculatedAmount,
+    statusOrder: p.alreadyInvoiced ? 1 : 0,
+  })), [billingPreviews]);
+  const { sortedData: sortedRows, sortConfig, handleSort } = useSortableData(sortableRows, { key: 'assetCode', direction: 'asc' });
   
   // Profitability-gated invoice generation
   const handleInvoiceWithProfitCheck = () => {
@@ -824,8 +838,8 @@ export function MonthlyInvoiceGenerator({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Generate Monthly Invoice
@@ -834,8 +848,8 @@ export function MonthlyInvoiceGenerator({
             Create a monthly invoice for {campaign.campaign_name} based on asset overlap billing
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-6">
+
+        <div className="space-y-6 overflow-y-auto px-6 py-4 flex-1 min-h-0">
           {/* FY backdate info banner */}
           {selectedMonth && isBillingMonthOldFY(selectedMonth) && (
             <Alert className="border-amber-300 bg-amber-50">
@@ -940,21 +954,21 @@ export function MonthlyInvoiceGenerator({
               
               {/* Asset Preview Table */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[420px] overflow-y-auto">
+                <div className="overflow-y-auto" style={{ maxHeight: 'min(55vh, 520px)' }}>
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 shadow-sm">
                     <TableRow className="bg-muted/50">
-                      <TableHead>Asset Code</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Billing Period</TableHead>
-                      <TableHead className="text-center">Days</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
+                      <SortableTableHead sortKey="assetCode" currentSort={sortConfig} onSort={handleSort}>Asset Code</SortableTableHead>
+                      <SortableTableHead sortKey="location" currentSort={sortConfig} onSort={handleSort}>Location</SortableTableHead>
+                      <SortableTableHead sortKey="billStart" currentSort={sortConfig} onSort={handleSort}>Billing Period</SortableTableHead>
+                      <SortableTableHead sortKey="billableDays" currentSort={sortConfig} onSort={handleSort} align="center">Days</SortableTableHead>
+                      <SortableTableHead sortKey="monthlyRate" currentSort={sortConfig} onSort={handleSort} align="right">Rate</SortableTableHead>
+                      <SortableTableHead sortKey="calculatedAmount" currentSort={sortConfig} onSort={handleSort} align="right">Amount</SortableTableHead>
+                      <SortableTableHead sortKey="statusOrder" currentSort={sortConfig} onSort={handleSort} align="center">Status</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {billingPreviews.map(preview => (
+                    {sortedRows.map(({ preview }) => (
                       <TableRow 
                         key={preview.campaignAsset.id}
                         className={preview.alreadyInvoiced && !includeAlreadyInvoiced ? 'opacity-50' : ''}
@@ -1130,8 +1144,8 @@ export function MonthlyInvoiceGenerator({
             </Alert>
           )}
         </div>
-        
-        <div className="flex justify-end gap-2 pt-4">
+
+        <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={generating}>
             Cancel
           </Button>

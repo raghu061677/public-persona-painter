@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink, ShieldAlert } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCampaignProfitability, getMinMarginThreshold, isProfitLockEnabled } from "@/hooks/useCampaignProfitability";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { toast } from "@/hooks/use-toast";

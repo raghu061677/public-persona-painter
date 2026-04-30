@@ -373,6 +373,16 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
           </CardContent>
         </Card>
       )}
+
+      <LedgerExportDialog
+        open={showExport}
+        onOpenChange={setShowExport}
+        entries={ledgerEntries}
+        summary={summary}
+        outstanding={outstanding}
+        clientId={clientId}
+        clientName={clientName || "Client"}
+      />
     </div>
   );
 }

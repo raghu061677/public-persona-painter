@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Receipt, Loader2 } from "lucide-react";
+import { Plus, Trash2, Receipt, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import type { CampaignChargeItem } from "./useCampaignChargeItems";
@@ -39,6 +39,8 @@ const TYPE_LABEL: Record<string, string> = {
   misc: "Misc",
   display: "Display",
 };
+
+const GROUP_ORDER = ["printing", "mounting", "reprinting", "remounting", "misc", "display"];
 
 export function CycleChargesPanel({
   items,
@@ -75,6 +77,26 @@ export function CycleChargesPanel({
     }
     return map;
   }, [items]);
+
+  // Group items by charge_type for collapsible display
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, { items: CampaignChargeItem[]; total: number; pending: number }>();
+    for (const it of items) {
+      const key = it.charge_type;
+      const cur = groups.get(key) || { items: [], total: 0, pending: 0 };
+      cur.items.push(it);
+      cur.total += Number(it.amount || 0);
+      if (!it.is_invoiced) cur.pending += Number(it.amount || 0);
+      groups.set(key, cur);
+    }
+    return Array.from(groups.entries()).sort(
+      (a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0]),
+    );
+  }, [items]);
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (key: string) =>
+    setExpandedGroups((s) => ({ ...s, [key]: !s[key] }));
 
   const handleAdd = async () => {
     const amt = Number(form.amount);
@@ -192,42 +214,92 @@ export function CycleChargesPanel({
           </p>
         ) : (
           <div className="space-y-2">
-            {items.map((it) => (
-              <div
-                key={it.id}
-                className="flex flex-wrap items-center gap-2 p-2 border rounded-md text-sm"
-              >
-                <Badge variant={it.is_invoiced ? "default" : "outline"} className="text-[10px]">
-                  {TYPE_LABEL[it.charge_type] || it.charge_type}
-                </Badge>
-                <span className="font-medium">{formatCurrency(Number(it.amount))}</span>
-                <span className="text-xs text-muted-foreground truncate max-w-[260px]">
-                  {it.description || "—"}
-                </span>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Cycle</span>
-                  <Select
-                    value={String(it.billing_cycle_no || 1)}
-                    disabled={it.is_invoiced}
-                    onValueChange={(v) => onReassign(it.id, Number(v))}
+            {groupedItems.map(([type, group]) => {
+              const isOpen = !!expandedGroups[type];
+              return (
+                <div key={type} className="border rounded-md overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(type)}
+                    className="w-full flex items-center gap-2 p-2 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
                   >
-                    <SelectTrigger className="h-7 w-[110px] text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {cycleOptions.map((c) => (
-                        <SelectItem key={c} value={String(c)}>Cycle {c}</SelectItem>
+                    {isOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <Badge variant="outline" className="text-[10px]">
+                      {TYPE_LABEL[type] || type}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {group.items.length} item{group.items.length === 1 ? "" : "s"}
+                    </span>
+                    <span className="ml-auto font-medium text-sm">
+                      {formatCurrency(group.total)}
+                    </span>
+                    {group.pending > 0 && group.pending !== group.total && (
+                      <span className="text-[11px] text-amber-600">
+                        ({formatCurrency(group.pending)} pending)
+                      </span>
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="divide-y">
+                      {group.items.map((it) => (
+                        <div
+                          key={it.id}
+                          className="flex flex-wrap items-center gap-2 p-2 text-sm"
+                        >
+                          <Badge
+                            variant={it.is_invoiced ? "default" : "outline"}
+                            className="text-[10px]"
+                          >
+                            {TYPE_LABEL[it.charge_type] || it.charge_type}
+                          </Badge>
+                          <span className="font-medium">{formatCurrency(Number(it.amount))}</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-[260px]">
+                            {it.description || "—"}
+                          </span>
+                          <div className="ml-auto flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Cycle</span>
+                            <Select
+                              value={String(it.billing_cycle_no || 1)}
+                              disabled={it.is_invoiced}
+                              onValueChange={(v) => onReassign(it.id, Number(v))}
+                            >
+                              <SelectTrigger className="h-7 w-[110px] text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {cycleOptions.map((c) => (
+                                  <SelectItem key={c} value={String(c)}>
+                                    Cycle {c}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {it.is_invoiced ? (
+                              <Badge variant="secondary" className="text-[10px]">
+                                Invoiced
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() => onDelete(it.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  {it.is_invoiced ? (
-                    <Badge variant="secondary" className="text-[10px]">Invoiced</Badge>
-                  ) : (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onDelete(it.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

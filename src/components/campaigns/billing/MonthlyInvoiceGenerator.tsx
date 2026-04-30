@@ -940,8 +940,9 @@ export function MonthlyInvoiceGenerator({
               
               {/* Asset Preview Table */}
               <div className="border rounded-lg overflow-hidden">
+                <div className="max-h-[420px] overflow-y-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 shadow-sm">
                     <TableRow className="bg-muted/50">
                       <TableHead>Asset Code</TableHead>
                       <TableHead>Location</TableHead>
@@ -992,6 +993,7 @@ export function MonthlyInvoiceGenerator({
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
               
               {/* One-time Charges Section */}

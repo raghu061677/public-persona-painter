@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ interface Props {
   onReassign: (id: string, cycle: number) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   campaignAssets: any[];
+  /** Optional campaign id used to scope persisted expanded state */
+  campaignId?: string;
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -49,6 +51,7 @@ export function CycleChargesPanel({
   onReassign,
   onDelete,
   campaignAssets,
+  campaignId,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -89,14 +92,52 @@ export function CycleChargesPanel({
       if (!it.is_invoiced) cur.pending += Number(it.amount || 0);
       groups.set(key, cur);
     }
+    // Sort items within each group by billing_cycle_no, then by description
+    for (const [, group] of groups) {
+      group.items.sort((a, b) => {
+        const ca = Number(a.billing_cycle_no || 1);
+        const cb = Number(b.billing_cycle_no || 1);
+        if (ca !== cb) return ca - cb;
+        return (a.description || "").localeCompare(b.description || "");
+      });
+    }
     return Array.from(groups.entries()).sort(
       (a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0]),
     );
   }, [items]);
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  // Persist expand/collapse state per-campaign in localStorage
+  const storageKey = `cycle-charges-expanded:${campaignId || "default"}`;
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(expandedGroups));
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [expandedGroups, storageKey]);
+
   const toggleGroup = (key: string) =>
     setExpandedGroups((s) => ({ ...s, [key]: !s[key] }));
+
+  const allExpanded =
+    groupedItems.length > 0 && groupedItems.every(([k]) => expandedGroups[k]);
+  const expandAll = () => {
+    const next: Record<string, boolean> = {};
+    for (const [k] of groupedItems) next[k] = true;
+    setExpandedGroups(next);
+  };
+  const collapseAll = () => setExpandedGroups({});
 
   const handleAdd = async () => {
     const amt = Number(form.amount);
@@ -214,6 +255,16 @@ export function CycleChargesPanel({
           </p>
         ) : (
           <div className="space-y-2">
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={allExpanded ? collapseAll : expandAll}
+              >
+                {allExpanded ? "Collapse all" : "Expand all"}
+              </Button>
+            </div>
             {groupedItems.map(([type, group]) => {
               const isOpen = !!expandedGroups[type];
               return (

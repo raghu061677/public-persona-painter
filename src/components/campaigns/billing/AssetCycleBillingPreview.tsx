@@ -452,6 +452,7 @@ export function AssetCycleBillingPreview({
         onReassign={reassignCycle}
         onDelete={deleteCharge}
         campaignAssets={campaignAssets}
+        campaignId={campaignId}
       />
 
       {/* Cycle Schedule Table */}

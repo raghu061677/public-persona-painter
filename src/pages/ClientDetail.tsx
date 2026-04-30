@@ -136,6 +136,7 @@ export default function ClientDetail() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showInvoiceExport, setShowInvoiceExport] = useState(false);
   
   // Enterprise RBAC: unified ownership-based access
   const perms = useRecordPermissions(client, 'clients');

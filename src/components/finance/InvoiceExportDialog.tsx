@@ -89,7 +89,7 @@ export function InvoiceExportDialog({ open, onOpenChange, invoices, clientName }
     if (ids.length === 0) return new Map<string, any[]>();
     const { data, error } = await supabase
       .from("invoice_line_items")
-      .select("invoice_id, description, quantity, unit_price, amount, hsn_code")
+      .select("invoice_id, description, qty, rate, amount, hsn_sac_code")
       .in("invoice_id", ids);
     if (error) {
       console.error(error);
@@ -132,12 +132,12 @@ export function InvoiceExportDialog({ open, onOpenChange, invoices, clientName }
             if (items.length === 0) {
               rows.push([...baseRow, "", "", "", ""].join(","));
             } else {
-              items.forEach(li => {
+              items.forEach((li: any) => {
                 rows.push([
                   ...baseRow,
                   csvVal(li.description || ""),
-                  csvVal(li.quantity ?? ""),
-                  csvVal(li.unit_price ?? ""),
+                  csvVal(li.qty ?? ""),
+                  csvVal(li.rate ?? ""),
                   csvVal(li.amount ?? ""),
                 ].join(","));
               });
@@ -175,12 +175,12 @@ export function InvoiceExportDialog({ open, onOpenChange, invoices, clientName }
             if (items.length === 0) {
               ws.addRow([...baseRow, "", "", "", ""]);
             } else {
-              items.forEach((li, idx) => {
+              items.forEach((li: any, idx: number) => {
                 ws.addRow([
                   ...(idx === 0 ? baseRow : baseRow.map(() => "")),
                   li.description || "",
-                  li.quantity ?? "",
-                  Number(li.unit_price ?? 0),
+                  li.qty ?? "",
+                  Number(li.rate ?? 0),
                   Number(li.amount ?? 0),
                 ]);
               });
@@ -222,12 +222,12 @@ export function InvoiceExportDialog({ open, onOpenChange, invoices, clientName }
             if (items.length === 0) {
               body.push([...baseRow, "", "", "", ""]);
             } else {
-              items.forEach((li, idx) => {
+              items.forEach((li: any, idx: number) => {
                 body.push([
                   ...(idx === 0 ? baseRow : baseRow.map(() => "")),
                   li.description || "",
-                  String(li.quantity ?? ""),
-                  formatINR(Number(li.unit_price ?? 0)),
+                  String(li.qty ?? ""),
+                  formatINR(Number(li.rate ?? 0)),
                   formatINR(Number(li.amount ?? 0)),
                 ]);
               });

@@ -1091,6 +1091,19 @@ export default function ClientDetail() {
           setSearchParams(searchParams);
         }}
       />
+      <InvoiceExportDialog
+        open={showInvoiceExport}
+        onOpenChange={setShowInvoiceExport}
+        invoices={invoices.map(inv => ({
+          id: inv.id,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          total_amount: Number(inv.total_amount || 0),
+          balance_due: Number(inv.balance_due || 0),
+          status: inv.status,
+        }))}
+        clientName={client?.name || "Client"}
+      />
     </div>
     </ModuleGuard>
   );

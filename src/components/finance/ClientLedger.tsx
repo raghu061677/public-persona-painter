@@ -12,6 +12,10 @@ import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/financ
 import { formatDate } from "@/utils/plans";
 import { FileText, DollarSign, AlertCircle, CheckCircle, Clock, ExternalLink, Download, Loader2 } from "lucide-react";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
+import { useClientLedger } from "@/hooks/useClientLedger";
+import { exportClientLedgerExcel } from "@/utils/exports/clientLedgerExcel";
+import { exportClientLedgerPdf } from "@/utils/exports/clientLedgerPdf";
+import { FileSpreadsheet, FileDown } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -46,6 +50,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
+  const { ledgerEntries, summary, outstanding } = useClientLedger(clientId);
 
   const [totals, setTotals] = useState({
     totalInvoiced: 0,
@@ -187,7 +192,26 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
               <CardTitle>Invoice History</CardTitle>
               <CardDescription>All invoices and payment records for this client</CardDescription>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportClientLedgerExcel(ledgerEntries, summary, outstanding, { name: clientName || 'Client' })}
+                disabled={ledgerEntries.length === 0}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportClientLedgerPdf(ledgerEntries, summary, outstanding, { name: clientName || 'Client' })}
+                disabled={ledgerEntries.length === 0}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
@@ -198,7 +222,8 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Overdue">Overdue</SelectItem>
               </SelectContent>
-            </Select>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

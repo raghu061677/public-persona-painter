@@ -169,6 +169,7 @@ export default function ReportCampaignBookingsV2() {
         .from("campaigns")
         .select("*")
         .eq("company_id", company.id)
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("start_date", { ascending: false });
 
       if (error) throw error;

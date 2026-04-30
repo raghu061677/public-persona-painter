@@ -44,6 +44,7 @@ export default function ReportCampaignBookings() {
       const { data, error } = await supabase
         .from("campaigns")
         .select("*")
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("start_date", { ascending: false });
 
       if (error) throw error;

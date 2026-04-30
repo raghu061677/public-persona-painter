@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink, ShieldAlert } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCampaignProfitability, getMinMarginThreshold, isProfitLockEnabled } from "@/hooks/useCampaignProfitability";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { toast } from "@/hooks/use-toast";
@@ -989,7 +990,102 @@ export function MonthlyInvoiceGenerator({
                           {formatCurrency(preview.monthlyRate)}/mo
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(preview.calculatedAmount)}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="hover:underline decoration-dotted underline-offset-4 cursor-help font-medium"
+                              >
+                                {formatCurrency(preview.calculatedAmount)}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-80 text-xs">
+                              {(() => {
+                                const printingShown = includePrinting && preview.printingCost > 0 && (allowRebill || !preview.printingAlreadyBilled);
+                                const mountingShown = includeMounting && preview.mountingCost > 0 && (allowRebill || !preview.mountingAlreadyBilled);
+                                const rentBase = preview.calculatedAmount;
+                                const oneTime = (printingShown ? preview.printingCost : 0) + (mountingShown ? preview.mountingCost : 0);
+                                const subtotal = rentBase + oneTime;
+                                const gstPct = campaign.gst_percent || 18;
+                                const gst = subtotal * (gstPct / 100);
+                                const grand = subtotal + gst;
+                                const dailyEffective = preview.billableDays > 0 ? rentBase / preview.billableDays : 0;
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="font-semibold text-sm border-b pb-1.5">
+                                      {preview.assetCode} — Breakdown
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex justify-between text-muted-foreground">
+                                        <span>Period</span>
+                                        <span>{format(preview.billStartDate, 'dd MMM')} – {format(preview.billEndDate, 'dd MMM yyyy')}</span>
+                                      </div>
+                                      <div className="flex justify-between text-muted-foreground">
+                                        <span>Days billed</span>
+                                        <span>{preview.billableDays} of {preview.daysInMonth}</span>
+                                      </div>
+                                      <div className="flex justify-between text-muted-foreground">
+                                        <span>Monthly rate</span>
+                                        <span>{formatCurrency(preview.monthlyRate)}</span>
+                                      </div>
+                                      <div className="flex justify-between text-muted-foreground">
+                                        <span>Pro-rata daily</span>
+                                        <span>{formatCurrency(dailyEffective)}/day</span>
+                                      </div>
+                                    </div>
+                                    <div className="border-t pt-1.5 space-y-1">
+                                      <div className="flex justify-between">
+                                        <span>Rent ({preview.billableDays}d)</span>
+                                        <span className="font-medium">{formatCurrency(rentBase)}</span>
+                                      </div>
+                                      {printingShown && (
+                                        <div className="flex justify-between">
+                                          <span>Printing</span>
+                                          <span className="font-medium">{formatCurrency(preview.printingCost)}</span>
+                                        </div>
+                                      )}
+                                      {mountingShown && (
+                                        <div className="flex justify-between">
+                                          <span>Mounting</span>
+                                          <span className="font-medium">{formatCurrency(preview.mountingCost)}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between border-t pt-1">
+                                        <span>Subtotal</span>
+                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                      </div>
+                                      {gstMode === 'CGST_SGST' ? (
+                                        <>
+                                          <div className="flex justify-between text-muted-foreground">
+                                            <span>CGST ({gstPct / 2}%)</span>
+                                            <span>{formatCurrency(gst / 2)}</span>
+                                          </div>
+                                          <div className="flex justify-between text-muted-foreground">
+                                            <span>SGST ({gstPct / 2}%)</span>
+                                            <span>{formatCurrency(gst / 2)}</span>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex justify-between text-muted-foreground">
+                                          <span>IGST ({gstPct}%)</span>
+                                          <span>{formatCurrency(gst)}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between border-t pt-1 font-semibold text-sm">
+                                        <span>Grand Total</span>
+                                        <span>{formatCurrency(grand)}</span>
+                                      </div>
+                                    </div>
+                                    {preview.alreadyInvoiced && (
+                                      <div className="text-amber-700 bg-amber-50 rounded px-2 py-1 text-[11px]">
+                                        This period was already invoiced.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </PopoverContent>
+                          </Popover>
                         </TableCell>
                         <TableCell className="text-center">
                           {preview.alreadyInvoiced ? (

@@ -45,6 +45,7 @@ import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDia
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
 import { ClientLedger } from "@/components/finance/ClientLedger";
+import { InvoiceExportDialog } from "@/components/finance/InvoiceExportDialog";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
 import { ClientRegistrations } from "@/components/clients/ClientRegistrations";
@@ -135,6 +136,7 @@ export default function ClientDetail() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showInvoiceExport, setShowInvoiceExport] = useState(false);
   
   // Enterprise RBAC: unified ownership-based access
   const perms = useRecordPermissions(client, 'clients');
@@ -886,86 +888,10 @@ export default function ClientDetail() {
                     size="sm"
                     variant="outline"
                     disabled={invoices.length === 0}
-                    onClick={async () => {
-                      const wb = new ExcelJS.Workbook();
-                      const ws = wb.addWorksheet("Invoices");
-                      ws.addRow([`${client?.name || 'Client'} — Invoices`]).font = { bold: true, size: 14 };
-                      ws.addRow([`Generated: ${new Date().toLocaleDateString('en-IN')}`]);
-                      ws.addRow([]);
-                      const header = ws.addRow(["Invoice ID", "Date", "Due Date", "Amount", "Paid", "Balance", "Status", "Aging (days)"]);
-                      header.font = { bold: true };
-                      header.eachCell(c => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } }; });
-                      invoices.forEach(inv => {
-                        const days = getDaysOverdue(inv.due_date);
-                        const isOverdue = inv.status !== "Paid" && days > 0;
-                        ws.addRow([
-                          inv.id,
-                          new Date(inv.invoice_date).toLocaleDateString('en-IN'),
-                          new Date(inv.due_date).toLocaleDateString('en-IN'),
-                          Number(inv.total_amount || 0),
-                          Number((inv.total_amount || 0) - (inv.balance_due || 0)),
-                          Number(inv.balance_due || 0),
-                          inv.status,
-                          isOverdue ? days : 0,
-                        ]);
-                      });
-                      ws.columns.forEach(col => { col.width = 18; });
-                      for (let r = header.number + 1; r <= ws.rowCount; r++) {
-                        [4, 5, 6].forEach(c => { ws.getCell(r, c).numFmt = '#,##0'; });
-                      }
-                      const buf = await wb.xlsx.writeBuffer();
-                      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `${(client?.name || 'Client').replace(/\s+/g, '_')}_Invoices.xlsx`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast.success("Invoices exported to Excel");
-                    }}
-                  >
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={invoices.length === 0}
-                    onClick={() => {
-                      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-                      doc.setFontSize(14);
-                      doc.text(`${client?.name || 'Client'} — Invoices`, 14, 16);
-                      doc.setFontSize(9);
-                      doc.setTextColor(100);
-                      doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 22);
-                      autoTable(doc, {
-                        startY: 28,
-                        head: [["Invoice ID", "Date", "Due Date", "Amount (₹)", "Paid (₹)", "Balance (₹)", "Status", "Aging"]],
-                        body: invoices.map(inv => {
-                          const days = getDaysOverdue(inv.due_date);
-                          const isOverdue = inv.status !== "Paid" && days > 0;
-                          return [
-                            inv.id,
-                            new Date(inv.invoice_date).toLocaleDateString('en-IN'),
-                            new Date(inv.due_date).toLocaleDateString('en-IN'),
-                            formatINR(inv.total_amount),
-                            formatINR((inv.total_amount || 0) - (inv.balance_due || 0)),
-                            formatINR(inv.balance_due),
-                            inv.status,
-                            isOverdue ? `${days}d` : (inv.status === "Paid" ? "Paid" : "Current"),
-                          ];
-                        }),
-                        theme: "striped",
-                        styles: { fontSize: 8, cellPadding: 1.5 },
-                        headStyles: { fillColor: [30, 64, 175] },
-                        columnStyles: { 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right", fontStyle: "bold" } },
-                      });
-                      doc.save(`${(client?.name || 'Client').replace(/\s+/g, '_')}_Invoices.pdf`);
-                      toast.success("Invoices exported to PDF");
-                    }}
+                    onClick={() => setShowInvoiceExport(true)}
                   >
                     <FileDown className="h-4 w-4 mr-2" />
-                    PDF
+                    Export…
                   </Button>
                 </div>
               </div>
@@ -1164,6 +1090,19 @@ export default function ClientDetail() {
           searchParams.delete('edit');
           setSearchParams(searchParams);
         }}
+      />
+      <InvoiceExportDialog
+        open={showInvoiceExport}
+        onOpenChange={setShowInvoiceExport}
+        invoices={invoices.map(inv => ({
+          id: inv.id,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          total_amount: Number(inv.total_amount || 0),
+          balance_due: Number(inv.balance_due || 0),
+          status: inv.status,
+        }))}
+        clientName={client?.name || "Client"}
       />
     </div>
     </ModuleGuard>

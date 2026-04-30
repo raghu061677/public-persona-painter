@@ -13,9 +13,8 @@ import { formatDate } from "@/utils/plans";
 import { FileText, DollarSign, AlertCircle, CheckCircle, Clock, ExternalLink, Download, Loader2 } from "lucide-react";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
 import { useClientLedger } from "@/hooks/useClientLedger";
-import { exportClientLedgerExcel } from "@/utils/exports/clientLedgerExcel";
-import { exportClientLedgerPdf } from "@/utils/exports/clientLedgerPdf";
-import { FileSpreadsheet, FileDown } from "lucide-react";
+import { LedgerExportDialog } from "@/components/finance/LedgerExportDialog";
+import { FileDown } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -51,6 +50,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
   const { ledgerEntries, summary, outstanding } = useClientLedger(clientId);
+  const [showExport, setShowExport] = useState(false);
 
   const [totals, setTotals] = useState({
     totalInvoiced: 0,
@@ -196,20 +196,11 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => exportClientLedgerExcel(ledgerEntries, summary, outstanding, { name: clientName || 'Client' })}
-                disabled={ledgerEntries.length === 0}
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => exportClientLedgerPdf(ledgerEntries, summary, outstanding, { name: clientName || 'Client' })}
+                onClick={() => setShowExport(true)}
                 disabled={ledgerEntries.length === 0}
               >
                 <FileDown className="h-4 w-4 mr-2" />
-                PDF
+                Export…
               </Button>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
@@ -382,6 +373,16 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
           </CardContent>
         </Card>
       )}
+
+      <LedgerExportDialog
+        open={showExport}
+        onOpenChange={setShowExport}
+        entries={ledgerEntries}
+        summary={summary}
+        outstanding={outstanding}
+        clientId={clientId}
+        clientName={clientName || "Client"}
+      />
     </div>
   );
 }

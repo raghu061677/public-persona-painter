@@ -573,7 +573,7 @@ export function CampaignBillingTab({
         const matched = ch.campaign_asset_id
           ? items.find((it) => it.campaign_asset_id === ch.campaign_asset_id)
           : null;
-        if (matched && (ch.charge_type === 'printing' || ch.charge_type === 'reprinting')) {
+        if (matched && (ch.charge_type === 'printing' || ch.charge_type === 'reprinting') && includePrinting) {
           matched.printing_charges = Number(matched.printing_charges || 0) + amt;
           matched.amount = Number(matched.rent_amount || 0) + Number(matched.printing_charges || 0) + Number(matched.mounting_charges || 0);
           matched.total = matched.amount;
@@ -581,7 +581,7 @@ export function CampaignBillingTab({
           consumedChargeIds.push(ch.id);
           continue;
         }
-        if (matched && (ch.charge_type === 'mounting' || ch.charge_type === 'remounting')) {
+        if (matched && (ch.charge_type === 'mounting' || ch.charge_type === 'remounting') && includeMounting) {
           matched.mounting_charges = Number(matched.mounting_charges || 0) + amt;
           matched.amount = Number(matched.rent_amount || 0) + Number(matched.printing_charges || 0) + Number(matched.mounting_charges || 0);
           matched.total = matched.amount;

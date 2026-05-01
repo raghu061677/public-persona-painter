@@ -334,8 +334,8 @@ export function CampaignBillingTab({
         const autoMount = ca.mounting_charges || ca.mounting_cost || 0;
         const ovr = override?.rows?.[ca.id];
         const rentAmt = ovr ? Number(ovr.display_amount || 0) : autoRent;
-        const printAmt = ovr ? Number(ovr.printing_charges || 0) : autoPrint;
-        const mountAmt = ovr ? Number(ovr.mounting_charges || 0) : autoMount;
+        const printAmt = includePrinting ? (ovr ? Number(ovr.printing_charges || 0) : autoPrint) : 0;
+        const mountAmt = includeMounting ? (ovr ? Number(ovr.mounting_charges || 0) : autoMount) : 0;
         const lineTotal = rentAmt + printAmt + mountAmt;
         const resolvedCode = maCodeMap.get(ca.asset_id) || null;
         return {

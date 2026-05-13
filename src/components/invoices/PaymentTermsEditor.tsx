@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate } from '@/utils/plans';
 
@@ -52,6 +54,9 @@ export function PaymentTermsEditor({
   const [daysInput, setDaysInput] = useState<string>(String(currentTermsDays || 0));
   const [calculatedDueDate, setCalculatedDueDate] = useState(dueDate);
   const [saving, setSaving] = useState(false);
+  const [daysError, setDaysError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const isUserEditing = useRef(false);
 
   // Sync local state when props change (e.g., after refetch), but don't
@@ -61,6 +66,7 @@ export function PaymentTermsEditor({
     if (!isUserEditing.current) {
       setCustomDays(currentTermsDays || 0);
       setDaysInput(String(currentTermsDays || 0));
+      setIsDirty(false);
     }
   }, [currentTermsMode, currentTermsDays]);
 
@@ -93,42 +99,67 @@ export function PaymentTermsEditor({
 
   const handleTermsModeChange = async (value: string) => {
     setTermsMode(value);
-    
+    setDaysError(null);
+
     if (value !== 'CUSTOM') {
       const option = TERMS_OPTIONS.find(o => o.value === value);
       if (option?.days !== null) {
         setCustomDays(option.days);
         setDaysInput(String(option.days));
+        setIsDirty(false);
       }
+      await saveTerms(value, option?.days || 0);
+    } else {
+      // Don't auto-save when switching to CUSTOM — wait for user to click Save
+      setIsDirty(true);
     }
-    
-    await saveTerms(value, value === 'CUSTOM' ? customDays : (TERMS_OPTIONS.find(o => o.value === value)?.days || 0));
   };
 
   const handleDaysInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     isUserEditing.current = true;
     const raw = e.target.value;
-    // Allow empty string while typing; strip non-numeric characters
     const cleaned = raw.replace(/[^0-9]/g, '');
     setDaysInput(cleaned);
+    setIsDirty(true);
+    setJustSaved(false);
+
+    if (cleaned === '') {
+      setDaysError('Enter a whole number of days');
+    } else {
+      const n = parseInt(cleaned, 10);
+      if (!Number.isInteger(n) || n < 0 || n > 365) {
+        setDaysError('Enter a whole number between 0 and 365');
+      } else {
+        setDaysError(null);
+      }
+    }
+
     if (cleaned !== '') {
-      setCustomDays(parseInt(cleaned, 10));
+      const n = parseInt(cleaned, 10);
+      setCustomDays(n);
     }
   };
 
-  const handleDaysBlur = async () => {
-    isUserEditing.current = false;
-    const days = parseInt(daysInput, 10) || 0;
-    setDaysInput(String(days));
-    setCustomDays(days);
-    if (termsMode === 'CUSTOM') {
-      await saveTerms('CUSTOM', days);
+  const handleSaveCustom = async () => {
+    if (daysError) return;
+    if (daysInput === '') {
+      setDaysError('Enter a whole number of days');
+      return;
     }
+    const days = parseInt(daysInput, 10);
+    if (!Number.isInteger(days) || days < 0 || days > 365) {
+      setDaysError('Enter a whole number between 0 and 365');
+      return;
+    }
+    setCustomDays(days);
+    isUserEditing.current = false;
+    await saveTerms('CUSTOM', days);
   };
 
   const handleDaysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      (e.target as HTMLInputElement).blur();
+      e.preventDefault();
+      handleSaveCustom();
     }
   };
 
@@ -154,7 +185,10 @@ export function PaymentTermsEditor({
       if (error) throw error;
 
       setCalculatedDueDate(newDueDate);
-      
+      setIsDirty(false);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 3000);
+
       if (onUpdate) {
         onUpdate({ termsMode: mode, termsDays: days, dueDate: newDueDate });
       }
@@ -211,18 +245,32 @@ export function PaymentTermsEditor({
           {termsMode === 'CUSTOM' && (
             <div className="space-y-2">
               <Label>Days</Label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={0}
-                value={daysInput}
-                onChange={handleDaysInputChange}
-                onBlur={handleDaysBlur}
-                onKeyDown={handleDaysKeyDown}
-                disabled={readOnly || saving}
-                placeholder="e.g. 15"
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={daysInput}
+                  onChange={handleDaysInputChange}
+                  onKeyDown={handleDaysKeyDown}
+                  onBlur={() => { isUserEditing.current = false; }}
+                  disabled={readOnly || saving}
+                  placeholder="e.g. 15"
+                  aria-invalid={!!daysError}
+                  className={daysError ? 'border-destructive' : ''}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveCustom}
+                  disabled={readOnly || saving || !!daysError || !isDirty}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                </Button>
+              </div>
+              {daysError && (
+                <p className="text-[0.8rem] font-medium text-destructive">{daysError}</p>
+              )}
             </div>
           )}
         </div>
@@ -234,7 +282,14 @@ export function PaymentTermsEditor({
           </div>
           <div>
             <Label className="text-muted-foreground text-xs">Due Date</Label>
-            <p className="font-medium">{formatDate(calculatedDueDate)}</p>
+            <p className="font-medium flex items-center gap-2">
+              {formatDate(calculatedDueDate)}
+              {justSaved && (
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-normal">
+                  <Check className="h-3 w-3" /> Updated
+                </span>
+              )}
+            </p>
           </div>
         </div>
       </CardContent>

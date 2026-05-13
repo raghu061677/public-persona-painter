@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -49,13 +49,19 @@ export function PaymentTermsEditor({
   const { toast } = useToast();
   const [termsMode, setTermsMode] = useState(currentTermsMode || 'DUE_ON_RECEIPT');
   const [customDays, setCustomDays] = useState(currentTermsDays || 0);
+  const [daysInput, setDaysInput] = useState<string>(String(currentTermsDays || 0));
   const [calculatedDueDate, setCalculatedDueDate] = useState(dueDate);
   const [saving, setSaving] = useState(false);
+  const isUserEditing = useRef(false);
 
-  // Sync local state when props change (e.g., after refetch)
+  // Sync local state when props change (e.g., after refetch), but don't
+  // overwrite while the user is actively typing in the days input.
   useEffect(() => {
     setTermsMode(currentTermsMode || 'DUE_ON_RECEIPT');
-    setCustomDays(currentTermsDays || 0);
+    if (!isUserEditing.current) {
+      setCustomDays(currentTermsDays || 0);
+      setDaysInput(String(currentTermsDays || 0));
+    }
   }, [currentTermsMode, currentTermsDays]);
 
   useEffect(() => {
@@ -92,16 +98,37 @@ export function PaymentTermsEditor({
       const option = TERMS_OPTIONS.find(o => o.value === value);
       if (option?.days !== null) {
         setCustomDays(option.days);
+        setDaysInput(String(option.days));
       }
     }
     
     await saveTerms(value, value === 'CUSTOM' ? customDays : (TERMS_OPTIONS.find(o => o.value === value)?.days || 0));
   };
 
-  const handleCustomDaysChange = async (days: number) => {
+  const handleDaysInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isUserEditing.current = true;
+    const raw = e.target.value;
+    // Allow empty string while typing; strip non-numeric characters
+    const cleaned = raw.replace(/[^0-9]/g, '');
+    setDaysInput(cleaned);
+    if (cleaned !== '') {
+      setCustomDays(parseInt(cleaned, 10));
+    }
+  };
+
+  const handleDaysBlur = async () => {
+    isUserEditing.current = false;
+    const days = parseInt(daysInput, 10) || 0;
+    setDaysInput(String(days));
     setCustomDays(days);
     if (termsMode === 'CUSTOM') {
       await saveTerms('CUSTOM', days);
+    }
+  };
+
+  const handleDaysKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
     }
   };
 
@@ -110,7 +137,6 @@ export function PaymentTermsEditor({
     
     setSaving(true);
     try {
-      // Update invoice directly
       const invoiceDateObj = new Date(invoiceDate);
       invoiceDateObj.setDate(invoiceDateObj.getDate() + days);
       const newDueDate = invoiceDateObj.toISOString().split('T')[0];
@@ -186,11 +212,16 @@ export function PaymentTermsEditor({
             <div className="space-y-2">
               <Label>Days</Label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min={0}
-                value={customDays}
-                onChange={(e) => handleCustomDaysChange(parseInt(e.target.value) || 0)}
+                value={daysInput}
+                onChange={handleDaysInputChange}
+                onBlur={handleDaysBlur}
+                onKeyDown={handleDaysKeyDown}
                 disabled={readOnly || saving}
+                placeholder="e.g. 15"
               />
             </div>
           )}

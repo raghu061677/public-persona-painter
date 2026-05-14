@@ -258,6 +258,7 @@ const PublicCareersAndFeatures = lazy(() => import("./pages/public/CareersAndFea
 const PublicCampaignPlanning = lazy(() => import("./pages/public/CampaignPlanning"));
 const PublicAssetManagement = lazy(() => import("./pages/public/AssetManagement"));
 const PublicProofAndContact = lazy(() => import("./pages/public/ProofAndContact"));
+const PublicProofCollection = lazy(() => import("./pages/public/ProofCollection"));
 const PublicSupport = lazy(() => import("./pages/public/Support"));
 const PublicSales = lazy(() => import("./pages/public/Sales"));
 const PublicPartners = lazy(() => import("./pages/public/Partners"));
@@ -320,7 +321,7 @@ const App = () => (
             <Route path="/careers" element={<PublicLayout><PublicCareersAndFeatures /></PublicLayout>} />
             <Route path="/campaign-planning" element={<PublicLayout><PublicCampaignPlanning /></PublicLayout>} />
             <Route path="/asset-management" element={<PublicLayout><PublicAssetManagement /></PublicLayout>} />
-            <Route path="/proof-collection" element={<PublicLayout><PublicProofAndContact /></PublicLayout>} />
+            <Route path="/proof-collection" element={<PublicLayout><PublicProofCollection /></PublicLayout>} />
             <Route path="/support" element={<PublicLayout><PublicSupport /></PublicLayout>} />
             <Route path="/sales" element={<PublicLayout><PublicSales /></PublicLayout>} />
             <Route path="/partners" element={<PublicLayout><PublicPartners /></PublicLayout>} />

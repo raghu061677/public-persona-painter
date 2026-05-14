@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import hero1 from "@/assets/hero-1.jpeg";
 import hero2 from "@/assets/hero-2.jpeg";
-import hero3 from "@/assets/hero-3.png";
-import hero4 from "@/assets/hero-4.png";
-import hero5 from "@/assets/hero-5.png";
+import hero3 from "@/assets/hero-3.jpg";
+import hero4 from "@/assets/hero-4.jpg";
+import hero5 from "@/assets/hero-5.jpg";
 
 const heroImages = [hero1, hero2, hero3, hero4, hero5];
 
@@ -44,7 +44,12 @@ export const HeroImageCarousel = () => {
             src={heroImages[currentIndex]}
             alt={`Hero ${currentIndex + 1}`}
             className="w-full h-full object-cover"
-            loading="eager"
+            width={1920}
+            height={1080}
+            loading={currentIndex === 0 ? "eager" : "lazy"}
+            decoding={currentIndex === 0 ? "sync" : "async"}
+            // @ts-expect-error - fetchpriority is a valid HTML attr not yet in React types
+            fetchpriority={currentIndex === 0 ? "high" : "low"}
           />
         </motion.div>
       </AnimatePresence>

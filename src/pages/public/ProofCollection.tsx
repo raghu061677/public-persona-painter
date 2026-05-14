@@ -67,7 +67,7 @@ const faqs = [
   { q: "Can clients see proofs without logging in?", a: "Yes. Each campaign has a secure proof gallery that you can share via a link with optional expiry. Clients view photos, download the PPT, and never see other clients' work.", link: { label: "Enter the campaign code", target: "cc" } },
   { q: "Are old/recycled photos blocked?", a: "EXIF timestamp is enforced. If a photo is older than your configured threshold (default: 24 hours from install), it is rejected. Fresh capture is mandatory.", link: { label: "Capture today's newspaper proof", target: "slot-newspaper" } },
   { q: "Can I customise which photo types are required?", a: "The 5-photo standard is the default for accountability, but admins can adjust the required tags per campaign or per client requirement (e.g. extra night-illumination shot, or skip newspaper for non-Indian markets).", link: { label: "See the 5 required slots", target: "upload" } },
-  { q: "What file types and sizes are accepted?", a: "JPEG and PNG, up to 15 MB per file. Photos over 4 MP are auto-resized server-side; original EXIF is preserved for the audit trail.", link: { label: "Upload a sample photo", target: "slot-hero" } },
+  { q: "What file types and sizes are accepted?", a: "JPEG and PNG, up to 15 MB per file. Photos over 4 MP are auto-resized server-side; original EXIF is preserved for the audit trail.", link: { label: "Upload a sample photo", target: "slot-creative" } },
   { q: "Where are uploaded proofs stored?", a: "In secure cloud storage scoped per company, accessed only via short-lived signed URLs (60–300 s). Public links never expose raw storage paths.", link: { label: "Add install notes for audit", target: "nt" } },
 ];
 

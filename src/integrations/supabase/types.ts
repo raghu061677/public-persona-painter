@@ -12540,6 +12540,57 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          category: string
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          message: string
+          metadata: Json
+          name: string
+          phone: string | null
+          priority: string
+          source: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          metadata?: Json
+          name: string
+          phone?: string | null
+          priority?: string
+          source?: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          name?: string
+          phone?: string | null
+          priority?: string
+          source?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       table_views: {
         Row: {
           configuration: Json

@@ -30,13 +30,21 @@ const fields = [
 ];
 
 const faqs = [
-  { q: "Can I import my existing inventory from Excel?", a: "Yes. Use the bulk import template to upload hundreds of assets in one go. The system validates duplicates, GPS, and rate fields, and shows a row-by-row error report before committing — so you fix issues once, not asset by asset." },
-  { q: "How are duplicate assets prevented?", a: "Duplicate detection uses identity fields (city, area, dimension, GPS, municipal ID) rather than name alone, so two records of the same hoarding cannot accidentally co-exist. Suspected duplicates are flagged for merge with a side-by-side comparison." },
-  { q: "Can I share inventory with agency partners?", a: "Mark assets as public to expose them in the marketplace. Agencies can see availability and rates, request bookings, and you stay in control of the final pricing and approval per request." },
-  { q: "What happens when an asset is dismantled or paused?", a: "You can deactivate an asset operationally without deleting history. Past bookings, invoices and proofs remain intact and the asset stops appearing in availability searches and rate cards immediately." },
-  { q: "How are municipal permits and renewals tracked?", a: "Each asset stores authority, permit ID and validity dates. The system raises renewal alerts 30/15/7 days in advance so you never lose inventory to an expired permit." },
-  { q: "Can I run the same checklist across all my new assets?", a: "Yes — the onboarding checklist below covers every required field, photo and document. You can use it as a SOP with your field team or hand it to our experts to do the heavy lifting." },
+  { q: "Can I import my existing inventory from Excel?", a: "Yes. Use the bulk import template to upload hundreds of assets in one go. The system validates duplicates, GPS, and rate fields, and shows a row-by-row error report before committing — so you fix issues once, not asset by asset.", link: { label: "Start with identity & code", target: "step-identity" } },
+  { q: "How are duplicate assets prevented?", a: "Duplicate detection uses identity fields (city, area, dimension, GPS, municipal ID) rather than name alone, so two records of the same hoarding cannot accidentally co-exist. Suspected duplicates are flagged for merge with a side-by-side comparison.", link: { label: "Pin GPS for this asset", target: "step-location" } },
+  { q: "Can I share inventory with agency partners?", a: "Mark assets as public to expose them in the marketplace. Agencies can see availability and rates, request bookings, and you stay in control of the final pricing and approval per request.", link: { label: "Toggle marketplace visibility", target: "step-publish" } },
+  { q: "What happens when an asset is dismantled or paused?", a: "You can deactivate an asset operationally without deleting history. Past bookings, invoices and proofs remain intact and the asset stops appearing in availability searches and rate cards immediately.", link: { label: "Manage active status", target: "step-publish" } },
+  { q: "How are municipal permits and renewals tracked?", a: "Each asset stores authority, permit ID and validity dates. The system raises renewal alerts 30/15/7 days in advance so you never lose inventory to an expired permit.", link: { label: "Upload permit document", target: "step-permit" } },
+  { q: "Can I run the same checklist across all my new assets?", a: "Yes — the onboarding checklist below covers every required field, photo and document. You can use it as a SOP with your field team or hand it to our experts to do the heavy lifting.", link: { label: "Open the checklist", target: "checklist" } },
 ];
+
+const focusStep = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("ring-2", "ring-[#1E40AF]/50");
+  setTimeout(() => el.classList.remove("ring-2", "ring-[#1E40AF]/50"), 1800);
+};
 
 type ChecklistItem = {
   id: string;
@@ -185,7 +193,7 @@ const AssetManagement = () => {
 
             <ol className="space-y-3">
               {items.map((item, i) => (
-                <li key={item.id} className={`rounded-xl border p-4 transition ${item.done ? "bg-[#10B981]/5 border-[#10B981]/40" : "bg-background border-border"}`}>
+                <li key={item.id} id={`step-${item.id}`} className={`scroll-mt-24 rounded-xl border p-4 transition ${item.done ? "bg-[#10B981]/5 border-[#10B981]/40" : "bg-background border-border"}`}>
                   <div className="flex items-start gap-3">
                     <Checkbox checked={item.done} onCheckedChange={() => toggleDone(item.id)} className="mt-1" />
                     <div className="flex-1 min-w-0">
@@ -250,7 +258,14 @@ const AssetManagement = () => {
             {faqs.map((f, i) => (
               <AccordionItem key={i} value={`f${i}`} className="bg-card border border-border rounded-xl px-5 border-b">
                 <AccordionTrigger className="text-left font-semibold">{f.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">{f.a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground leading-relaxed">
+                  <p>{f.a}</p>
+                  {f.link && (
+                    <button type="button" onClick={() => focusStep(f.link!.target)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1E40AF] hover:underline">
+                      {f.link.label} <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

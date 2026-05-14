@@ -148,6 +148,33 @@ export type Database = {
           },
         ]
       }
+      admin_pageviews: {
+        Row: {
+          created_at: string
+          id: string
+          path: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          path: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          path?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_assistant_logs: {
         Row: {
           company_id: string | null
@@ -1460,6 +1487,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      auth_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          error_reason: string | null
+          event_type: string
+          id: string
+          ip_hint: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          error_reason?: string | null
+          event_type: string
+          id?: string
+          ip_hint?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          error_reason?: string | null
+          event_type?: string
+          id?: string
+          ip_hint?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       auto_reminder_settings: {
         Row: {

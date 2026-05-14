@@ -489,7 +489,7 @@ const App = () => (
               <Route path="power-bills/reconciliation" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsReconciliation /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills/scheduler" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsScheduler /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-sharing" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsSharing /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="audit-logs" element={<ProtectedRoute requireAuth><ModernAppLayout><AuditLogs /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="audit-logs" element={<Navigate to="/admin/security" replace />} />
               <Route path="vendors" element={<ProtectedRoute requireAuth><ModernAppLayout><VendorsManagement /></ModernAppLayout></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><ModernAppLayout><UserManagement /></ModernAppLayout></ProtectedRoute>} />
               <Route path="users/companies/:companyId" element={<PlatformAdminGuard><ModernAppLayout><CompanyUsersManagement /></ModernAppLayout></PlatformAdminGuard>} />

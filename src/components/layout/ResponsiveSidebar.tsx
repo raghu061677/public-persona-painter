@@ -196,6 +196,7 @@ export function ResponsiveSidebar() {
                 <MenuItem icon={DollarSign} label="Billing & Subscriptions" href="/admin/platform-reports/billing" />
                 <MenuItem icon={BarChart3} label="Multi-Tenant Reports" href="/admin/analytics-dashboard" />
                 <MenuItem icon={FileText} label="Audit Logs" href="/admin/audit-logs" />
+                <MenuItem icon={Shield} label="Security Console" href="/admin/security" />
                 <MenuItem icon={Settings} label="Platform Settings" href="/admin/platform-admin-setup" />
               </SidebarMenu>
               <Separator className="my-2" />

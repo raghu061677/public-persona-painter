@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Global auth gate for ALL /admin/* routes.
@@ -11,6 +13,25 @@ import { Loader2 } from 'lucide-react';
 export function AdminAuthGate() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const lastLogged = useRef<string>('');
+
+  // Log verified admin pageview only AFTER auth is confirmed.
+  useEffect(() => {
+    if (loading || !user) return;
+    const path = location.pathname;
+    const key = `${user.id}|${path}`;
+    if (lastLogged.current === key) return;
+    lastLogged.current = key;
+    supabase
+      .from('admin_pageviews')
+      .insert({
+        user_id: user.id,
+        user_email: user.email ?? null,
+        path,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      })
+      .then(() => {});
+  }, [user, loading, location.pathname]);
 
   if (loading) {
     return (

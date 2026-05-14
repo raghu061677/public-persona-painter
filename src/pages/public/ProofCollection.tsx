@@ -63,13 +63,25 @@ const workflow = [
 ];
 
 const faqs = [
-  { q: "What happens if a photo's GPS is outside the asset's location?", a: "The upload is rejected with a clear message. The mounter must re-capture from the actual site — this prevents fake or recycled proofs and keeps your client trust intact." },
-  { q: "Can clients see proofs without logging in?", a: "Yes. Each campaign has a secure proof gallery that you can share via a link with optional expiry. Clients view photos, download the PPT, and never see other clients' work." },
-  { q: "Are old/recycled photos blocked?", a: "EXIF timestamp is enforced. If a photo is older than your configured threshold (default: 24 hours from install), it is rejected. Fresh capture is mandatory." },
-  { q: "Can I customise which photo types are required?", a: "The 5-photo standard is the default for accountability, but admins can adjust the required tags per campaign or per client requirement (e.g. extra night-illumination shot, or skip newspaper for non-Indian markets)." },
-  { q: "What file types and sizes are accepted?", a: "JPEG and PNG, up to 15 MB per file. Photos over 4 MP are auto-resized server-side; original EXIF is preserved for the audit trail." },
-  { q: "Where are uploaded proofs stored?", a: "In secure cloud storage scoped per company, accessed only via short-lived signed URLs (60–300 s). Public links never expose raw storage paths." },
+  { q: "What happens if a photo's GPS is outside the asset's location?", a: "The upload is rejected with a clear message. The mounter must re-capture from the actual site — this prevents fake or recycled proofs and keeps your client trust intact.", link: { label: "Try a geo-tagged upload", target: "slot-geotag" } },
+  { q: "Can clients see proofs without logging in?", a: "Yes. Each campaign has a secure proof gallery that you can share via a link with optional expiry. Clients view photos, download the PPT, and never see other clients' work.", link: { label: "Enter the campaign code", target: "cc" } },
+  { q: "Are old/recycled photos blocked?", a: "EXIF timestamp is enforced. If a photo is older than your configured threshold (default: 24 hours from install), it is rejected. Fresh capture is mandatory.", link: { label: "Capture today's newspaper proof", target: "slot-newspaper" } },
+  { q: "Can I customise which photo types are required?", a: "The 5-photo standard is the default for accountability, but admins can adjust the required tags per campaign or per client requirement (e.g. extra night-illumination shot, or skip newspaper for non-Indian markets).", link: { label: "See the 5 required slots", target: "upload" } },
+  { q: "What file types and sizes are accepted?", a: "JPEG and PNG, up to 15 MB per file. Photos over 4 MP are auto-resized server-side; original EXIF is preserved for the audit trail.", link: { label: "Upload a sample photo", target: "slot-creative" } },
+  { q: "Where are uploaded proofs stored?", a: "In secure cloud storage scoped per company, accessed only via short-lived signed URLs (60–300 s). Public links never expose raw storage paths.", link: { label: "Add install notes for audit", target: "nt" } },
 ];
+
+const focusProof = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    setTimeout(() => el.focus({ preventScroll: true }), 350);
+  } else {
+    el.classList.add("ring-2", "ring-[#1E40AF]/50");
+    setTimeout(() => el.classList.remove("ring-2", "ring-[#1E40AF]/50"), 1800);
+  }
+};
 
 const MAX_BYTES = 15 * 1024 * 1024;
 const REF_PREFIX = "PRF";
@@ -220,7 +232,7 @@ const ProofCollection = () => {
             {/* Slots */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {slots.map((s) => (
-                <div key={s.id} className={`relative rounded-xl border p-4 ${s.status === "uploaded" ? "border-[#10B981]/50 bg-[#10B981]/5" : s.status === "failed" ? "border-destructive/40 bg-destructive/5" : "border-border bg-background"}`}>
+                <div key={s.id} id={`slot-${s.id}`} className={`scroll-mt-24 relative rounded-xl border p-4 ${s.status === "uploaded" ? "border-[#10B981]/50 bg-[#10B981]/5" : s.status === "failed" ? "border-destructive/40 bg-destructive/5" : "border-border bg-background"}`}>
                   <div className="flex items-start gap-2 mb-3">
                     <div className="w-9 h-9 rounded-lg bg-[#1E40AF]/10 flex items-center justify-center"><s.icon className="w-4 h-4 text-[#1E40AF]" /></div>
                     <div className="flex-1 min-w-0">
@@ -352,7 +364,14 @@ const ProofCollection = () => {
             {faqs.map((f, i) => (
               <AccordionItem key={i} value={`f${i}`} className="bg-card border border-border rounded-xl px-5 border-b">
                 <AccordionTrigger className="text-left font-semibold">{f.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">{f.a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground leading-relaxed">
+                  <p>{f.a}</p>
+                  {f.link && (
+                    <button type="button" onClick={() => focusProof(f.link!.target)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1E40AF] hover:underline">
+                      {f.link.label} <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

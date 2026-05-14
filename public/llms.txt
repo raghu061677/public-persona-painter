@@ -1,0 +1,26 @@
+# Go-Ads 360°
+
+> Multi-tenant SaaS platform for Out-of-Home (OOH) advertising — covering leads, media inventory, campaign planning, operations proof, finance, and reporting for media owners and agencies in India.
+
+Go-Ads 360° digitizes the full OOH lifecycle: Lead → Client → Media Asset → Plan → Campaign → Operations (mounting & proof) → Finance (quotation/invoice/expenses) → Reporting & Analytics, with an AI assistant on top.
+
+## Pages
+
+- [Home](/): Product overview, features, and pricing entry point.
+- [About](/about): Company background and mission.
+- [Our Story](/our-story): How Go-Ads 360° was built.
+- [Team](/team): People behind the platform.
+- [Careers](/careers): Open roles and culture.
+- [Campaign Planning](/campaign-planning): Plan builder, quotations, GST pricing.
+- [Asset Management](/asset-management): OOH inventory, availability, and rates.
+- [Proof Collection](/proof-collection): Mobile field-app for mounting proof and verification.
+- [Sales](/sales): Sales workflows and CRM features.
+- [Partners](/partners): Partner program for media owners and agencies.
+- [Marketplace](/marketplace): Public OOH inventory available across media owners.
+- [Explore](/explore): Browse cities, media types, and featured assets.
+- [Support](/support): Help center and contact channels.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): Machine-readable list of public routes.
+- [Robots](/robots.txt): Crawler directives.

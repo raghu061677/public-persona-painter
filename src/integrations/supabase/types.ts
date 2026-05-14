@@ -12355,6 +12355,66 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_reports: {
+        Row: {
+          cls: number | null
+          created_at: string
+          errors: Json | null
+          fcp_ms: number | null
+          gsc_indexed_count: number | null
+          id: string
+          lcp_ms: number | null
+          performance_score: number | null
+          raw: Json | null
+          robots_status: number | null
+          run_at: string
+          sitemap_status: number | null
+          sitemap_url_count: number | null
+          speed_index_ms: number | null
+          strategy: string
+          target_url: string
+          tbt_ms: number | null
+        }
+        Insert: {
+          cls?: number | null
+          created_at?: string
+          errors?: Json | null
+          fcp_ms?: number | null
+          gsc_indexed_count?: number | null
+          id?: string
+          lcp_ms?: number | null
+          performance_score?: number | null
+          raw?: Json | null
+          robots_status?: number | null
+          run_at?: string
+          sitemap_status?: number | null
+          sitemap_url_count?: number | null
+          speed_index_ms?: number | null
+          strategy?: string
+          target_url: string
+          tbt_ms?: number | null
+        }
+        Update: {
+          cls?: number | null
+          created_at?: string
+          errors?: Json | null
+          fcp_ms?: number | null
+          gsc_indexed_count?: number | null
+          id?: string
+          lcp_ms?: number | null
+          performance_score?: number | null
+          raw?: Json | null
+          robots_status?: number | null
+          run_at?: string
+          sitemap_status?: number | null
+          sitemap_url_count?: number | null
+          speed_index_ms?: number | null
+          strategy?: string
+          target_url?: string
+          tbt_ms?: number | null
+        }
+        Relationships: []
+      }
       subscription_usage: {
         Row: {
           assets_count: number | null

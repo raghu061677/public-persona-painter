@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://app.go-ads.in/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://app.go-ads.in/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.go-ads.in/our-story</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.go-ads.in/team</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.go-ads.in/careers</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.go-ads.in/campaign-planning</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.go-ads.in/asset-management</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.go-ads.in/proof-collection</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.go-ads.in/support</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.go-ads.in/sales</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.go-ads.in/partners</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.go-ads.in/marketplace</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://app.go-ads.in/explore</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+</urlset>

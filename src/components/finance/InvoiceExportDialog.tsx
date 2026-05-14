@@ -80,10 +80,10 @@ export function InvoiceExportDialog({ open, onOpenChange, invoices, clientName, 
     if (!companyId) return null;
     const { data } = await supabase
       .from("companies")
-      .select("name, logo_url, theme_color, gstin, address, phone, email")
+      .select("name, logo_url, theme_color, gstin")
       .eq("id", companyId)
       .maybeSingle();
-    return data;
+    return data as { name?: string; logo_url?: string | null; theme_color?: string | null; gstin?: string | null } | null;
   };
 
   const loadImageAsDataUrl = async (url: string): Promise<{ data: string; w: number; h: number } | null> => {

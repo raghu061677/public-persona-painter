@@ -1103,6 +1103,7 @@ export default function ClientDetail() {
           status: inv.status,
         }))}
         clientName={client?.name || "Client"}
+        companyId={client?.company_id || undefined}
       />
     </div>
     </ModuleGuard>

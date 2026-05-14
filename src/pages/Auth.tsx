@@ -101,6 +101,14 @@ const Auth = () => {
           password: validation.data.password,
         });
 
+        // Log auth event for security audit (best effort, don't block UX)
+        supabase.from('auth_events').insert({
+          email: validation.data.email,
+          event_type: error ? 'login_failure' : 'login_success',
+          error_reason: error?.message ?? null,
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        }).then(() => {});
+
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast({

@@ -33,14 +33,23 @@ const capabilities = [
 ];
 
 const faqs = [
-  { q: "Can I plan a campaign across multiple cities and media owners?", a: "Yes. A single plan can mix your owned inventory with marketplace assets from partner media owners. Pricing, billing and proofs are tracked per line item — and the consolidated invoice still respects the right tax codes per state." },
-  { q: "How does pro-rata billing work?", a: "If an asset runs for a partial billing cycle, the rate is scaled by the ratio of actual days to cycle days using inclusive day counting (end − start + 1). Mounting and printing remain fixed values and are not pro-rated. The cycle is configurable — typically 30 days or calendar month." },
-  { q: "What happens to assets when a plan becomes a campaign?", a: "On conversion, each plan item creates a campaign asset with the same dates, pricing and a frozen pricing snapshot for billing. Operations tasks are auto-generated for mounters and the underlying media is locked from being booked by other plans for those dates." },
-  { q: "Can clients approve a plan online?", a: "Yes. Generate a secure public share link with optional expiry. Clients view the plan, photos and totals — no login needed — and you receive an approval notification. Approval is recorded with timestamp and IP for the audit trail." },
-  { q: "Can I lock inventory while the client decides?", a: "Yes — place soft holds on selected assets directly from the plan. Holds expire automatically after a configurable window, freeing up inventory if the client doesn't approve in time." },
-  { q: "Does the plan support GST (CGST/SGST/IGST) and TDS?", a: "Yes. The system picks CGST+SGST for intra-state and IGST for inter-state automatically based on the client's GSTIN and your registered state. TDS deductions can be modelled per client and reflected in the receivables." },
-  { q: "Can I build plans for clients without a finalised brief?", a: "Yes — start with a draft plan, lock pricing later. The intake form below generates a tailored checklist so nothing falls through the cracks even when the brief is half-baked." },
+  { q: "Can I plan a campaign across multiple cities and media owners?", a: "Yes. A single plan can mix your owned inventory with marketplace assets from partner media owners. Pricing, billing and proofs are tracked per line item — and the consolidated invoice still respects the right tax codes per state.", link: { label: "Pick your target cities", target: "intake-cities" } },
+  { q: "How does pro-rata billing work?", a: "If an asset runs for a partial billing cycle, the rate is scaled by the ratio of actual days to cycle days using inclusive day counting (end − start + 1). Mounting and printing remain fixed values and are not pro-rated. The cycle is configurable — typically 30 days or calendar month.", link: { label: "Set your campaign window", target: "startDate" } },
+  { q: "What happens to assets when a plan becomes a campaign?", a: "On conversion, each plan item creates a campaign asset with the same dates, pricing and a frozen pricing snapshot for billing. Operations tasks are auto-generated for mounters and the underlying media is locked from being booked by other plans for those dates.", link: { label: "Choose your media types", target: "intake-medias" } },
+  { q: "Can clients approve a plan online?", a: "Yes. Generate a secure public share link with optional expiry. Clients view the plan, photos and totals — no login needed — and you receive an approval notification. Approval is recorded with timestamp and IP for the audit trail.", link: { label: "Add your contact details", target: "contactEmail" } },
+  { q: "Can I lock inventory while the client decides?", a: "Yes — place soft holds on selected assets directly from the plan. Holds expire automatically after a configurable window, freeing up inventory if the client doesn't approve in time.", link: { label: "Pick cities to soft-hold", target: "intake-cities" } },
+  { q: "Does the plan support GST (CGST/SGST/IGST) and TDS?", a: "Yes. The system picks CGST+SGST for intra-state and IGST for inter-state automatically based on the client's GSTIN and your registered state. TDS deductions can be modelled per client and reflected in the receivables.", link: { label: "Enter the brand / client", target: "brand" } },
+  { q: "Can I build plans for clients without a finalised brief?", a: "Yes — start with a draft plan, lock pricing later. The intake form below generates a tailored checklist so nothing falls through the cracks even when the brief is half-baked.", link: { label: "Capture special requirements", target: "specialReq" } },
 ];
+
+const focusField = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    setTimeout(() => el.focus({ preventScroll: true }), 350);
+  }
+};
 
 const cityOptions = ["Hyderabad", "Bengaluru", "Chennai", "Mumbai", "Delhi NCR", "Pune", "Ahmedabad", "Kolkata", "Visakhapatnam", "Vijayawada"];
 const mediaOptions = ["Billboard / Hoarding", "Bus Shelter", "Unipole / Gantry", "Kiosk / Pole Kiosk", "DOOH / LED screen", "Mall / Airport / Metro"];
@@ -309,7 +318,14 @@ const CampaignPlanning = () => {
             {faqs.map((f, i) => (
               <AccordionItem key={i} value={`f${i}`} className="bg-card border border-border rounded-xl px-5 border-b">
                 <AccordionTrigger className="text-left font-semibold">{f.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">{f.a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground leading-relaxed">
+                  <p>{f.a}</p>
+                  {f.link && (
+                    <button type="button" onClick={() => focusField(f.link!.target)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1E40AF] hover:underline">
+                      {f.link.label} <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

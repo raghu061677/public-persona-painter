@@ -191,6 +191,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     collapsed={collapsed}
                   />
                   <SidebarItem
+                    icon={Shield}
+                    label="Security Console"
+                    href="/admin/security"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
                     icon={Settings}
                     label="Platform Settings"
                     href="/admin/platform-admin-setup"

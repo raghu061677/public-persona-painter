@@ -186,7 +186,7 @@ const CampaignPlanning = () => {
               <div><Label htmlFor="contactPhone">Phone</Label><Input id="contactPhone" value={intake.contactPhone} onChange={(e) => setIntake({ ...intake, contactPhone: e.target.value })} /></div>
             </div>
 
-            <div>
+            <div id="intake-cities" className="scroll-mt-24">
               <Label className="mb-2 block">Target cities *</Label>
               <div className="flex flex-wrap gap-2">
                 {cityOptions.map((c) => (
@@ -195,7 +195,7 @@ const CampaignPlanning = () => {
               </div>
             </div>
 
-            <div>
+            <div id="intake-medias" className="scroll-mt-24">
               <Label className="mb-2 block">Media types *</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {mediaOptions.map((m) => (

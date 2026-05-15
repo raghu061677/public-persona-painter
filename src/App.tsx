@@ -234,6 +234,7 @@ const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const ManageUsers = lazy(() => import("./pages/platform/ManageUsers"));
 const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
+const CompanySubscription = lazy(() => import("./pages/CompanySubscription"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
 const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
 const AssetIdentityInspector = lazy(() => import("./pages/admin/AssetIdentityInspector"));
@@ -357,6 +358,7 @@ const App = () => (
               <Route path="platform/users" element={<PlatformAdminGuard><ModernAppLayout><ManageUsers /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="platform/companies" element={<PlatformAdminGuard><ModernAppLayout><ManageCompanies /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="subscriptions" element={<PlatformAdminGuard><ModernAppLayout><SubscriptionManagement /></ModernAppLayout></PlatformAdminGuard>} />
+              <Route path="subscription" element={<ProtectedRoute requireAuth><ModernAppLayout><CompanySubscription /></ModernAppLayout></ProtectedRoute>} />
               <Route path="code-management" element={<PlatformAdminGuard><ModernAppLayout><CodeManagement /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="platform-reports" element={<PlatformAdminGuard><ModernAppLayout><PlatformReports /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="migrate-data" element={<PlatformAdminGuard><ModernAppLayout><MigrateToMatrix /></ModernAppLayout></PlatformAdminGuard>} />

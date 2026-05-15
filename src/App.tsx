@@ -358,6 +358,7 @@ const App = () => (
               <Route path="platform/users" element={<PlatformAdminGuard><ModernAppLayout><ManageUsers /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="platform/companies" element={<PlatformAdminGuard><ModernAppLayout><ManageCompanies /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="subscriptions" element={<PlatformAdminGuard><ModernAppLayout><SubscriptionManagement /></ModernAppLayout></PlatformAdminGuard>} />
+              <Route path="subscription" element={<ProtectedRoute requireAuth><ModernAppLayout><CompanySubscription /></ModernAppLayout></ProtectedRoute>} />
               <Route path="code-management" element={<PlatformAdminGuard><ModernAppLayout><CodeManagement /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="platform-reports" element={<PlatformAdminGuard><ModernAppLayout><PlatformReports /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="migrate-data" element={<PlatformAdminGuard><ModernAppLayout><MigrateToMatrix /></ModernAppLayout></PlatformAdminGuard>} />

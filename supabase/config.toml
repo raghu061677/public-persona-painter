@@ -1,5 +1,12 @@
 project_id = "psryfvfdmjguhamvmqqd"
 
+# WhatsApp Integration
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.send-whatsapp-message]
+verify_jwt = true
+
 # AI & Smart Features
 [functions.ask-ai]
 verify_jwt = true

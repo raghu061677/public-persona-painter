@@ -143,6 +143,8 @@ const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const PortalActivity = lazy(() => import("./pages/PortalActivity"));
 const PortalActivityUser = lazy(() => import("./pages/PortalActivityUser"));
 const PortalSuspiciousLogins = lazy(() => import("./pages/PortalSuspiciousLogins"));
+const WhatsAppLeads = lazy(() => import("./pages/WhatsAppLeads"));
+const WhatsAppSettings = lazy(() => import("./pages/WhatsAppSettings"));
 const ApprovalSettings = lazy(() => import("./pages/ApprovalSettings"));
 const ApprovalDelegation = lazy(() => import("./pages/ApprovalDelegation"));
 const ApprovalAnalytics = lazy(() => import("./pages/ApprovalAnalytics"));
@@ -385,6 +387,8 @@ const App = () => (
               <Route path="leads/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><LeadNew /></ModernAppLayout></ProtectedRoute>} />
               <Route path="leads/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><LeadDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="leads/merge-review" element={<ProtectedRoute requiredRole={['admin', 'sales']}><ModernAppLayout><LeadMergeReview /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="leads/whatsapp" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><WhatsAppLeads /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="settings/whatsapp" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><WhatsAppSettings /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />

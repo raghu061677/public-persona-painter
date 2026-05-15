@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
-import { Download, RefreshCw, Search } from "lucide-react";
+import { Download, RefreshCw, Search, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 
 interface ActivityRow {
@@ -25,78 +26,82 @@ interface ActivityRow {
   client_name?: string;
 }
 
-const ACTIONS = ["all", "login", "logout", "view_campaign", "view_invoice", "view_proof", "download_proof", "download_invoice"];
+const ACTIONS = ["all", "login", "logout", "magic_link_requested", "login_failed", "view_campaign", "view_invoice", "view_proof", "download_proof", "download_invoice"];
+const PAGE_SIZE = 50;
 
 export default function PortalActivity() {
   const [rows, setRows] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [days, setDays] = useState("30");
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const load = async () => {
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [actionFilter, days]);
+
+  const load = useCallback(async () => {
     setLoading(true);
     const since = new Date(Date.now() - parseInt(days) * 86400000).toISOString();
-    const { data: logs } = await supabase
-      .from("client_portal_access_logs" as any)
-      .select("*")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(1000);
-
-    const list = (logs as any[]) || [];
-    const clientIds = [...new Set(list.map((l) => l.client_id))];
-
-    const [{ data: users }, { data: clients }] = await Promise.all([
-      supabase.from("client_portal_users" as any).select("client_id, name, email").in("client_id", clientIds),
-      supabase.from("clients").select("id, name").in("id", clientIds),
-    ]);
-
-    const userMap = new Map((users as any[] || []).map((u) => [u.client_id, u]));
-    const clientMap = new Map((clients as any[] || []).map((c) => [c.id, c.name]));
-
-    setRows(
-      list.map((l) => ({
-        ...l,
-        user_name: userMap.get(l.client_id)?.name,
-        user_email: userMap.get(l.client_id)?.email,
-        client_name: clientMap.get(l.client_id),
-      }))
-    );
+    const { data, error } = await supabase.rpc("search_portal_access_logs", {
+      p_search: debouncedSearch || null,
+      p_action: actionFilter,
+      p_from: since,
+      p_to: null,
+      p_client_id: null,
+      p_limit: PAGE_SIZE,
+      p_offset: page * PAGE_SIZE,
+    });
+    if (error) {
+      console.error(error);
+      setRows([]);
+      setTotalCount(0);
+    } else {
+      const list = (data as any[]) || [];
+      setRows(list);
+      setTotalCount(list[0]?.total_count ?? 0);
+    }
     setLoading(false);
-  };
+  }, [debouncedSearch, actionFilter, days, page]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days]);
-
-  const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (actionFilter !== "all" && r.action !== actionFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return (
-          r.user_name?.toLowerCase().includes(q) ||
-          r.user_email?.toLowerCase().includes(q) ||
-          r.client_name?.toLowerCase().includes(q) ||
-          r.client_id.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [rows, search, actionFilter]);
+  }, [load]);
 
   const stats = useMemo(() => {
-    const logins = filtered.filter((r) => r.action === "login").length;
-    const uniqueUsers = new Set(filtered.map((r) => r.client_id)).size;
-    return { total: filtered.length, logins, uniqueUsers };
-  }, [filtered]);
+    const logins = rows.filter((r) => r.action === "login").length;
+    const uniqueUsers = new Set(rows.map((r) => r.client_id)).size;
+    return { total: totalCount, logins, uniqueUsers };
+  }, [rows, totalCount]);
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
+    // Pull up to 5000 matching the current filters for export
+    const since = new Date(Date.now() - parseInt(days) * 86400000).toISOString();
+    const { data } = await supabase.rpc("search_portal_access_logs", {
+      p_search: debouncedSearch || null,
+      p_action: actionFilter,
+      p_from: since,
+      p_to: null,
+      p_client_id: null,
+      p_limit: 5000,
+      p_offset: 0,
+    });
+    const list = ((data as any[]) || []) as ActivityRow[];
     const headers = ["Timestamp", "User Name", "Email", "Client", "Client ID", "Action", "Resource Type", "Resource ID", "IP"];
     const lines = [headers.join(",")];
-    filtered.forEach((r) => {
+    list.forEach((r) => {
       lines.push(
         [
           format(new Date(r.created_at), "dd/MM/yyyy HH:mm:ss"),
@@ -122,6 +127,8 @@ export default function PortalActivity() {
     URL.revokeObjectURL(url);
   };
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -130,11 +137,16 @@ export default function PortalActivity() {
           <p className="text-muted-foreground">Track logins and usage by portal users</p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/admin/portal-activity/suspicious">
+              <ShieldAlert className="h-4 w-4 mr-2" /> Suspicious logins
+            </Link>
+          </Button>
           <Button variant="outline" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button onClick={exportCsv} disabled={!filtered.length}>
+          <Button onClick={exportCsv} disabled={!totalCount}>
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
         </div>
@@ -151,7 +163,7 @@ export default function PortalActivity() {
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by user, email, client..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Search by user, email, client, IP..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <Select value={actionFilter} onValueChange={setActionFilter}>
               <SelectTrigger className="w-full md:w-48"><SelectValue /></SelectTrigger>
@@ -185,16 +197,20 @@ export default function PortalActivity() {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
+                ) : rows.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No activity found</TableCell></TableRow>
                 ) : (
-                  filtered.map((r) => (
+                  rows.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="text-sm whitespace-nowrap">{format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                      <TableCell className="font-medium">{r.user_name || "—"}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/admin/portal-activity/user/${encodeURIComponent(r.client_id)}`} className="hover:underline text-primary">
+                          {r.user_name || r.client_id}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{r.user_email || "—"}</TableCell>
                       <TableCell>{r.client_name || r.client_id}</TableCell>
-                      <TableCell><Badge variant={r.action === "login" ? "default" : "secondary"}>{r.action.replace(/_/g, " ")}</Badge></TableCell>
+                      <TableCell><Badge variant={r.action === "login_failed" ? "destructive" : r.action === "login" ? "default" : "secondary"}>{r.action.replace(/_/g, " ")}</Badge></TableCell>
                       <TableCell className="text-sm">{r.resource_type ? `${r.resource_type}${r.resource_id ? `: ${r.resource_id}` : ""}` : "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{r.ip_address || "—"}</TableCell>
                     </TableRow>
@@ -203,6 +219,20 @@ export default function PortalActivity() {
               </TableBody>
             </Table>
           </ResponsiveTable>
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              {totalCount === 0 ? "0 results" : `Showing ${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, totalCount)} of ${totalCount}`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || loading}>
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <span className="text-sm">Page {page + 1} / {totalPages}</span>
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) >= totalPages || loading}>
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

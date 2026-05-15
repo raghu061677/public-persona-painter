@@ -128,6 +128,8 @@ export default function PlanNew() {
   // Pre-fill client from URL parameter if provided
   useEffect(() => {
     const clientId = searchParams.get('client_id');
+    const startStr = searchParams.get('start');
+    const endStr = searchParams.get('end');
     if (clientId && clients.length > 0) {
       const client = clients.find(c => c.id === clientId);
       if (client) {
@@ -135,6 +137,8 @@ export default function PlanNew() {
           ...prev,
           client_id: clientId,
           client_name: client.name,
+          ...(startStr && !isNaN(Date.parse(startStr)) ? { start_date: new Date(startStr) } : {}),
+          ...(endStr && !isNaN(Date.parse(endStr)) ? { end_date: new Date(endStr) } : {}),
         }));
       }
     }
@@ -658,6 +662,19 @@ export default function PlanNew() {
       
       if (planError) throw planError;
       if (!plan) throw new Error("Failed to create plan");
+
+      // If created from a WhatsApp lead, link the plan back to the lead
+      const sourceLeadId = searchParams.get('source_lead_id');
+      if (sourceLeadId) {
+        try {
+          await supabase
+            .from('leads')
+            .update({ plan_id: plan.id, status: 'qualified' } as any)
+            .eq('id', sourceLeadId);
+        } catch (e) {
+          console.warn('Failed to link plan to source lead:', e);
+        }
+      }
 
       // Create plan items with FULL media asset snapshot and per-asset duration
       const items = Array.from(selectedAssets).map(assetId => {

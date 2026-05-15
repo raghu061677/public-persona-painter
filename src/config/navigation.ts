@@ -107,6 +107,7 @@ export const NAV_CONFIG: NavConfig = {
       icon: Briefcase,
       items: [
         { label: "Leads", href: "/admin/leads", icon: UserPlus },
+        { label: "WhatsApp Leads", href: "/admin/leads/whatsapp", icon: UserPlus },
         { label: "Clients", href: "/admin/clients", icon: Users },
         { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
         { label: "Plans", href: "/admin/plans", icon: Layers },

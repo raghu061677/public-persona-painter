@@ -64,6 +64,8 @@ interface WaLead {
   source: string;
   metadata: any;
   converted_at: string | null;
+  campaign_start_date?: string | null;
+  campaign_end_date?: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -182,10 +184,8 @@ export default function WhatsAppLeads() {
     }
     const params = new URLSearchParams();
     params.set("client_id", String(lead.client_id));
-    if (lead.campaign_start_date)
-      params.set("start", String((lead as any).campaign_start_date));
-    if ((lead as any).campaign_end_date)
-      params.set("end", String((lead as any).campaign_end_date));
+    if (lead.campaign_start_date) params.set("start", String(lead.campaign_start_date));
+    if (lead.campaign_end_date) params.set("end", String(lead.campaign_end_date));
     if (lead.media_type) params.set("media_type", lead.media_type);
     if (lead.target_locations) params.set("locations", lead.target_locations);
     params.set("source_lead_id", lead.id);

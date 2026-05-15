@@ -140,6 +140,7 @@ const PowerBillsReconciliation = lazy(() => import("./pages/PowerBillsReconcilia
 const PowerBillsSharing = lazy(() => import("./pages/PowerBillsSharing"));
 const PowerBillsScheduler = lazy(() => import("./pages/PowerBillsScheduler"));
 const AuditLogs = lazy(() => import("./pages/AuditLogs"));
+const PortalActivity = lazy(() => import("./pages/PortalActivity"));
 const ApprovalSettings = lazy(() => import("./pages/ApprovalSettings"));
 const ApprovalDelegation = lazy(() => import("./pages/ApprovalDelegation"));
 const ApprovalAnalytics = lazy(() => import("./pages/ApprovalAnalytics"));
@@ -492,6 +493,7 @@ const App = () => (
               <Route path="power-bills/scheduler" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsScheduler /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-sharing" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsSharing /></ModernAppLayout></ProtectedRoute>} />
               <Route path="audit-logs" element={<Navigate to="/admin/security" replace />} />
+              <Route path="portal-activity" element={<ProtectedRoute requireAuth><ModernAppLayout><PortalActivity /></ModernAppLayout></ProtectedRoute>} />
               <Route path="vendors" element={<ProtectedRoute requireAuth><ModernAppLayout><VendorsManagement /></ModernAppLayout></ProtectedRoute>} />
               <Route path="users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><ModernAppLayout><UserManagement /></ModernAppLayout></ProtectedRoute>} />
               <Route path="users/companies/:companyId" element={<PlatformAdminGuard><ModernAppLayout><CompanyUsersManagement /></ModernAppLayout></PlatformAdminGuard>} />

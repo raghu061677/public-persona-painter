@@ -1,63 +1,69 @@
+# Plan: Professional `/admin/subscription` Page
 
+## Context
+- Nav already links **Admin & Settings → Subscription** to `/admin/subscription` (singular), but no route is registered → currently blank.
+- An existing platform-admin page lives at `/admin/subscriptions` (plural) — `SubscriptionManagement.tsx` — which manages **every company's** plan. We keep that untouched.
+- `useSubscription()` hook already reads `company_subscriptions` for the current company (tier, status, modules, user/asset/campaign limits, end_date) and falls back to a free tier.
+- DB has `company_subscriptions` (tier, status, modules, limits, billing_cycle, amount, start/end dates, auto_renew) and a `transactions` table (subscription/portal_fee/commission entries) we can surface as billing history.
 
 ## Goal
-Fix incorrect "Available" labels on `/admin/media-assets` for assets that are operationally Removed / Under Maintenance / Inactive / manually Blocked, by adding an operational override in the enrichment step. Logic-only patch — no UI restructure, no new queries.
+Create an enterprise-grade, **company-scoped** subscription dashboard at `/admin/subscription` that lets a company admin see and manage their own plan — clean, modern, and consistent with the existing design system (semantic tokens, shadcn/ui, ModernAppLayout + breadcrumbs).
 
-## Root cause (already confirmed)
-In `src/pages/MediaAssetsControlCenter.tsx`, enrichment defaults to `Available` whenever there is no overlapping campaign or hold — ignoring `media_assets.operational_status` and the manual `status` field. Affected examples: `MNS-HYD-BQS-0047`, `MNS-HYD-BQS-0075`, `MNS-HYD-BQS-0090` (all `operational_status = removed`).
+## Page Structure (`src/pages/CompanySubscription.tsx`)
 
-## Resolution priority (applied per asset, in order)
-1. Active **campaign** overlapping today → `Booked` (keep end date)
-2. Active **hold** overlapping today → `Held` (keep end date)
-3. `operational_status === 'removed'` → `Removed` (red, no end date, no next-available)
-4. `operational_status === 'maintenance'` OR stored `status === 'Under Maintenance'` → `Under Maintenance` (amber)
-5. `operational_status === 'inactive'` → `Inactive` (gray)
-6. Stored `status === 'Blocked'` (no campaign/hold) → `Blocked`
-7. Otherwise → `Available`
+1. **Header**
+   - Title "Subscription & Billing" + breadcrumb (Admin › Subscription).
+   - Current plan badge (Free / Pro / Enterprise) + status pill (Active / Expired / Trial).
+   - Primary CTA: "Upgrade Plan" / "Contact Sales" (Enterprise).
 
-When override fires (3–6): set `current_end_date = null`, `next_available_date = null`. **Future** campaigns/holds remain in `next_*` fields so the hover card still shows "Next Booking" / "Upcoming Hold".
+2. **Current Plan Card (hero)**
+   - Tier name, monthly/annual price (₹, INR), billing cycle, next renewal date, auto-renew toggle (read-only for non-admins).
+   - Days remaining progress indicator if `end_date` set.
 
-## Files to change (3 only)
+3. **Usage Overview (3 KPI cards with progress bars)**
+   - Users used / `user_limit` (count from `company_users` where status='active').
+   - Media assets used / `asset_limit` (count from `media_assets` filtered by `company_id`, not deleted).
+   - Campaigns used / `campaign_limit` (count from `campaigns` for company).
+   - Color thresholds: green <70%, amber 70–90%, red >90% via semantic tokens.
 
-### 1. `src/pages/MediaAssetsControlCenter.tsx`
-- After the existing `current` / `next` resolution and before building `booking_hover_info`, insert the priority override above.
-- Read `asset.operational_status` and `asset.status` from the row already loaded (no new query).
-- Set `dynamicStatus` and `booking_hover_info.current_status` to the overridden value when applicable.
-- Null out `current_end_date` and `next_available_date` for non-bookable overrides.
-- Leave `next_booking_*` / `next_hold_*` / `next_start_date` / `next_end_date` intact so future bookings still surface in the hover card.
+4. **Enabled Modules Grid**
+   - Pull `AVAILABLE_MODULES` list (10 modules), show enabled vs locked with check/lock icon and short description. Locked modules show "Upgrade to unlock".
 
-### 2. `src/components/media-assets/bookingStatusLabel.ts`
-- Extend `BookingStatusLabel["bucket"]` union with `"Removed" | "Under Maintenance" | "Inactive"`.
-- Update `getBookingStatusLabel` so these three (plus existing `Blocked` without end date) render as **plain labels** — no "till …" suffix.
-- Extend `BOOKING_STATUS_BUCKET_CLASS`:
-  - `Removed`: `bg-red-100 text-red-700 border-red-200`
-  - `Under Maintenance`: `bg-amber-100 text-amber-700 border-amber-200`
-  - `Inactive`: `bg-gray-100 text-gray-700 border-gray-200`
-  - Existing `Available / Booked / Held / Blocked` unchanged.
+5. **Plan Comparison / Upgrade Section**
+   - Three pricing cards: **Free / Pro (₹5,000/mo) / Enterprise (Custom)** as defined in project knowledge.
+   - Highlight current tier, list features per tier, CTA buttons ("Current Plan" disabled, "Upgrade", "Contact Sales").
+   - Clicking Upgrade opens a confirmation dialog (records intent in `transactions` as pending or shows "Contact admin" — Razorpay is out of scope unless requested).
 
-### 3. `src/components/media-assets/AssetBookingHoverCard.tsx`
-- Extend the status-to-header-title map and badge colors with: `Removed` ("Removed"), `Under Maintenance` ("Under Maintenance"), `Inactive` ("Inactive").
-- Match badge tone to the bucket classes above.
-- Suppress the "Next available from …" footer when current_status is `Removed`, `Under Maintenance`, `Inactive`, or `Blocked`.
-- Keep the "Next Booking" / "Upcoming Hold" section logic untouched — it still renders if a future item exists.
-- Do not change card layout, width, spacing, or props shape.
+6. **Billing History Table**
+   - Reads `transactions` rows where `company_id = current` and `type IN ('subscription','portal_fee')`, ordered desc.
+   - Columns: Date (DD/MM/YYYY), Type, Amount (₹ + GST), Status badge.
+   - Empty state when no records.
 
-## What stays unchanged
-- Both Supabase fetches in `MediaAssetsControlCenter.tsx` (campaigns + holds) — same query count, same payload.
-- All filters, sorting, columns, table settings, action buttons, map view, gallery view, navigation, click behavior.
-- Hover card structure, layout, props, integration points.
-- All other pages and modules.
+7. **Danger / Account Zone (admins only)**
+   - Cancel subscription button (sets `auto_renew=false`, confirmation dialog). No hard delete.
 
-## Expected results
-| Asset state | Label |
-|---|---|
-| Active campaign overlapping today | `Booked till 13 Oct 2026` (blue) |
-| Active hold overlapping today | `Held till 25 Apr 2026` (amber) |
-| `operational_status = removed` | `Removed` (red) |
-| `operational_status = maintenance` or `status = Under Maintenance` | `Under Maintenance` (amber) |
-| `operational_status = inactive` | `Inactive` (gray) |
-| `status = Blocked`, no booking | `Blocked` (red) |
-| Truly available | `Available` (green) |
+## Routing & Wiring
+- Add lazy import + route in `src/App.tsx`:
+  `<Route path="subscription" element={<ModernAppLayout><CompanySubscription /></ModernAppLayout></Route>` inside the existing `/admin` parent (no `PlatformAdminGuard` — accessible to company admins).
+- Restrict actions (upgrade/cancel) to `companyUser.role === 'admin'` via `useCompany()`.
+- Add `'subscription': 'Subscription'` to `breadcrumb-nav.tsx` label map.
 
-`MNS-HYD-BQS-0047`, `MNS-HYD-BQS-0075`, `MNS-HYD-BQS-0090` will show **Removed** after the fix.
+## Data & Security
+- Reuse `useSubscription()` for plan data; one `useEffect` to fetch usage counts (3 parallel `head:true, count:'exact'` queries scoped by `company_id`).
+- All queries scoped by `company_id` from `useCompany()` — RLS already enforces tenant isolation.
+- No new tables / migrations needed.
 
+## Design
+- Semantic tokens only (`bg-card`, `text-muted-foreground`, `text-primary`, etc.). No raw color classes.
+- Responsive grid (1 col mobile → 3 col desktop). Generous spacing, `rounded-2xl` cards, subtle borders, soft shadows consistent with the rest of the admin UI.
+- Use lucide icons: `CreditCard`, `Users`, `Building2`, `Megaphone`, `CheckCircle2`, `Lock`, `Sparkles`, `Crown`.
+
+## Files
+- **Create**: `src/pages/CompanySubscription.tsx`
+- **Edit**: `src/App.tsx` (add lazy import + route)
+- **Edit**: `src/components/ui/breadcrumb-nav.tsx` (add label)
+
+## Out of Scope (can do as follow-ups)
+- Razorpay checkout integration.
+- Editing tier from this page (platform admin keeps `/admin/subscriptions` for that).
+- Invoice PDF download per transaction.

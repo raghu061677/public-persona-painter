@@ -8146,21 +8146,29 @@ export type Database = {
       leads: {
         Row: {
           assigned_to: string | null
+          campaign_duration_days: number | null
+          campaign_end_date: string | null
+          campaign_start_date: string | null
           client_id: string | null
           company: string | null
           company_id: string | null
+          company_name: string | null
           converted_at: string | null
           created_at: string | null
           email: string | null
+          estimated_budget: number | null
           id: string
+          last_message_at: string | null
           location: string | null
           matched_client_id: string | null
+          media_type: string | null
           merge_confidence: number | null
           merge_reason: string | null
           merge_status: string
           metadata: Json | null
           name: string
           phone: string | null
+          plan_id: string | null
           raw_message: string | null
           requirement: string | null
           reviewed_at: string | null
@@ -8168,26 +8176,35 @@ export type Database = {
           source: string
           status: string
           synced_to_zoho: boolean | null
+          target_locations: string | null
           updated_at: string | null
           zoho_lead_id: string | null
         }
         Insert: {
           assigned_to?: string | null
+          campaign_duration_days?: number | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
           client_id?: string | null
           company?: string | null
           company_id?: string | null
+          company_name?: string | null
           converted_at?: string | null
           created_at?: string | null
           email?: string | null
+          estimated_budget?: number | null
           id?: string
+          last_message_at?: string | null
           location?: string | null
           matched_client_id?: string | null
+          media_type?: string | null
           merge_confidence?: number | null
           merge_reason?: string | null
           merge_status?: string
           metadata?: Json | null
           name: string
           phone?: string | null
+          plan_id?: string | null
           raw_message?: string | null
           requirement?: string | null
           reviewed_at?: string | null
@@ -8195,26 +8212,35 @@ export type Database = {
           source: string
           status?: string
           synced_to_zoho?: boolean | null
+          target_locations?: string | null
           updated_at?: string | null
           zoho_lead_id?: string | null
         }
         Update: {
           assigned_to?: string | null
+          campaign_duration_days?: number | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
           client_id?: string | null
           company?: string | null
           company_id?: string | null
+          company_name?: string | null
           converted_at?: string | null
           created_at?: string | null
           email?: string | null
+          estimated_budget?: number | null
           id?: string
+          last_message_at?: string | null
           location?: string | null
           matched_client_id?: string | null
+          media_type?: string | null
           merge_confidence?: number | null
           merge_reason?: string | null
           merge_status?: string
           metadata?: Json | null
           name?: string
           phone?: string | null
+          plan_id?: string | null
           raw_message?: string | null
           requirement?: string | null
           reviewed_at?: string | null
@@ -8222,6 +8248,7 @@ export type Database = {
           source?: string
           status?: string
           synced_to_zoho?: boolean | null
+          target_locations?: string | null
           updated_at?: string | null
           zoho_lead_id?: string | null
         }
@@ -13292,42 +13319,66 @@ export type Database = {
       whatsapp_logs: {
         Row: {
           campaign_id: string | null
+          client_id: string | null
+          company_id: string | null
+          contact_name: string | null
           content_type: string | null
           created_at: string | null
           error_message: string | null
+          from_number: string | null
           id: string
           lead_id: string | null
           media_url: string | null
           message_body: string | null
           message_type: string
           phone_number: string
+          raw_payload: Json | null
           status: string | null
+          to_number: string | null
+          updated_at: string
+          wa_message_id: string | null
         }
         Insert: {
           campaign_id?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          contact_name?: string | null
           content_type?: string | null
           created_at?: string | null
           error_message?: string | null
+          from_number?: string | null
           id?: string
           lead_id?: string | null
           media_url?: string | null
           message_body?: string | null
           message_type: string
           phone_number: string
+          raw_payload?: Json | null
           status?: string | null
+          to_number?: string | null
+          updated_at?: string
+          wa_message_id?: string | null
         }
         Update: {
           campaign_id?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          contact_name?: string | null
           content_type?: string | null
           created_at?: string | null
           error_message?: string | null
+          from_number?: string | null
           id?: string
           lead_id?: string | null
           media_url?: string | null
           message_body?: string | null
           message_type?: string
           phone_number?: string
+          raw_payload?: Json | null
           status?: string | null
+          to_number?: string | null
+          updated_at?: string
+          wa_message_id?: string | null
         }
         Relationships: [
           {
@@ -13338,6 +13389,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_settings: {
+        Row: {
+          auto_reply_enabled: boolean
+          auto_reply_text: string | null
+          company_id: string
+          payment_template: string | null
+          phone_number_id: string | null
+          proof_template: string | null
+          proposal_template: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_reply_enabled?: boolean
+          auto_reply_text?: string | null
+          company_id: string
+          payment_template?: string | null
+          phone_number_id?: string | null
+          proof_template?: string | null
+          proposal_template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_reply_enabled?: boolean
+          auto_reply_text?: string | null
+          company_id?: string
+          payment_template?: string | null
+          phone_number_id?: string | null
+          proof_template?: string | null
+          proposal_template?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

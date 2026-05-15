@@ -54,6 +54,7 @@ export function BreadcrumbNav() {
         'export': 'Export',
         'audit-logs': 'Audit Logs',
         'security': 'Security Console',
+       'subscription': 'Subscription',
         'code-management': 'Code Management',
         'organization-settings': 'Organization',
         'custom-dashboard': 'Custom Dashboard',

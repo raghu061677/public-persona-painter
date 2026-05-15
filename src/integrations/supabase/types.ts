@@ -15398,6 +15398,26 @@ export type Database = {
           media_type: string
         }[]
       }
+      detect_suspicious_portal_logins: {
+        Args: {
+          p_baseline_days?: number
+          p_burst_threshold?: number
+          p_days?: number
+        }
+        Returns: {
+          action: string
+          client_id: string
+          client_name: string
+          created_at: string
+          id: string
+          ip_address: string
+          reason: string
+          severity: string
+          user_agent: string
+          user_email: string
+          user_name: string
+        }[]
+      }
       extract_state_code: { Args: { client_id: string }; Returns: string }
       finalize_invoice_number:
         | { Args: { p_draft_id: string; p_gst_rate?: number }; Returns: string }
@@ -16054,6 +16074,32 @@ export type Database = {
         Returns: Json
       }
       resolve_asset_id: { Args: { p_identifier: string }; Returns: string }
+      search_portal_access_logs: {
+        Args: {
+          p_action?: string
+          p_client_id?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          client_id: string
+          client_name: string
+          created_at: string
+          id: string
+          ip_address: string
+          metadata: Json
+          resource_id: string
+          resource_type: string
+          total_count: number
+          user_agent: string
+          user_email: string
+          user_name: string
+        }[]
+      }
       seed_demo_companies: { Args: never; Returns: Json }
       setup_platform_admin: {
         Args: { p_company_name?: string; p_user_email: string }

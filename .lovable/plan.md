@@ -1,69 +1,109 @@
-# Plan: Professional `/admin/subscription` Page
+## WhatsApp Cloud API Integration — Go-Ads 360°
 
-## Context
-- Nav already links **Admin & Settings → Subscription** to `/admin/subscription` (singular), but no route is registered → currently blank.
-- An existing platform-admin page lives at `/admin/subscriptions` (plural) — `SubscriptionManagement.tsx` — which manages **every company's** plan. We keep that untouched.
-- `useSubscription()` hook already reads `company_subscriptions` for the current company (tier, status, modules, user/asset/campaign limits, end_date) and falls back to a free tier.
-- DB has `company_subscriptions` (tier, status, modules, limits, billing_cycle, amount, start/end dates, auto_renew) and a `transactions` table (subscription/portal_fee/commission entries) we can surface as billing history.
+### Existing assets discovered (will reuse, not duplicate)
+- `public.leads` table already exists with `source`, `status`, `company_id`, `assigned_to`, `client_id`, `metadata` (jsonb), and merge fields. It supports `source='whatsapp'`.
+- `public.whatsapp_logs` table already exists (incoming/outgoing, status, lead_id, message_body, media_url) — covers most of the spec for `whatsapp_messages`.
+- RLS helpers `current_company_id()`, `is_company_member()`, `has_company_role()` exist — will use them.
+- Leads routes live at `/admin/leads`, `/admin/leads/new`, `/admin/leads/:id` — already wired in `App.tsx`.
+- No existing WhatsApp edge function or admin UI page.
 
-## Goal
-Create an enterprise-grade, **company-scoped** subscription dashboard at `/admin/subscription` that lets a company admin see and manage their own plan — clean, modern, and consistent with the existing design system (semantic tokens, shadcn/ui, ModernAppLayout + breadcrumbs).
+### Decision
+Rather than create parallel `whatsapp_leads` / `whatsapp_messages` tables (which would fork lead data and break the existing Lead Merge Engine, Kanban, follow-ups, and client conversion flows), I will:
 
-## Page Structure (`src/pages/CompanySubscription.tsx`)
+1. **Reuse `public.leads`** for WhatsApp enquiries (`source='whatsapp'`). Add a few WhatsApp-specific columns the spec requires that are missing today.
+2. **Extend `public.whatsapp_logs`** with the missing fields from the spec (`wa_message_id`, `from_number`, `to_number`, `contact_name`, `raw_payload`, `client_id`, `direction` alias, `updated_at`) — preserving existing data and policies.
+3. Add a new `public.whatsapp_settings` (single-row per company) for templates + auto-reply config.
 
-1. **Header**
-   - Title "Subscription & Billing" + breadcrumb (Admin › Subscription).
-   - Current plan badge (Free / Pro / Enterprise) + status pill (Active / Expired / Trial).
-   - Primary CTA: "Upgrade Plan" / "Contact Sales" (Enterprise).
+This keeps Convert-to-Client / Convert-to-Plan / Follow-ups / Merge Review all working without rewrites.
 
-2. **Current Plan Card (hero)**
-   - Tier name, monthly/annual price (₹, INR), billing cycle, next renewal date, auto-renew toggle (read-only for non-admins).
-   - Days remaining progress indicator if `end_date` set.
+---
 
-3. **Usage Overview (3 KPI cards with progress bars)**
-   - Users used / `user_limit` (count from `company_users` where status='active').
-   - Media assets used / `asset_limit` (count from `media_assets` filtered by `company_id`, not deleted).
-   - Campaigns used / `campaign_limit` (count from `campaigns` for company).
-   - Color thresholds: green <70%, amber 70–90%, red >90% via semantic tokens.
+### Phase 1 — Database migration
+- ALTER `leads`: add `company_name text`, `target_locations text`, `campaign_start_date date`, `campaign_end_date date`, `campaign_duration_days int`, `estimated_budget numeric`, `media_type text`, `last_message_at timestamptz`, `plan_id text`. (Name/phone/requirement/source/status/assigned_to/client_id already exist.)
+- ALTER `whatsapp_logs`: add `wa_message_id text unique`, `from_number text`, `to_number text`, `contact_name text`, `raw_payload jsonb`, `client_id text`, `updated_at timestamptz default now()`, `company_id uuid`. Add index on `wa_message_id` and `lead_id`.
+- CREATE `whatsapp_settings (company_id uuid pk, auto_reply_enabled bool default true, auto_reply_text text, proposal_template text, proof_template text, payment_template text, phone_number_id text, updated_at timestamptz)` with RLS via `has_company_role(auth.uid(), company_id, 'admin')`.
+- RLS: tighten `whatsapp_logs` policies to `is_company_member(company_id)`; keep service-role bypass for the webhook.
 
-4. **Enabled Modules Grid**
-   - Pull `AVAILABLE_MODULES` list (10 modules), show enabled vs locked with check/lock icon and short description. Locked modules show "Upgrade to unlock".
+### Phase 2 — Edge function `whatsapp-webhook` (public, verify_jwt=false)
+- GET: verify `hub.verify_token` against `WHATSAPP_VERIFY_TOKEN`, echo `hub.challenge`.
+- POST: parse Meta payload → for each message:
+  - Insert into `whatsapp_logs` (idempotent via `wa_message_id`).
+  - Find lead by phone (`source='whatsapp'`). If none → create lead (status `new`, parse text for budget/locations/dates with simple regex; richer parsing can call existing `ai-lead-parser`).
+  - Update `last_message_at`, link `lead_id`.
+  - Status callbacks: update `whatsapp_logs.status`.
+  - If `auto_reply_enabled` AND lead is brand-new (or last reply > 24h) → call `send-whatsapp-message` once.
 
-5. **Plan Comparison / Upgrade Section**
-   - Three pricing cards: **Free / Pro (₹5,000/mo) / Enterprise (Custom)** as defined in project knowledge.
-   - Highlight current tier, list features per tier, CTA buttons ("Current Plan" disabled, "Upgrade", "Contact Sales").
-   - Clicking Upgrade opens a confirmation dialog (records intent in `transactions` as pending or shows "Contact admin" — Razorpay is out of scope unless requested).
+### Phase 3 — Edge function `send-whatsapp-message` (verify_jwt=true)
+- Validate `to`, `message`. Auth via `getClaims`.
+- POST to `https://graph.facebook.com/v20.0/{WHATSAPP_PHONE_NUMBER_ID}/messages`.
+- Insert outgoing row in `whatsapp_logs` with returned `wa_message_id`, link `lead_id`/`client_id`, update `leads.last_message_at`.
 
-6. **Billing History Table**
-   - Reads `transactions` rows where `company_id = current` and `type IN ('subscription','portal_fee')`, ordered desc.
-   - Columns: Date (DD/MM/YYYY), Type, Amount (₹ + GST), Status badge.
-   - Empty state when no records.
+### Phase 4 — Admin UI `/admin/leads/whatsapp`
+- New page `src/pages/WhatsAppLeads.tsx`. Reuses existing `ResponsiveTable`, `StatCard`, filter primitives.
+- KPIs: New / Requirement Received / Proposal Sent / Converted (counts on `leads where source='whatsapp'`).
+- Filters: status, media_type, date range, search (name/phone/company/location/requirement).
+- Row actions: View Conversation, Send Reply, Create Client, Create Plan, Mark Converted, Mark Lost.
 
-7. **Danger / Account Zone (admins only)**
-   - Cancel subscription button (sets `auto_renew=false`, confirmation dialog). No hard delete.
+### Phase 5 — Conversation drawer
+- New `src/components/whatsapp/ConversationDrawer.tsx` (uses existing `Sheet`).
+- Loads `whatsapp_logs` for the lead's phone, chat-bubble layout (incoming left, outgoing right), reply textarea + Send → calls `send-whatsapp-message`. Realtime subscription on `whatsapp_logs` for live refresh.
 
-## Routing & Wiring
-- Add lazy import + route in `src/App.tsx`:
-  `<Route path="subscription" element={<ModernAppLayout><CompanySubscription /></ModernAppLayout></Route>` inside the existing `/admin` parent (no `PlatformAdminGuard` — accessible to company admins).
-- Restrict actions (upgrade/cancel) to `companyUser.role === 'admin'` via `useCompany()`.
-- Add `'subscription': 'Subscription'` to `breadcrumb-nav.tsx` label map.
+### Phase 6 — Convert to Client
+- New `CreateClientFromLeadDialog.tsx`. Pre-fills name/phone/company. Phone-duplicate check against `clients.phone`; if found → offers "Link existing client". On save reuses existing client insert logic (same as `LeadDetail` convert), then sets `leads.client_id` and `status='converted'` (or `contacted`).
 
-## Data & Security
-- Reuse `useSubscription()` for plan data; one `useEffect` to fetch usage counts (3 parallel `head:true, count:'exact'` queries scoped by `company_id`).
-- All queries scoped by `company_id` from `useCompany()` — RLS already enforces tenant isolation.
-- No new tables / migrations needed.
+### Phase 7 — Convert to Plan
+- Reuses `/admin/plans/new` route. If `lead.client_id` empty → opens Create Client dialog first. Then navigates to plan builder with query params (`?client_id=&start=&end=&media_type=&locations=`). Plan builder already accepts pre-fill; small additions if missing. On save → write back `leads.plan_id` and bump status.
 
-## Design
-- Semantic tokens only (`bg-card`, `text-muted-foreground`, `text-primary`, etc.). No raw color classes.
-- Responsive grid (1 col mobile → 3 col desktop). Generous spacing, `rounded-2xl` cards, subtle borders, soft shadows consistent with the rest of the admin UI.
-- Use lucide icons: `CreditCard`, `Users`, `Building2`, `Megaphone`, `CheckCircle2`, `Lock`, `Sparkles`, `Crown`.
+### Phase 8 — Auto reply
+- Logic in webhook (Phase 2). Configurable via `whatsapp_settings.auto_reply_enabled` AND env `WHATSAPP_AUTO_REPLY_ENABLED` (default true). Throttle: only on lead creation or if `last_message_at` > 24h ago.
 
-## Files
-- **Create**: `src/pages/CompanySubscription.tsx`
-- **Edit**: `src/App.tsx` (add lazy import + route)
-- **Edit**: `src/components/ui/breadcrumb-nav.tsx` (add label)
+### Phase 9 — Settings page `/admin/settings/whatsapp`
+- New `src/pages/WhatsAppSettings.tsx`. Edits `whatsapp_settings` row: phone number ID, verify-token guidance (read-only with copy), webhook URL display, auto-reply toggle + text, proposal/proof/payment templates with `{{variable}}` reference. Access tokens never shown.
 
-## Out of Scope (can do as follow-ups)
-- Razorpay checkout integration.
-- Editing tier from this page (platform admin keeps `/admin/subscriptions` for that).
-- Invoice PDF download per transaction.
+### Phase 10 — Navigation
+- `DesktopNavFromConfig` / `MobileAccordionNav` config: under existing Leads group add "WhatsApp" → `/admin/leads/whatsapp`. (Clients, Email, Follow-ups already present per current nav config.) Add Settings → "WhatsApp" entry.
+
+### Phase 11 — Secrets to add (Supabase)
+- `WHATSAPP_VERIFY_TOKEN`
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_AUTO_REPLY_ENABLED` (optional, defaults true)
+- Webhook URL: `https://psryfvfdmjguhamvmqqd.supabase.co/functions/v1/whatsapp-webhook`
+
+### Phase 12 — Security
+- Webhook function: `verify_jwt = false` in `supabase/config.toml`, validates Meta verify token; uses service role only inside the function.
+- Send function: JWT-validated via `getClaims`; rate-limit per user (simple in-memory map).
+- All UI pages behind `ProtectedRoute` with `requiredModule="clients"`.
+- Access token never sent to client; templates table has no token columns.
+
+### Files to be created
+- `supabase/migrations/<ts>_whatsapp_integration.sql`
+- `supabase/functions/whatsapp-webhook/index.ts`
+- `supabase/functions/send-whatsapp-message/index.ts`
+- `src/pages/WhatsAppLeads.tsx`
+- `src/pages/WhatsAppSettings.tsx`
+- `src/components/whatsapp/ConversationDrawer.tsx`
+- `src/components/whatsapp/CreateClientFromLeadDialog.tsx`
+- `src/components/whatsapp/SendReplyForm.tsx`
+- `src/lib/whatsapp/parseEnquiry.ts` (lightweight regex parser)
+
+### Files to be modified
+- `src/App.tsx` — add 2 routes (`leads/whatsapp`, `settings/whatsapp`).
+- `src/config/routes.ts` + nav config — add menu entries.
+- `supabase/config.toml` — add `[functions.whatsapp-webhook] verify_jwt = false`.
+
+### Will NOT touch
+Media Assets, Plans (schema), Campaigns, Operations, Proof upload, Invoices, Client Portal, Reports, existing Lead Merge / Kanban / `LeadDetail` flows. Existing `whatsapp_logs` rows preserved.
+
+### Testing checklist
+1. GET `/whatsapp-webhook?hub.mode=subscribe&hub.verify_token=...&hub.challenge=123` → returns `123`.
+2. POST sample Meta inbound payload → row in `whatsapp_logs`, new row in `leads` with `source='whatsapp'`.
+3. Auto-reply fires once for new lead, not on subsequent messages within 24h.
+4. UI `/admin/leads/whatsapp` lists lead with correct KPIs/filters.
+5. Open conversation → see incoming bubble. Send reply → outgoing row created, Meta API called, bubble appears.
+6. Create Client → new client linked, duplicate phone surfaces existing client.
+7. Create Plan → redirects to plan builder pre-filled, on save `leads.plan_id` populated.
+8. Mark Converted / Lost updates `leads.status`.
+9. RLS: a user from another company cannot see leads/messages.
+
+Approve to implement.

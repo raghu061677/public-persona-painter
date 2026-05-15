@@ -234,6 +234,7 @@ const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const ManageUsers = lazy(() => import("./pages/platform/ManageUsers"));
 const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
+const CompanySubscription = lazy(() => import("./pages/CompanySubscription"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
 const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
 const AssetIdentityInspector = lazy(() => import("./pages/admin/AssetIdentityInspector"));

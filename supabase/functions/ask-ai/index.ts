@@ -37,9 +37,36 @@ function titleCase(s: string): string {
   return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+function fmtDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function parseDateRange(query: string): Record<string, string> {
+  const lower = query.toLowerCase();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ddRange = lower.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4}).*?(?:to|-|until|till)\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (ddRange) {
+    return {
+      date_from: `${ddRange[3]}-${ddRange[2].padStart(2, '0')}-${ddRange[1].padStart(2, '0')}`,
+      date_to: `${ddRange[6]}-${ddRange[5].padStart(2, '0')}-${ddRange[4].padStart(2, '0')}`,
+    };
+  }
+  if (lower.includes('next week')) {
+    const s = new Date(today); s.setDate(s.getDate() + 7);
+    const e = new Date(s); e.setDate(e.getDate() + 6);
+    return { date_from: fmtDate(s), date_to: fmtDate(e) };
+  }
+  if (lower.includes('next month')) {
+    const s = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const e = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    return { date_from: fmtDate(s), date_to: fmtDate(e) };
+  }
+  return {};
+}
+
 function parseDeterministicFilters(query: string): Record<string, any> {
   const lower = query.toLowerCase();
-  const filters: Record<string, any> = {};
+  const filters: Record<string, any> = { ...parseDateRange(query) };
   for (const [key, value] of Object.entries(MEDIA_TYPE_MAP)) {
     if (lower.includes(key)) { filters.media_type = value; break; }
   }
@@ -160,7 +187,7 @@ async function getVacantMedia(sb: any, companyId: string, filters: Record<string
   const end = filters.date_to || start;
 
   let q = sb.from('asset_availability_view')
-    .select('asset_id, media_asset_code, location, area, city, media_type, size, facing, total_sqft, illumination_type, card_rate, availability_status, booking_start_date, booking_end_date, next_available_date, company_id')
+    .select('asset_id, media_asset_code, location, area, city, media_type, size, facing, total_sqft, illumination_type, card_rate, availability_status, booking_start_date, booking_end_date, next_available_date')
     .eq('company_id', companyId);
   if (filters.area) q = q.ilike('area', `%${filters.area}%`);
   if (filters.city) q = q.ilike('city', `%${filters.city}%`);
@@ -175,7 +202,7 @@ async function getVacantMedia(sb: any, companyId: string, filters: Record<string
   for (const r of (data || [])) {
     const overlaps = r.booking_start_date && r.booking_end_date &&
       r.booking_start_date <= end && r.booking_end_date >= start;
-    const isAvail = r.availability_status === 'Available' || !overlaps;
+    const isAvail = String(r.availability_status || '').toUpperCase() === 'AVAILABLE' || !overlaps;
     if (!isAvail) continue;
     if (!byAsset.has(r.asset_id)) byAsset.set(r.asset_id, r);
   }

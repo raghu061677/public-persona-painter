@@ -189,7 +189,7 @@ function parseDateRange(msg: string): { start: string; end: string } {
 
 /** A row is "available" for the requested range if no booking overlaps it */
 function isRowAvailableForRange(row: any, start: string, end: string): boolean {
-  if (row.availability_status === 'Available') return true;
+  if (String(row.availability_status || '').toUpperCase() === 'AVAILABLE') return true;
   const bs = row.booking_start_date;
   const be = row.booking_end_date;
   if (!bs || !be) return true;

@@ -19,6 +19,68 @@ interface IntentResult {
   summary?: string;
 }
 
+const MEDIA_TYPE_MAP: Record<string, string> = {
+  'bus shelter': 'Bus Shelter', 'bus shelters': 'Bus Shelter', 'bqs': 'Bus Shelter', 'bus queue': 'Bus Shelter',
+  'hoarding': 'Hoarding', 'hoardings': 'Hoarding', 'billboard': 'Hoarding', 'billboards': 'Hoarding',
+  'unipole': 'Unipole', 'unipoles': 'Unipole',
+  'cantilever': 'Cantilever', 'cantilevers': 'Cantilever',
+  'gantry': 'Gantry', 'gantries': 'Gantry',
+  'skywalk': 'Skywalk',
+  'pole kiosk': 'Pole Kiosk', 'kiosk': 'Pole Kiosk',
+  'foot over bridge': 'FOB', 'fob': 'FOB',
+};
+
+const AREAS = ['begumpet','ameerpet','kukatpally','gachibowli','madhapur','hitech city','jubilee hills','banjara hills','secunderabad','uppal','dilsukhnagar','lb nagar','mehdipatnam','abids','koti','raidurgam','kondapur','miyapur','chandanagar','lingampally','manikonda','attapur','tolichowki','somajiguda','lakdi ka pul','panjagutta','erragadda','sr nagar','habsiguda','tarnaka','malkajgiri','bowenpally','trimulgherry','kompally','alwal','shamshabad','rajendranagar','nagole','vanasthalipuram'];
+const CITIES = ['hyderabad', 'bangalore', 'mumbai', 'delhi', 'chennai', 'pune', 'kolkata', 'ahmedabad', 'visakhapatnam', 'vizag', 'warangal', 'secunderabad'];
+
+function titleCase(s: string): string {
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function fmtDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function parseDateRange(query: string): Record<string, string> {
+  const lower = query.toLowerCase();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ddRange = lower.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4}).*?(?:to|-|until|till)\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (ddRange) {
+    return {
+      date_from: `${ddRange[3]}-${ddRange[2].padStart(2, '0')}-${ddRange[1].padStart(2, '0')}`,
+      date_to: `${ddRange[6]}-${ddRange[5].padStart(2, '0')}-${ddRange[4].padStart(2, '0')}`,
+    };
+  }
+  if (lower.includes('next week')) {
+    const s = new Date(today); s.setDate(s.getDate() + 7);
+    const e = new Date(s); e.setDate(e.getDate() + 6);
+    return { date_from: fmtDate(s), date_to: fmtDate(e) };
+  }
+  if (lower.includes('next month')) {
+    const s = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const e = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    return { date_from: fmtDate(s), date_to: fmtDate(e) };
+  }
+  return {};
+}
+
+function parseDeterministicFilters(query: string): Record<string, any> {
+  const lower = query.toLowerCase();
+  const filters: Record<string, any> = { ...parseDateRange(query) };
+  for (const [key, value] of Object.entries(MEDIA_TYPE_MAP)) {
+    if (lower.includes(key)) { filters.media_type = value; break; }
+  }
+  for (const area of AREAS) {
+    if (lower.includes(area)) { filters.area = titleCase(area); break; }
+  }
+  for (const city of CITIES) {
+    if (lower.includes(city)) { filters.city = city === 'vizag' ? 'Visakhapatnam' : titleCase(city); break; }
+  }
+  const priceMatch = lower.match(/(?:under|below|less than|<)\s*₹?\s*(\d+)(k)?/);
+  if (priceMatch) filters.price_max = parseInt(priceMatch[1], 10) * (priceMatch[2] === 'k' ? 1000 : 1);
+  return filters;
+}
+
 Deno.serve(withAuth(async (req) => {
   if (req.method !== 'POST') return jsonError('Method not allowed', 405);
 
@@ -35,6 +97,9 @@ Deno.serve(withAuth(async (req) => {
   const supabase = supabaseServiceClient();
 
   const intent = await detectIntentWithAI(query);
+  if (intent.action === 'get_vacant_media') {
+    intent.filters = { ...intent.filters, ...parseDeterministicFilters(query) };
+  }
 
   let result: any;
   switch (intent.action) {
@@ -60,6 +125,9 @@ Deno.serve(withAuth(async (req) => {
 }));
 
 async function detectIntentWithAI(query: string): Promise<IntentResult> {
+  const localIntent = detectIntentLocal(query);
+  if (localIntent.action !== 'unknown') return localIntent;
+
   try {
     const systemPrompt = `You are a business intelligence assistant for an OOH advertising platform.
 Available actions: get_vacant_media, get_campaigns, get_invoices, get_clients, get_expenses, get_summary
@@ -103,7 +171,7 @@ Always provide a helpful summary.`;
 
 function detectIntentLocal(query: string): IntentResult {
   const q = query.toLowerCase();
-  if (q.includes('vacant') || q.includes('available')) return { action: 'get_vacant_media', filters: {}, format: 'table', summary: 'Searching vacant media...' };
+  if (q.includes('vacant') || q.includes('available')) return { action: 'get_vacant_media', filters: parseDeterministicFilters(query), format: 'table', summary: 'Searching vacant media...' };
   if (q.includes('campaign')) return { action: 'get_campaigns', filters: {}, format: 'table', summary: 'Fetching campaigns...' };
   if (q.includes('invoice') || q.includes('payment')) return { action: 'get_invoices', filters: {}, format: 'table', summary: 'Retrieving invoices...' };
   if (q.includes('client') || q.includes('customer')) return { action: 'get_clients', filters: {}, format: 'table', summary: 'Loading clients...' };
@@ -119,7 +187,7 @@ async function getVacantMedia(sb: any, companyId: string, filters: Record<string
   const end = filters.date_to || start;
 
   let q = sb.from('asset_availability_view')
-    .select('asset_id, media_asset_code, location, area, city, media_type, size, facing, total_sqft, illumination_type, card_rate, availability_status, booking_start_date, booking_end_date, next_available_date, company_id')
+    .select('asset_id, media_asset_code, location, area, city, media_type, size, facing, total_sqft, illumination_type, card_rate, availability_status, booking_start_date, booking_end_date, next_available_date')
     .eq('company_id', companyId);
   if (filters.area) q = q.ilike('area', `%${filters.area}%`);
   if (filters.city) q = q.ilike('city', `%${filters.city}%`);
@@ -134,7 +202,7 @@ async function getVacantMedia(sb: any, companyId: string, filters: Record<string
   for (const r of (data || [])) {
     const overlaps = r.booking_start_date && r.booking_end_date &&
       r.booking_start_date <= end && r.booking_end_date >= start;
-    const isAvail = r.availability_status === 'Available' || !overlaps;
+    const isAvail = String(r.availability_status || '').toUpperCase() === 'AVAILABLE' || !overlaps;
     if (!isAvail) continue;
     if (!byAsset.has(r.asset_id)) byAsset.set(r.asset_id, r);
   }

@@ -61,6 +61,35 @@ function parseRequirement(text: string) {
   };
 }
 
+async function pickRuleReply(
+  text: string,
+  parsed: { estimated_budget: number | null; media_type: string | null },
+): Promise<string | null> {
+  const { data: rules } = await supabase
+    .from("whatsapp_auto_reply_rules")
+    .select("*")
+    .eq("enabled", true)
+    .is("company_id", null)
+    .order("priority", { ascending: true });
+  if (!rules || !rules.length) return null;
+  const lower = (text || "").toLowerCase();
+  for (const r of rules) {
+    const kwOk =
+      !r.keywords || !r.keywords.length
+        ? true
+        : (r.keywords as string[]).some((k) => k && lower.includes(k.toLowerCase()));
+    const mtOk = !r.media_type || r.media_type === parsed.media_type;
+    const minOk =
+      r.min_budget == null ||
+      (parsed.estimated_budget != null && parsed.estimated_budget >= Number(r.min_budget));
+    const maxOk =
+      r.max_budget == null ||
+      (parsed.estimated_budget != null && parsed.estimated_budget <= Number(r.max_budget));
+    if (kwOk && mtOk && minOk && maxOk) return r.body as string;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -88,6 +117,12 @@ Deno.serve(async (req) => {
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
+
+  // Test mode: caller controls whether to actually call Meta send API.
+  // ?test=1  -> never send to Meta (simulate only); response includes lead/log ids.
+  const url = new URL(req.url);
+  const isTest = url.searchParams.get("test") === "1";
+  const debug: any = { test: isTest, created_leads: [], log_ids: [], replies: [] };
 
   try {
     const entries = payload?.entry ?? [];
@@ -167,6 +202,7 @@ Deno.serve(async (req) => {
               .single();
             leadId = created?.id ?? null;
             isNewLead = true;
+            if (leadId) debug.created_leads.push(leadId);
           } else {
             await supabase
               .from("leads")
@@ -177,7 +213,7 @@ Deno.serve(async (req) => {
               .eq("id", leadId);
           }
 
-          await supabase.from("whatsapp_logs").insert({
+          const { data: logRow } = await supabase.from("whatsapp_logs").insert({
             wa_message_id: waId,
             phone_number: from,
             from_number: from,
@@ -189,7 +225,8 @@ Deno.serve(async (req) => {
             raw_payload: msg,
             status: "delivered",
             lead_id: leadId,
-          });
+          }).select("id").maybeSingle();
+          if (logRow?.id) debug.log_ids.push(logRow.id);
 
           // Auto-reply (only on first message, throttled by isNewLead OR 24h gap)
           if (AUTO_REPLY_ENABLED) {
@@ -205,13 +242,18 @@ Deno.serve(async (req) => {
                 .is("company_id", null)
                 .maybeSingle();
               const enabled = settings?.auto_reply_enabled ?? true;
+              const parsedNow = parseRequirement(text);
+              const ruleBody = await pickRuleReply(text, parsedNow);
               const body =
+                ruleBody ??
                 settings?.auto_reply_text ??
                 "Thank you for contacting Matrix Network Solutions. We have received your outdoor advertising enquiry. Please share your target locations, campaign dates, media type, and budget so we can send suitable available media options.";
               if (enabled) {
-                const result = await sendAutoReply(from, body);
+                const result = isTest ? null : await sendAutoReply(from, body);
                 const outId = result?.messages?.[0]?.id ?? null;
-                if (outId) {
+                if (isTest) {
+                  debug.replies.push({ to: from, body, sent: false });
+                } else if (outId) {
                   await supabase.from("whatsapp_logs").insert({
                     wa_message_id: outId,
                     phone_number: from,
@@ -224,6 +266,7 @@ Deno.serve(async (req) => {
                     lead_id: leadId,
                     raw_payload: result,
                   });
+                  debug.replies.push({ to: from, body, sent: true });
                 }
               }
             }
@@ -232,14 +275,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ status: "EVENT_RECEIVED" }), {
+    return new Response(JSON.stringify({ status: "EVENT_RECEIVED", ...(isTest ? { debug } : {}) }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("whatsapp-webhook error", e);
     // Always 200 so Meta does not retry-storm
-    return new Response(JSON.stringify({ status: "ERROR" }), {
+    return new Response(JSON.stringify({ status: "ERROR", error: String(e) }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

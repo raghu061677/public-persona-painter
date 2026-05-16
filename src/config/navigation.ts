@@ -272,7 +272,7 @@ export const NAV_CONFIG: NavConfig = {
         { label: "Roles & Permissions", href: "/admin/company-settings/roles", icon: Shield },
         { label: "Import / Export", href: "/admin/data-export-import", icon: Database },
         { label: "Integrations", href: "/admin/company-settings/integrations", icon: Globe },
-        { label: "WhatsApp Settings", href: "/settings/whatsapp", icon: Smartphone },
+        { label: "WhatsApp Settings", href: "/admin/settings/whatsapp", icon: Smartphone },
         { label: "API & Webhooks", href: "/admin/company-settings/developer", icon: Settings },
         { label: "Subscription", href: "/admin/subscription", icon: CreditCard },
       ],

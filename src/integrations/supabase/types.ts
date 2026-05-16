@@ -13316,6 +13316,54 @@ export type Database = {
           },
         ]
       }
+      whatsapp_auto_reply_rules: {
+        Row: {
+          body: string
+          company_id: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          keywords: string[]
+          max_budget: number | null
+          media_type: string | null
+          min_budget: number | null
+          name: string
+          priority: number
+          template_kind: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          company_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          keywords?: string[]
+          max_budget?: number | null
+          media_type?: string | null
+          min_budget?: number | null
+          name: string
+          priority?: number
+          template_kind?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          company_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          keywords?: string[]
+          max_budget?: number | null
+          media_type?: string | null
+          min_budget?: number | null
+          name?: string
+          priority?: number
+          template_kind?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_logs: {
         Row: {
           campaign_id: string | null
@@ -13394,7 +13442,7 @@ export type Database = {
         Row: {
           auto_reply_enabled: boolean
           auto_reply_text: string | null
-          company_id: string
+          company_id: string | null
           payment_template: string | null
           phone_number_id: string | null
           proof_template: string | null
@@ -13404,7 +13452,7 @@ export type Database = {
         Insert: {
           auto_reply_enabled?: boolean
           auto_reply_text?: string | null
-          company_id: string
+          company_id?: string | null
           payment_template?: string | null
           phone_number_id?: string | null
           proof_template?: string | null
@@ -13414,7 +13462,7 @@ export type Database = {
         Update: {
           auto_reply_enabled?: boolean
           auto_reply_text?: string | null
-          company_id?: string
+          company_id?: string | null
           payment_template?: string | null
           phone_number_id?: string | null
           proof_template?: string | null

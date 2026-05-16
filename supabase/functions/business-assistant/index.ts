@@ -131,6 +131,11 @@ Deno.serve(withAuth(async (req) => {
     return jsonError('Message too long (max 2000 characters)', 400);
   }
 
+  if (isAvailabilityQuery(lastMessage)) {
+    const content = await getGroundedAvailabilityReply(ctx.companyId, lastMessage);
+    return renderAvailabilitySse(content);
+  }
+
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   if (!LOVABLE_API_KEY) {
     return jsonError('AI service not configured', 500);
@@ -177,3 +182,61 @@ Keep responses clear and brief unless detailed analysis is requested.`;
     headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
   });
 }));
+
+async function getGroundedAvailabilityReply(companyId: string, message: string): Promise<string> {
+  const filters = parseAvailabilityFilters(message);
+  const { start, end } = parseDateRange(message);
+  const supabase = supabaseServiceClient();
+
+  let query = supabase
+    .from('asset_availability_view')
+    .select(SAFE_AVAILABILITY_SELECT)
+    .eq('company_id', companyId);
+
+  if (filters.area) query = query.ilike('area', `%${filters.area}%`);
+  if (filters.city) query = query.ilike('city', `%${filters.city}%`);
+  if (filters.media_type) query = query.ilike('media_type', `%${filters.media_type}%`);
+  if (filters.price_max) query = query.lte('card_rate', filters.price_max);
+
+  const { data, error } = await query.order('area').limit(200);
+  if (error) {
+    console.error('[business-assistant] availability DB error:', error);
+    return 'Sorry, I could not fetch live media availability right now. Please try again.';
+  }
+
+  const byAsset = new Map<string, any>();
+  for (const row of data || []) {
+    const existing = byAsset.get(row.asset_id);
+    if (!existing) {
+      byAsset.set(row.asset_id, row);
+      continue;
+    }
+    const rowAvailable = isAvailableForRange(row, start, end);
+    const existingAvailable = isAvailableForRange(existing, start, end);
+    if (rowAvailable && !existingAvailable) byAsset.set(row.asset_id, row);
+  }
+
+  const rows = Array.from(byAsset.values()).filter(row => isAvailableForRange(row, start, end));
+  const locLabel = [filters.area, filters.city].filter(Boolean).join(', ') || 'your search';
+  if (!rows.length) {
+    return `No vacant media assets found for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}.`;
+  }
+
+  const list = rows.slice(0, 10).map((row, index) => {
+    const code = row.media_asset_code || row.asset_id;
+    const details = [
+      `${index + 1}. **${code}** — ${row.media_type || 'Media'}`,
+      `   Area: ${row.area || '—'}, ${row.city || '—'}`,
+    ];
+    if (row.location) details.push(`   Location: ${row.location}`);
+    if (row.facing) details.push(`   Direction: ${row.facing}`);
+    const size = [row.size, row.total_sqft ? `${row.total_sqft} sq.ft` : null].filter(Boolean).join(' / ');
+    if (size) details.push(`   Size: ${size}`);
+    if (row.card_rate) details.push(`   Card Rate: ₹${Number(row.card_rate).toLocaleString('en-IN')} per month`);
+    details.push('   Status: Available');
+    return details.join('\n');
+  }).join('\n\n');
+
+  const more = rows.length > 10 ? '\n\n_Showing first 10. Narrow your search to see more._' : '';
+  return `Found **${rows.length}** vacant media asset${rows.length > 1 ? 's' : ''} for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}:\n\n${list}${more}`;
+}

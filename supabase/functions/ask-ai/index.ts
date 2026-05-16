@@ -19,6 +19,43 @@ interface IntentResult {
   summary?: string;
 }
 
+const MEDIA_TYPE_MAP: Record<string, string> = {
+  'bus shelter': 'Bus Shelter', 'bus shelters': 'Bus Shelter', 'bqs': 'Bus Shelter', 'bus queue': 'Bus Shelter',
+  'hoarding': 'Hoarding', 'hoardings': 'Hoarding', 'billboard': 'Hoarding', 'billboards': 'Hoarding',
+  'unipole': 'Unipole', 'unipoles': 'Unipole',
+  'cantilever': 'Cantilever', 'cantilevers': 'Cantilever',
+  'gantry': 'Gantry', 'gantries': 'Gantry',
+  'skywalk': 'Skywalk',
+  'pole kiosk': 'Pole Kiosk', 'kiosk': 'Pole Kiosk',
+  'foot over bridge': 'FOB', 'fob': 'FOB',
+};
+
+const AREAS = ['begumpet','ameerpet','kukatpally','gachibowli','madhapur','hitech city','jubilee hills','banjara hills','secunderabad','uppal','dilsukhnagar','lb nagar','mehdipatnam','abids','koti','raidurgam','kondapur','miyapur','chandanagar','lingampally','manikonda','attapur','tolichowki','somajiguda','lakdi ka pul','panjagutta','erragadda','sr nagar','habsiguda','tarnaka','malkajgiri','bowenpally','trimulgherry','kompally','alwal','shamshabad','rajendranagar','nagole','vanasthalipuram'];
+const CITIES = ['hyderabad', 'bangalore', 'mumbai', 'delhi', 'chennai', 'pune', 'kolkata', 'ahmedabad', 'visakhapatnam', 'vizag', 'warangal', 'secunderabad'];
+
+function titleCase(s: string): string {
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function parseDeterministicFilters(query: string): Record<string, any> {
+  const lower = query.toLowerCase();
+  const filters: Record<string, any> = {};
+  for (const [key, value] of Object.entries(MEDIA_TYPE_MAP)) {
+    if (lower.includes(key)) { filters.media_type = value; break; }
+  }
+  for (const area of AREAS) {
+    if (lower.includes(area)) { filters.area = titleCase(area); break; }
+  }
+  for (const city of CITIES) {
+    if (lower.includes(city)) { filters.city = city === 'vizag' ? 'Visakhapatnam' : titleCase(city); break; }
+  }
+  const priceMatch = lower.match(/(?:under|below|less than|<)\s*₹?\s*(\d+)(k)?/);
+  if (priceMatch) filters.price_max = parseInt(priceMatch[1], 10) * (priceMatch[2] === 'k' ? 1000 : 1);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (!filters.date_from) filters.date_from = today.toISOString().slice(0, 10);
+  return filters;
+}
+
 Deno.serve(withAuth(async (req) => {
   if (req.method !== 'POST') return jsonError('Method not allowed', 405);
 
@@ -35,6 +72,9 @@ Deno.serve(withAuth(async (req) => {
   const supabase = supabaseServiceClient();
 
   const intent = await detectIntentWithAI(query);
+  if (intent.action === 'get_vacant_media') {
+    intent.filters = { ...intent.filters, ...parseDeterministicFilters(query) };
+  }
 
   let result: any;
   switch (intent.action) {

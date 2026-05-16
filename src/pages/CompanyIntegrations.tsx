@@ -80,7 +80,7 @@ export default function CompanyIntegrations() {
 
   const handleConnect = (id: string) => {
     if (id === "whatsapp") {
-      navigate("/settings/whatsapp");
+      navigate("/admin/settings/whatsapp");
       return;
     }
     toast({

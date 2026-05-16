@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsCard, SectionHeader, InfoAlert } from "@/components/settings/zoho-style";
 import { Button } from "@/components/ui/button";
@@ -59,9 +61,28 @@ const INTEGRATIONS = [
 
 export default function CompanyIntegrations() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [integrations, setIntegrations] = useState(INTEGRATIONS);
 
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("whatsapp_settings")
+        .select("phone_number_id")
+        .maybeSingle();
+      if (data?.phone_number_id) {
+        setIntegrations((prev) =>
+          prev.map((i) => (i.id === "whatsapp" ? { ...i, status: "connected" } : i))
+        );
+      }
+    })();
+  }, []);
+
   const handleConnect = (id: string) => {
+    if (id === "whatsapp") {
+      navigate("/settings/whatsapp");
+      return;
+    }
     toast({
       title: "Integration",
       description: "Integration setup will be available soon.",

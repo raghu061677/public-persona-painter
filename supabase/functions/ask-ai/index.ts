@@ -98,6 +98,9 @@ Deno.serve(withAuth(async (req) => {
 }));
 
 async function detectIntentWithAI(query: string): Promise<IntentResult> {
+  const localIntent = detectIntentLocal(query);
+  if (localIntent.action !== 'unknown') return localIntent;
+
   try {
     const systemPrompt = `You are a business intelligence assistant for an OOH advertising platform.
 Available actions: get_vacant_media, get_campaigns, get_invoices, get_clients, get_expenses, get_summary
@@ -141,7 +144,7 @@ Always provide a helpful summary.`;
 
 function detectIntentLocal(query: string): IntentResult {
   const q = query.toLowerCase();
-  if (q.includes('vacant') || q.includes('available')) return { action: 'get_vacant_media', filters: {}, format: 'table', summary: 'Searching vacant media...' };
+  if (q.includes('vacant') || q.includes('available')) return { action: 'get_vacant_media', filters: parseDeterministicFilters(query), format: 'table', summary: 'Searching vacant media...' };
   if (q.includes('campaign')) return { action: 'get_campaigns', filters: {}, format: 'table', summary: 'Fetching campaigns...' };
   if (q.includes('invoice') || q.includes('payment')) return { action: 'get_invoices', filters: {}, format: 'table', summary: 'Retrieving invoices...' };
   if (q.includes('client') || q.includes('customer')) return { action: 'get_clients', filters: {}, format: 'table', summary: 'Loading clients...' };

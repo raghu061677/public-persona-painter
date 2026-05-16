@@ -113,15 +113,33 @@ function detectIntentLocal(query: string): IntentResult {
 
 // All query helpers scoped to companyId
 async function getVacantMedia(sb: any, companyId: string, filters: Record<string, any>) {
-  let q = sb.from('media_assets').select('id, location, area, city, media_type, card_rate, status, dimensions').eq('company_id', companyId).eq('status', 'Available');
+  // Date-aware availability — uses asset_availability_view (same logic as Vacant Media Report & Plan Builder)
+  const today = new Date().toISOString().slice(0, 10);
+  const start = filters.date_from || today;
+  const end = filters.date_to || start;
+
+  let q = sb.from('asset_availability_view')
+    .select('asset_id, media_asset_code, location, area, city, media_type, size, facing, total_sqft, illumination_type, card_rate, availability_status, booking_start_date, booking_end_date, next_available_date, company_id')
+    .eq('company_id', companyId);
   if (filters.area) q = q.ilike('area', `%${filters.area}%`);
   if (filters.city) q = q.ilike('city', `%${filters.city}%`);
-  if (filters.media_type) q = q.eq('media_type', filters.media_type);
+  if (filters.media_type) q = q.ilike('media_type', `%${filters.media_type}%`);
   if (filters.price_max) q = q.lte('card_rate', filters.price_max);
   if (filters.price_min) q = q.gte('card_rate', filters.price_min);
-  const { data, error } = await q.order('area').limit(50);
+  const { data, error } = await q.order('area').limit(200);
   if (error) throw error;
-  return { type: 'table', data: data || [], summary: `Found ${data?.length || 0} vacant assets` };
+
+  // Keep rows that are available for the requested range (no overlap with booking)
+  const byAsset = new Map<string, any>();
+  for (const r of (data || [])) {
+    const overlaps = r.booking_start_date && r.booking_end_date &&
+      r.booking_start_date <= end && r.booking_end_date >= start;
+    const isAvail = r.availability_status === 'Available' || !overlaps;
+    if (!isAvail) continue;
+    if (!byAsset.has(r.asset_id)) byAsset.set(r.asset_id, r);
+  }
+  const rows = Array.from(byAsset.values());
+  return { type: 'table', data: rows, summary: `Found ${rows.length} vacant assets for ${start} → ${end}` };
 }
 
 async function getCampaigns(sb: any, companyId: string, filters: Record<string, any>) {

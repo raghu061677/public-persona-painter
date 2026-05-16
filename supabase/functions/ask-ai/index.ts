@@ -51,8 +51,6 @@ function parseDeterministicFilters(query: string): Record<string, any> {
   }
   const priceMatch = lower.match(/(?:under|below|less than|<)\s*₹?\s*(\d+)(k)?/);
   if (priceMatch) filters.price_max = parseInt(priceMatch[1], 10) * (priceMatch[2] === 'k' ? 1000 : 1);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  if (!filters.date_from) filters.date_from = today.toISOString().slice(0, 10);
   return filters;
 }
 

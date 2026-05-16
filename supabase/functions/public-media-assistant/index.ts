@@ -217,14 +217,14 @@ function formatResults(rows: any[], start: string, end: string, locLabel: string
     const list = Array.isArray(pool) ? pool : rows;
     if (!list.length) return `No booked media assets found for ${locLabel}.${SALES_CTA}`;
     let reply = `Found **${list.length}** booked media asset${list.length>1?'s':''} for ${locLabel}:\n\n`;
-    reply += renderList(list.slice(0, 10));
+    reply += renderList(list.slice(0, 10), "Booked");
     return reply + SALES_CTA;
   }
 
   if (available.length > 0) {
     const showing = available.slice(0, 10);
     let reply = `Found **${available.length}** available media asset${available.length>1?'s':''} for ${locLabel} from ${fmtDisplay(start)} to ${fmtDisplay(end)}:\n\n`;
-    reply += renderList(showing);
+    reply += renderList(showing, "Available");
     if (available.length > 10) reply += `\n_Showing first 10. Narrow your search to see more._\n`;
     return reply + SALES_CTA;
   }
@@ -242,7 +242,7 @@ function formatResults(rows: any[], start: string, end: string, locLabel: string
   return `No matching media assets found. Please try another area, media type, or date range.${SALES_CTA}`;
 }
 
-function renderList(rows: any[]): string {
+function renderList(rows: any[], statusOverride?: string): string {
   return rows.map((r, i) => {
     const code = r.media_asset_code || r.asset_id;
     const lines: string[] = [];
@@ -254,7 +254,7 @@ function renderList(rows: any[]): string {
     if (sizeBits) lines.push(`   Size: ${sizeBits}`);
     if (r.illumination_type) lines.push(`   Illumination: ${r.illumination_type}`);
     if (r.card_rate) lines.push(`   Card Rate: ₹${Number(r.card_rate).toLocaleString('en-IN')} per month`);
-    lines.push(`   Status: ${r.availability_status || 'Available'}`);
+    lines.push(`   Status: ${statusOverride || r.availability_status || "Available"}`);
     return lines.join('\n');
   }).join('\n\n');
 }

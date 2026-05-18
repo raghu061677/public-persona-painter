@@ -7,7 +7,8 @@ import { Mail, Instagram, Facebook, Linkedin } from "lucide-react";
 const SOCIAL_LINKS = {
   instagram: "https://instagram.com/goads360",
   facebook: "https://facebook.com/goads360",
-  whatsapp: "https://wa.me/919876543210",
+  whatsapp:
+    "https://api.whatsapp.com/send/?phone=919999999999&text=Hi%20Go-Ads%20team&type=phone_number&app_absent=0",
   linkedin: "https://linkedin.com/company/goads360",
 };
 

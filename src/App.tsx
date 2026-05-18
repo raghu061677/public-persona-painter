@@ -48,7 +48,6 @@ const MediaAssetsHealthReport = lazy(() => import("./pages/MediaAssetsHealthRepo
 const DataHealthDashboard = lazy(() => import("./pages/admin/DataHealthDashboard"));
 const SecurityConsole = lazy(() => import("./pages/admin/SecurityConsole"));
 const SupportTicketsConsole = lazy(() => import("./pages/admin/SupportTicketsConsole"));
-const SocialLinksSettings = lazy(() => import("./pages/admin/SocialLinksSettings"));
 const SeoReports = lazy(() => import("./pages/admin/SeoReports"));
 // TenantAnalytics removed — redirect to analytics-dashboard
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
@@ -374,7 +373,6 @@ const App = () => (
               <Route path="data-health" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><DataHealthDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="security" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><SecurityConsole /></ModernAppLayout></ProtectedRoute>} />
               <Route path="support-tickets" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><SupportTicketsConsole /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="social-links" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><SocialLinksSettings /></ModernAppLayout></ProtectedRoute>} />
               <Route path="seo-reports" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><SeoReports /></ModernAppLayout></ProtectedRoute>} />
               
               {/* Dead test routes — redirect to dashboard */}

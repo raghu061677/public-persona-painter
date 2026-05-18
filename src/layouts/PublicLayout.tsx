@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { PremiumFooter } from "@/components/landing/cosmic/PremiumFooter";
 import { DarkModeToggle } from "@/components/landing/god-mode/DarkModeToggle";
+import { FloatingWhatsApp } from "@/components/landing/FloatingWhatsApp";
 import { useNavigate } from "react-router-dom";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -110,6 +111,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer - matches Landing page */}
       <PremiumFooter />
+
+      {/* Floating WhatsApp chat button */}
+      <FloatingWhatsApp />
     </div>
   );
 }

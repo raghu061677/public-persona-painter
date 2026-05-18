@@ -3,14 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Mail, Instagram, Facebook, Linkedin } from "lucide-react";
-
-const SOCIAL_LINKS = {
-  instagram: "https://instagram.com/goads360",
-  facebook: "https://facebook.com/goads360",
-  whatsapp:
-    "https://api.whatsapp.com/send/?phone=919666444888&text=Hi%20Go-Ads%20team&type=phone_number&app_absent=0",
-  linkedin: "https://linkedin.com/company/goads360",
-};
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -20,6 +13,13 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 export const PremiumFooter = () => {
   const navigate = useNavigate();
+  const social = useSocialLinks();
+  const SOCIAL_LINKS = {
+    instagram: social.instagram,
+    facebook: social.facebook,
+    whatsapp: social.whatsappUrl,
+    linkedin: social.linkedin,
+  };
 
   return (
     <footer className="relative bg-gradient-to-b from-white to-[#F8FAFF] dark:from-[#0A1628] dark:to-[#030A1A] pt-20 pb-8">

@@ -1,5 +1,5 @@
 const WHATSAPP_URL =
-  "https://api.whatsapp.com/send/?phone=919666444888&text=Hi%20Go-Ads%20team&type=phone_number&app_absent=0";
+  "https://wa.me/919666444888?text=Hi%20Go-Ads%20team";
 
 export const FloatingWhatsApp = () => {
   return (

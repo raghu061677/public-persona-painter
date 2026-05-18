@@ -219,7 +219,9 @@ async function getGroundedAvailabilityReply(companyId: string, message: string):
   const rows = Array.from(byAsset.values()).filter(row => isAvailableForRange(row, start, end));
   const locLabel = [filters.area, filters.city].filter(Boolean).join(', ') || 'your search';
   if (!rows.length) {
-    return `No vacant media assets found for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}.`;
+    const suggestion = await suggestNearbyBusiness(companyId, filters, start, end);
+    const base = `No vacant media assets found for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}.`;
+    return suggestion ? `${base}\n\n${suggestion}` : base;
   }
 
   const list = rows.slice(0, 10).map((row, index) => {
@@ -234,9 +236,73 @@ async function getGroundedAvailabilityReply(companyId: string, message: string):
     if (size) details.push(`   Size: ${size}`);
     if (row.card_rate) details.push(`   Card Rate: ₹${Number(row.card_rate).toLocaleString('en-IN')} per month`);
     details.push('   Status: Available');
+    const bs = row.booking_start_date;
+    const be = row.booking_end_date;
+    if (row.next_available_date && bs && be) {
+      details.push(`   Available Window: from ${displayDate(row.next_available_date)} (currently booked ${displayDate(bs)}–${displayDate(be)})`);
+    } else {
+      details.push(`   Available Window: Open — no current bookings`);
+    }
     return details.join('\n');
   }).join('\n\n');
 
   const more = rows.length > 10 ? '\n\n_Showing first 10. Narrow your search to see more._' : '';
   return `Found **${rows.length}** vacant media asset${rows.length > 1 ? 's' : ''} for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}:\n\n${list}${more}`;
+}
+
+async function suggestNearbyBusiness(
+  companyId: string,
+  filters: Record<string, any>,
+  start: string,
+  end: string,
+): Promise<string | null> {
+  const supabase = supabaseServiceClient();
+  const tries: Array<{ label: string; apply: (q: any) => any }> = [];
+  if (filters.area && filters.city) {
+    tries.push({ label: `Other areas in ${filters.city}`, apply: (q) => {
+      let qq = q.ilike('city', `%${filters.city}%`);
+      if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+      return qq;
+    }});
+  }
+  if (filters.city) {
+    tries.push({ label: `Other cities`, apply: (q) => {
+      let qq = q.not('city', 'ilike', `%${filters.city}%`);
+      if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+      return qq;
+    }});
+  } else if (filters.area) {
+    tries.push({ label: `Other areas`, apply: (q) => {
+      let qq = q.not('area', 'ilike', `%${filters.area}%`);
+      if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+      return qq;
+    }});
+  }
+  if (filters.media_type) {
+    tries.push({ label: `Other media types`, apply: (q) => {
+      let qq = q.not('media_type', 'ilike', `%${filters.media_type}%`);
+      if (filters.area) qq = qq.ilike('area', `%${filters.area}%`);
+      else if (filters.city) qq = qq.ilike('city', `%${filters.city}%`);
+      return qq;
+    }});
+  }
+  for (const t of tries) {
+    let q = supabase.from('asset_availability_view').select(SAFE_AVAILABILITY_SELECT).eq('company_id', companyId).limit(300);
+    q = t.apply(q);
+    const { data, error } = await q;
+    if (error || !data || data.length === 0) continue;
+    const seen = new Map<string, any>();
+    for (const r of data) if (!seen.has(r.asset_id)) seen.set(r.asset_id, r);
+    const avail = Array.from(seen.values()).filter(r => isAvailableForRange(r, start, end));
+    if (!avail.length) continue;
+    const groups = new Map<string, number>();
+    for (const r of avail) {
+      const key = `${r.area || '—'}, ${r.city || '—'}`;
+      groups.set(key, (groups.get(key) || 0) + 1);
+    }
+    const top = Array.from(groups.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5)
+      .map(([k,n]) => `• **${k}** — ${n} asset${n>1?'s':''} available`).join('\n');
+    return `**${t.label} with availability for ${displayDate(start)}–${displayDate(end)}:**\n${top}`;
+  }
+  return null;
 }

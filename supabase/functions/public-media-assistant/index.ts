@@ -255,6 +255,20 @@ function renderList(rows: any[], statusOverride?: string): string {
     if (r.illumination_type) lines.push(`   Illumination: ${r.illumination_type}`);
     if (r.card_rate) lines.push(`   Card Rate: ₹${Number(r.card_rate).toLocaleString('en-IN')} per month`);
     lines.push(`   Status: ${statusOverride || r.availability_status || "Available"}`);
+    // Show the asset's exact available window relative to current bookings
+    const bs = r.booking_start_date;
+    const be = r.booking_end_date;
+    if (statusOverride === 'Available' || String(r.availability_status||'').toUpperCase() === 'AVAILABLE') {
+      if (r.next_available_date && bs && be) {
+        lines.push(`   Available Window: from ${fmtDisplay(r.next_available_date)} (currently booked ${fmtDisplay(bs)}–${fmtDisplay(be)})`);
+      } else {
+        lines.push(`   Available Window: Open — no current bookings`);
+      }
+    } else if (r.next_available_date) {
+      lines.push(`   Next Available: ${fmtDisplay(r.next_available_date)}${bs && be ? ` (booked ${fmtDisplay(bs)}–${fmtDisplay(be)})` : ''}`);
+    } else if (bs && be) {
+      lines.push(`   Currently Booked: ${fmtDisplay(bs)}–${fmtDisplay(be)}`);
+    }
     return lines.join('\n');
   }).join('\n\n');
 }
@@ -325,9 +339,101 @@ Deno.serve(async (req) => {
   const uniqueRows = Array.from(byAsset.values());
 
   const locLabel = [filters.area, filters.city].filter(Boolean).join(', ') || 'your search';
-  const reply = formatResults(uniqueRows, start, end, locLabel, !!filters.want_booked);
+  let reply = formatResults(uniqueRows, start, end, locLabel, !!filters.want_booked);
+
+  // If nothing matched OR no available rows in the requested range, suggest nearest areas/cities
+  const anyAvailableInRange = uniqueRows.some(r => isRowAvailableForRange(r, start, end));
+  if (uniqueRows.length === 0 || !anyAvailableInRange) {
+    const suggestions = await suggestNearby(supabase, filters, start, end);
+    if (suggestions) reply = `${reply}\n\n${suggestions}`;
+  }
 
   return new Response(JSON.stringify({ reply, count: uniqueRows.length, date_range: { start, end }, filters }), {
     status: 200, headers: { ...cors, 'Content-Type': 'application/json' },
   });
 });
+
+/**
+ * Look up alternative areas/cities that DO have availability in the requested range.
+ * Relaxes the area filter first, then the city filter, then media_type.
+ */
+async function suggestNearby(
+  supabase: any,
+  filters: { city?: string; area?: string; media_type?: string; price_max?: number; price_min?: number },
+  start: string,
+  end: string,
+): Promise<string | null> {
+  const tries: Array<{ label: string; apply: (q: any) => any }> = [];
+
+  if (filters.area && filters.city) {
+    tries.push({
+      label: `Other areas in ${filters.city}`,
+      apply: (q) => {
+        let qq = q.ilike('city', `%${filters.city}%`);
+        if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+        return qq;
+      },
+    });
+  }
+  if (filters.city) {
+    tries.push({
+      label: `Other cities`,
+      apply: (q) => {
+        let qq = q.not('city', 'ilike', `%${filters.city}%`);
+        if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+        return qq;
+      },
+    });
+  } else if (filters.area) {
+    tries.push({
+      label: `Other areas`,
+      apply: (q) => {
+        let qq = q.not('area', 'ilike', `%${filters.area}%`);
+        if (filters.media_type) qq = qq.ilike('media_type', `%${filters.media_type}%`);
+        return qq;
+      },
+    });
+  }
+  if (filters.media_type) {
+    tries.push({
+      label: `Other media types`,
+      apply: (q) => {
+        let qq = q.not('media_type', 'ilike', `%${filters.media_type}%`);
+        if (filters.area) qq = qq.ilike('area', `%${filters.area}%`);
+        else if (filters.city) qq = qq.ilike('city', `%${filters.city}%`);
+        return qq;
+      },
+    });
+  }
+  if (tries.length === 0) return null;
+
+  for (const t of tries) {
+    let q = supabase.from('asset_availability_view').select(SAFE_SELECT).limit(300);
+    q = t.apply(q);
+    const { data, error } = await q;
+    if (error || !data || data.length === 0) continue;
+
+    // De-dup per asset, then keep only rows available in requested range
+    const seen = new Map<string, any>();
+    for (const r of data) {
+      if (!seen.has(r.asset_id)) seen.set(r.asset_id, r);
+    }
+    const available = Array.from(seen.values()).filter(r => isRowAvailableForRange(r, start, end));
+    if (available.length === 0) continue;
+
+    // Group by area, city
+    const groups = new Map<string, number>();
+    for (const r of available) {
+      const key = `${r.area || '—'}, ${r.city || '—'}`;
+      groups.set(key, (groups.get(key) || 0) + 1);
+    }
+    const top = Array.from(groups.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([k, n]) => `• **${k}** — ${n} asset${n > 1 ? 's' : ''} available`)
+      .join('\n');
+
+    return `**${t.label} with availability for ${fmtDisplay(start)}–${fmtDisplay(end)}:**\n${top}`;
+  }
+  return null;
+}

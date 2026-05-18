@@ -219,7 +219,9 @@ async function getGroundedAvailabilityReply(companyId: string, message: string):
   const rows = Array.from(byAsset.values()).filter(row => isAvailableForRange(row, start, end));
   const locLabel = [filters.area, filters.city].filter(Boolean).join(', ') || 'your search';
   if (!rows.length) {
-    return `No vacant media assets found for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}.`;
+    const suggestion = await suggestNearbyBusiness(companyId, filters, start, end);
+    const base = `No vacant media assets found for ${locLabel} from ${displayDate(start)} to ${displayDate(end)}.`;
+    return suggestion ? `${base}\n\n${suggestion}` : base;
   }
 
   const list = rows.slice(0, 10).map((row, index) => {

@@ -255,6 +255,20 @@ function renderList(rows: any[], statusOverride?: string): string {
     if (r.illumination_type) lines.push(`   Illumination: ${r.illumination_type}`);
     if (r.card_rate) lines.push(`   Card Rate: ₹${Number(r.card_rate).toLocaleString('en-IN')} per month`);
     lines.push(`   Status: ${statusOverride || r.availability_status || "Available"}`);
+    // Show the asset's exact available window relative to current bookings
+    const bs = r.booking_start_date;
+    const be = r.booking_end_date;
+    if (statusOverride === 'Available' || String(r.availability_status||'').toUpperCase() === 'AVAILABLE') {
+      if (r.next_available_date && bs && be) {
+        lines.push(`   Available Window: from ${fmtDisplay(r.next_available_date)} (currently booked ${fmtDisplay(bs)}–${fmtDisplay(be)})`);
+      } else {
+        lines.push(`   Available Window: Open — no current bookings`);
+      }
+    } else if (r.next_available_date) {
+      lines.push(`   Next Available: ${fmtDisplay(r.next_available_date)}${bs && be ? ` (booked ${fmtDisplay(bs)}–${fmtDisplay(be)})` : ''}`);
+    } else if (bs && be) {
+      lines.push(`   Currently Booked: ${fmtDisplay(bs)}–${fmtDisplay(be)}`);
+    }
     return lines.join('\n');
   }).join('\n\n');
 }

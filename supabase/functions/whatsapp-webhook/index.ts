@@ -186,13 +186,13 @@ Deno.serve(async (req) => {
 
           if (!leadId) {
             const parsed = parseRequirement(text);
-            const { data: created } = await supabase
+            const { data: created, error: createErr } = await supabase
               .from("leads")
               .insert({
                 name: contactName || `WhatsApp ${from}`,
                 phone: from,
                 source: "whatsapp",
-                status: "new",
+                status: "New",
                 requirement: text || null,
                 raw_message: text || null,
                 last_message_at: new Date().toISOString(),
@@ -200,6 +200,11 @@ Deno.serve(async (req) => {
               })
               .select("id")
               .single();
+            if (createErr) {
+              console.error("lead insert failed", createErr);
+              debug.lead_errors = debug.lead_errors || [];
+              debug.lead_errors.push(createErr.message);
+            }
             leadId = created?.id ?? null;
             isNewLead = true;
             if (leadId) debug.created_leads.push(leadId);

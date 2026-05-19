@@ -48,6 +48,7 @@ const MediaAssetsHealthReport = lazy(() => import("./pages/MediaAssetsHealthRepo
 const DataHealthDashboard = lazy(() => import("./pages/admin/DataHealthDashboard"));
 const SecurityConsole = lazy(() => import("./pages/admin/SecurityConsole"));
 const SupportTicketsConsole = lazy(() => import("./pages/admin/SupportTicketsConsole"));
+const SocialLinksSettings = lazy(() => import("./pages/admin/SocialLinksSettings"));
 const SeoReports = lazy(() => import("./pages/admin/SeoReports"));
 // TenantAnalytics removed — redirect to analytics-dashboard
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
@@ -391,6 +392,7 @@ const App = () => (
               <Route path="leads/merge-review" element={<ProtectedRoute requiredRole={['admin', 'sales']}><ModernAppLayout><LeadMergeReview /></ModernAppLayout></ProtectedRoute>} />
               <Route path="leads/whatsapp" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><WhatsAppLeads /></ModernAppLayout></ProtectedRoute>} />
               <Route path="settings/whatsapp" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><WhatsAppSettings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="settings/social-links" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><SocialLinksSettings /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />

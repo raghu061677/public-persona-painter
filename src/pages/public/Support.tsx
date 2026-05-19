@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 const pillars = [
   {
@@ -109,6 +110,7 @@ const faqs = [
 
 const SupportPage = () => {
   const { toast } = useToast();
+  const { whatsappUrl } = useSocialLinks();
   const [params] = useSearchParams();
   const formRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -275,7 +277,7 @@ const SupportPage = () => {
                 <div className="flex-1"><div className="text-sm font-semibold text-foreground">Email us</div><div className="text-xs text-muted-foreground">support@go-ads.in</div></div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </a>
-              <a href="https://wa.me/919666444888?text=Hi%20Go-Ads%20support%20team" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-muted/50 transition">
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-muted/50 transition">
                 <MessageCircle className="w-5 h-5 text-[#10B981]" />
                 <div className="flex-1"><div className="text-sm font-semibold text-foreground">WhatsApp</div><div className="text-xs text-muted-foreground">Chat with the support team</div></div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />

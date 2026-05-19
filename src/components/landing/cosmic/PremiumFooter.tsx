@@ -3,13 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Mail, Instagram, Facebook, Linkedin } from "lucide-react";
-
-const SOCIAL_LINKS = {
-  instagram: "https://instagram.com/goads360",
-  facebook: "https://facebook.com/goads360",
-  whatsapp: "https://wa.me/919666444888?text=Hi%20Go-Ads%20team",
-  linkedin: "https://linkedin.com/company/goads360",
-};
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -19,6 +13,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 export const PremiumFooter = () => {
   const navigate = useNavigate();
+  const social = useSocialLinks();
 
   return (
     <footer className="relative bg-gradient-to-b from-white to-[#F8FAFF] dark:from-[#0A1628] dark:to-[#030A1A] pt-20 pb-8">
@@ -71,7 +66,7 @@ export const PremiumFooter = () => {
           <p className="text-sm font-semibold text-foreground">Follow us</p>
           <div className="flex items-center gap-3">
             <a
-              href={SOCIAL_LINKS.instagram}
+              href={social.instagram}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
@@ -80,7 +75,7 @@ export const PremiumFooter = () => {
               <Instagram className="h-5 w-5" />
             </a>
             <a
-              href={SOCIAL_LINKS.facebook}
+              href={social.facebook}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
@@ -89,7 +84,7 @@ export const PremiumFooter = () => {
               <Facebook className="h-5 w-5" />
             </a>
             <a
-              href={SOCIAL_LINKS.whatsapp}
+              href={social.whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="WhatsApp"
@@ -98,7 +93,7 @@ export const PremiumFooter = () => {
               <WhatsAppIcon className="h-5 w-5" />
             </a>
             <a
-              href={SOCIAL_LINKS.linkedin}
+              href={social.linkedin}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LinkedIn"

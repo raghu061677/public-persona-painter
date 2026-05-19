@@ -1,10 +1,10 @@
-const WHATSAPP_URL =
-  "https://wa.me/919666444888?text=Hi%20Go-Ads%20team";
+import { useSocialLinks } from "@/hooks/useSocialLinks";
 
 export const FloatingWhatsApp = () => {
+  const { whatsappUrl } = useSocialLinks();
   return (
     <a
-      href={WHATSAPP_URL}
+      href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"
